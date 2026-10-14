@@ -88,15 +88,42 @@ export async function fetchPageHtml(url) {
 }
 
 // Extract readable text from a full HTML page.
-// Strategy: prefer <article>/<main>, else <body>; strip the usual
-// noise containers first. Heuristic, not perfect — good enough for
-// research material that the user will curate anyway.
+// Strategy: score candidate containers by text length and pick the
+// RICHEST one — not the first <article> (which is often a promo banner).
+// Diagnostics are logged so we can tune against real pages.
 export function extractPageText(html) {
     const doc = new DOMParser().parseFromString(html, "text/html");
-    doc.querySelectorAll("script, style, noscript, iframe, svg, nav, header, footer, aside, form, button").forEach(el => el.remove());
-    const source = doc.querySelector("article") || doc.querySelector("main") || doc.body;
-    if (!source) return "";
-    const text = source.textContent
+
+    // Remove non-content elements (keep header/footer for now — they're
+    // candidates for scoring; we strip them from the winner afterwards)
+    doc.querySelectorAll("script, style, noscript, iframe, svg, form, button, template, nav, aside").forEach(el => el.remove());
+
+    // Candidate containers, most specific first. body is the fallback.
+    const candidates = [
+        ...doc.querySelectorAll("article, main, [role='main'], [itemprop='articleBody']"),
+        doc.body,
+    ].filter(Boolean);
+
+    // Score each by trimmed text length; log the table for diagnosis
+    const scores = [];
+    let best = null;
+    let bestLen = 0;
+    for (const el of candidates) {
+        const len = (el.textContent || "").replace(/\s+/g, " ").trim().length;
+        const label = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${el.className ? `.${String(el.className).split(" ").slice(0, 2).join(".")}` : ""}`;
+        scores.push(`${label}: ${len}`);
+        if (len > bestLen) { bestLen = len; best = el; }
+    }
+    console.log(`[${extensionName}] Container scores:\n  ${scores.join("\n  ")}`);
+
+    if (!best || bestLen === 0) return "";
+
+    // If the winner is <body>, strip the usual chrome inside it
+    if (best === doc.body) {
+        best.querySelectorAll("header, footer").forEach(el => el.remove());
+    }
+
+    const text = best.textContent
         .replace(/[ \t]+/g, " ")
         .replace(/\n\s*\n\s*\n+/g, "\n\n")
         .split("\n")
