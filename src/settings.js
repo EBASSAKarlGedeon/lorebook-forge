@@ -5,6 +5,7 @@ import { testSearxngConnection, searchSearxng, fetchPageText } from "./searchDat
 import { escapeHtml, suggestKeys } from "./helpers.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
 import { initDistiller } from "./distiller.js";
+import { openStudio } from "./studio.js";
 
 // Full extracted text per URL (the reader only DISPLAYS 4000 chars,
 // but the draft form gets the complete text from here).
@@ -121,6 +122,9 @@ export function initSettings() {
             <div class="lf-settings-hint">Your self-hosted SearXNG instance (Docker). Default: http://localhost:8888</div>
         </div>
         <div class="lf-settings-block">
+            <button id="lf_open_studio" class="menu_button" type="button">⚒️ Open Lorebook Forge Studio</button>
+        </div>
+        <div class="lf-settings-block">
             <button id="lf_test_connection" class="menu_button" type="button">Test SearXNG connection</button>
         </div>
         <div class="lf-settings-block">
@@ -146,6 +150,7 @@ export function initSettings() {
     });
     renderDraftsList();
     initDistiller();
+    $("#lf_open_studio").on("click", openStudio);
     $("#lf_test_connection").on("click", async function () {
         const btn = $(this);
         btn.prop("disabled", true);
