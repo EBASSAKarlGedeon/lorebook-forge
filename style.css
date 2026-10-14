@@ -283,16 +283,26 @@
     white-space: nowrap;
 }
 
-/* ============ The Studio — light gradient workspace ============ */
+/* ============ The Studio — 60/30/10 workspace ============
+   60% dominant  — tinted neutral canvas; deep enough that
+                    white panels visibly float on it.
+   30% secondary — solid white surfaces + inset cards + typography.
+   10% accent    — indigo, STRICTLY reserved for primary CTAs,
+                    links, and active/selected states.
+   ============ */
 #lf_studio_root {
-    --lfs-bg: #f6f7fb;
-    --lfs-surface: #ffffff;
-    --lfs-text: #1c2033;
-    --lfs-text-dim: #5a6178;
-    --lfs-border: rgba(28, 32, 51, 0.10);
-    --lfs-accent: #6366f1;
-    --lfs-accent-2: #ec4899;
-    --lfs-accent-3: #38bdf8;
+    --lfs-bg: #e8eaf3;
+    --lfs-surface: #fdfdff;
+    --lfs-surface-2: #f3f4fa;
+    --lfs-text: #1b1f33;
+    --lfs-text-dim: #4d5468;
+    --lfs-border: rgba(27, 31, 51, 0.14);
+    --lfs-border-strong: rgba(27, 31, 51, 0.24);
+    --lfs-accent: #4f46e5;
+    --lfs-accent-hover: #4338ca;
+    --lfs-accent-soft: rgba(79, 70, 229, 0.10);
+    --lfs-accent-border: rgba(79, 70, 229, 0.35);
+    --lfs-shadow: 0 10px 30px rgba(27, 31, 51, 0.10);
 
     position: fixed;
     inset: 0;
@@ -300,15 +310,89 @@
     color: var(--lfs-text);
     font-family: var(--mainFontFamily, sans-serif);
     background:
-        radial-gradient(1200px 600px at 85% -10%, rgba(236, 72, 153, 0.13), transparent 60%),
-        radial-gradient(1000px 500px at -10% 110%, rgba(56, 189, 248, 0.13), transparent 60%),
-        linear-gradient(135deg, #f6f7fb 0%, #eef1f9 50%, #f9f4fb 100%);
+        radial-gradient(1100px 550px at 88% -8%, rgba(99, 102, 241, 0.10), transparent 60%),
+        radial-gradient(900px 450px at -8% 108%, rgba(236, 72, 153, 0.08), transparent 60%),
+        linear-gradient(135deg, #e8eaf3 0%, #edecf1 55%, #eceaf4 100%);
 }
 
 #lf_studio_root .lf-studio-page {
     display: flex;
     flex-direction: column;
     height: 100%;
+}
+
+/* ---- Inputs & neutral buttons: themed explicitly, not inherited ---- */
+#lf_studio_root .text_pole {
+    background: var(--lfs-surface);
+    color: var(--lfs-text);
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+#lf_studio_root .text_pole::placeholder { color: var(--lfs-text-dim); opacity: 0.7; }
+
+#lf_studio_root .text_pole:focus {
+    outline: none;
+    border-color: var(--lfs-accent);
+    box-shadow: 0 0 0 3px var(--lfs-accent-soft);
+}
+
+#lf_studio_root textarea.text_pole { resize: vertical; }
+
+#lf_studio_root .menu_button {
+    background: var(--lfs-surface);
+    color: var(--lfs-text);
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: 8px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+#lf_studio_root .menu_button:hover {
+    background: var(--lfs-surface-2);
+    border-color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .menu_button:disabled { opacity: 0.55; cursor: default; }
+
+/* ---- 10% accent: PRIMARY CTAs only (solid indigo) ---- */
+#lf_studio_root #lf_search_btn,
+#lf_studio_root .lf-distill-go,
+#lf_studio_root .lf-draft-save,
+#lf_studio_root .lf-commit-go {
+    background: var(--lfs-accent);
+    color: #fff;
+    border: 1px solid var(--lfs-accent);
+    font-weight: 600;
+}
+
+#lf_studio_root #lf_search_btn:hover,
+#lf_studio_root .lf-distill-go:hover,
+#lf_studio_root .lf-draft-save:hover,
+#lf_studio_root .lf-commit-go:hover {
+    background: var(--lfs-accent-hover);
+    border-color: var(--lfs-accent-hover);
+    color: #fff;
+}
+
+/* Accent-outline actions: the per-result "Read" and "Make Entry Draft" —
+   key interactions, but they repeat many times, so tinted outline
+   instead of solid fill keeps accent usage near the 10% budget. */
+#lf_studio_root .lf-read-btn,
+#lf_studio_root .lf-draft-btn {
+    background: var(--lfs-accent-soft);
+    color: var(--lfs-accent);
+    border: 1px solid var(--lfs-accent-border);
+    font-weight: 600;
+}
+
+#lf_studio_root .lf-read-btn:hover,
+#lf_studio_root .lf-draft-btn:hover {
+    background: rgba(79, 70, 229, 0.18);
+    color: var(--lfs-accent-hover);
+    border-color: var(--lfs-accent);
 }
 
 /* ---- Header ---- */
@@ -319,9 +403,7 @@
     gap: 12px;
     padding: 14px 24px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--lfs-surface);
     flex-shrink: 0;
 }
 
@@ -335,12 +417,7 @@
 
 #lf_studio_root .lf-studio-logo { font-size: 1.3rem; }
 
-#lf_studio_root .lf-studio-name {
-    background: linear-gradient(90deg, var(--lfs-accent), var(--lfs-accent-2));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
+#lf_studio_root .lf-studio-name { color: var(--lfs-text); }
 
 #lf_studio_root .lf-studio-sub {
     font-size: 0.75rem;
@@ -349,9 +426,9 @@
     letter-spacing: 0.08em;
     color: var(--lfs-text-dim);
     padding: 2px 10px;
-    border: 1px solid var(--lfs-border);
+    border: 1px solid var(--lfs-border-strong);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--lfs-surface-2);
 }
 
 #lf_studio_root .lf-studio-close {
@@ -360,9 +437,9 @@
     justify-content: center;
     width: 38px;
     height: 38px;
-    border: 1px solid var(--lfs-border);
+    border: 1px solid var(--lfs-border-strong);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.7);
+    background: var(--lfs-surface);
     color: var(--lfs-text);
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -371,9 +448,9 @@
 #lf_studio_root .lf-studio-close svg { width: 18px; height: 18px; }
 
 #lf_studio_root .lf-studio-close:hover {
-    background: rgba(236, 72, 153, 0.12);
-    border-color: var(--lfs-accent-2);
-    color: var(--lfs-accent-2);
+    background: var(--lfs-surface-2);
+    border-color: var(--lfs-text-dim);
+    color: var(--lfs-text);
 }
 
 /* ---- Main row ---- */
@@ -385,7 +462,7 @@
     padding: 10px 14px 12px;
 }
 
-/* ---- Left icon rail ---- */
+/* ---- Left icon rail (30% surface) ---- */
 #lf_studio_root .lf-rail {
     display: flex;
     flex-direction: column;
@@ -396,9 +473,8 @@
     flex-shrink: 0;
     border: 1px solid var(--lfs-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--lfs-surface);
+    box-shadow: var(--lfs-shadow);
 }
 
 #lf_studio_root .lf-rail-brand {
@@ -411,7 +487,7 @@
     font-size: 13px;
     font-weight: 800;
     color: #fff;
-    background: linear-gradient(135deg, var(--lfs-accent), var(--lfs-accent-2));
+    background: var(--lfs-accent);
     margin-bottom: 8px;
     user-select: none;
 }
@@ -433,34 +509,33 @@
 #lf_studio_root .lf-rail-btn svg { width: 19px; height: 19px; }
 
 #lf_studio_root .lf-rail-btn:hover {
-    background: rgba(99, 102, 241, 0.10);
+    background: var(--lfs-accent-soft);
     color: var(--lfs-accent);
 }
 
+/* Active rail state = accent (selection feedback, part of the 10%) */
 #lf_studio_root .lf-rail-btn.active {
-    background: rgba(99, 102, 241, 0.14);
-    border-color: rgba(99, 102, 241, 0.35);
+    background: var(--lfs-accent-soft);
+    border-color: var(--lfs-accent-border);
     color: var(--lfs-accent);
 }
 
 #lf_studio_root .lf-rail-sep {
     width: 22px;
     height: 1px;
-    background: var(--lfs-border);
+    background: var(--lfs-border-strong);
     margin: 6px 0;
 }
 
-/* ---- Side panels ---- */
+/* ---- Side panels (30% surface) ---- */
 #lf_studio_root .lf-panel {
     display: flex;
     flex-direction: column;
     min-height: 0;
     border: 1px solid var(--lfs-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.07);
+    background: var(--lfs-surface);
+    box-shadow: var(--lfs-shadow);
     overflow: hidden;
     transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
 }
@@ -485,6 +560,7 @@
     letter-spacing: 0.06em;
     color: var(--lfs-text-dim);
     border-bottom: 1px solid var(--lfs-border);
+    background: var(--lfs-surface-2);
 }
 
 #lf_studio_root .lf-panel-body {
@@ -505,7 +581,31 @@
 
 #lf_studio_root .lf-distill-bar { flex-shrink: 0; }
 
-/* ---- Reader pane (center) ---- */
+/* ---- Cards inside panels: inset secondary surface ---- */
+#lf_studio_root .lf-result,
+#lf_studio_root .lf-draft {
+    padding: 8px 10px;
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: 10px;
+    background: var(--lfs-surface-2);
+}
+
+/* Links = accent (part of the 10%) */
+#lf_studio_root .lf-result-title {
+    color: var(--lfs-accent);
+}
+
+#lf_studio_root .lf-result-title:hover { color: var(--lfs-accent-hover); }
+
+/* Active/selected result = accent feedback */
+#lf_studio_root .lf-result.active {
+    border-color: var(--lfs-accent);
+    background: var(--lfs-accent-soft);
+}
+
+#lf_studio_root input[type="checkbox"] { accent-color: var(--lfs-accent); }
+
+/* ---- Reader pane (center, 30% surface) ---- */
 #lf_studio_root .lf-reader-pane {
     flex: 1 1 0%;
     min-width: 0;
@@ -513,10 +613,8 @@
     flex-direction: column;
     border: 1px solid var(--lfs-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.07);
+    background: var(--lfs-surface);
+    box-shadow: var(--lfs-shadow);
     overflow: hidden;
 }
 
@@ -572,12 +670,12 @@
     flex-wrap: wrap;
     padding-bottom: 10px;
     margin-bottom: 10px;
-    border-bottom: 1px dashed var(--lfs-border);
+    border-bottom: 1px dashed var(--lfs-border-strong);
     font-size: 0.8rem;
     color: var(--lfs-text-dim);
 }
 
-/* Reader text fills the pane and scrolls inside */
+/* Reader text fills the pane and scrolls inside; inset surface for contrast */
 #lf_studio_root .lf-reader-text {
     flex: 1;
     min-height: 0;
@@ -590,8 +688,9 @@
     line-height: 1.55;
     margin: 0;
     padding: 12px 14px;
+    border: 1px solid var(--lfs-border);
     border-radius: 12px;
-    background: rgba(99, 102, 241, 0.05);
+    background: var(--lfs-surface-2);
 }
 
 /* Draft form lives at the bottom of the reader */
@@ -601,9 +700,9 @@
     overflow-y: auto;
     margin-top: 10px;
     padding: 12px;
-    border: 1px solid var(--lfs-border);
+    border: 1px solid var(--lfs-border-strong);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--lfs-surface-2);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -616,17 +715,10 @@
 
 #lf_studio_root .lf-draft-content {
     width: 100%;
-    resize: vertical;
     font-family: inherit;
     font-size: 0.85rem;
     line-height: 1.45;
     min-height: 110px;
-}
-
-/* Active search result */
-#lf_studio_root .lf-result.active {
-    border-color: var(--lfs-accent);
-    background: rgba(99, 102, 241, 0.08);
 }
 
 /* ---- Status bar ---- */
@@ -637,9 +729,7 @@
     gap: 8px;
     padding: 7px 18px;
     border-top: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: var(--lfs-surface);
     font-size: 0.78rem;
     color: var(--lfs-text-dim);
 }
@@ -650,10 +740,10 @@
 #lf_studio_root ::-webkit-scrollbar-track { background: transparent; }
 
 #lf_studio_root ::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.25);
+    background: rgba(27, 31, 51, 0.22);
     border-radius: 4px;
 }
 
 #lf_studio_root ::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.45);
+    background: rgba(27, 31, 51, 0.38);
 }
