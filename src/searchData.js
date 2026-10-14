@@ -205,7 +205,7 @@ async function fetchMediaWikiText(url) {
     const u = new URL(url);
     const title = getMediaWikiPageTitle(url);
     const apiUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&prop=wikitext`;
-    console.log(`[${extensionName}] MediaWiki API response (first 300 chars):`, body.slice(0, 300));
+    console.log(`[${extensionName}] MediaWiki route: ${apiUrl}`);
 
     const response = await fetch("/api/search/visit", {
         method: "POST",
@@ -215,6 +215,7 @@ async function fetchMediaWikiText(url) {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.text();
+    console.log(`[${extensionName}] MediaWiki API response (first 300 chars):`, body.slice(0, 300));
 
     let data;
     try { data = JSON.parse(body); } catch {
