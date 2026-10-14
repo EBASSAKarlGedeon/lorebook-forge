@@ -18,3 +18,73 @@
     font-size: 0.85em;
     opacity: 0.7;
 }
+
+/* Stage 4: drawer search + results list */
+.lf-search-row {
+    display: flex;
+    gap: 6px;
+}
+
+.lf-search-row .lf-text-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.lf-search-results {
+    margin-top: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lf-search-status {
+    font-size: 0.85em;
+    opacity: 0.7;
+    padding: 4px 0;
+}
+
+.lf-result {
+    padding: 8px 10px;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.06);
+}
+
+.lf-result-title {
+    display: block;
+    font-weight: 600;
+    color: inherit;
+    text-decoration: underline;
+    word-break: break-word;
+}
+
+.lf-result-url {
+    font-size: 0.75em;
+    opacity: 0.55;
+    word-break: break-all;
+    margin-top: 2px;
+}
+
+.lf-result-snippet {
+    font-size: 0.85em;
+    opacity: 0.8;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.lf-result-engines {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.lf-result-engines span {
+    font-size: 0.7em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    opacity: 0.75;
+}
