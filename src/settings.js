@@ -1,7 +1,6 @@
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { defaultSettings, extensionName } from "./config.js";
-import { testSearxngConnection, searchSearxng } from "./searchData.js";
 import { escapeHtml } from "./helpers.js";
 import { testSearxngConnection, searchSearxng, fetchPageText } from "./searchData.js";
 
