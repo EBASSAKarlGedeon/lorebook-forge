@@ -1,1 +1,20 @@
-/* Stage 1: intentionally empty. Theme tokens arrive with the overlay shell. */
+/* Stage 2: settings drawer widgets */
+.lf-settings-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0;
+}
+
+.lf-settings-label {
+    font-weight: 600;
+}
+
+.lf-text-input {
+    width: 100%;
+}
+
+.lf-settings-hint {
+    font-size: 0.85em;
+    opacity: 0.7;
+}

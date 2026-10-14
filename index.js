@@ -1,15 +1,14 @@
-import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
-import { saveSettingsDebounced } from "../../../../script.js";
-
-const extensionName = "lorebook-forge"; // ⚠️ MUST match folder name exactly
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+import { loadExtensionSettings } from "../../../extensions.js";
+import { extensionName, extensionFolderPath } from "./src/config.js";
+import { initSettings } from "./src/settings.js";
 
 jQuery(async () => {
     console.log(`[${extensionName}] Loading...`);
     try {
+        loadExtensionSettings(extensionName);
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
         $("#extensions_settings2").append(settingsHtml);
-        loadExtensionSettings(extensionName);
+        initSettings();
         console.log(`[${extensionName}] ✅ Loaded successfully`);
     } catch (error) {
         console.error(`[${extensionName}] ❌ Failed to load:`, error);
