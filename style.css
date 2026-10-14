@@ -209,3 +209,29 @@
     display: flex;
     justify-content: flex-end;
 }
+
+/* Stage 7: commit-to-lorebook */
+.lf-draft-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.lf-draft-actions .menu_button {
+    padding: 3px 10px;
+    font-size: 0.8em;
+}
+
+.lf-commit-form {
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lf-commit-target {
+    width: 100%;
+}
