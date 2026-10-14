@@ -7,24 +7,23 @@ import { extensionName, extensionFolderPath } from "./src/config.js";
 import { initSettings } from "./src/settings.js";
 import { openStudio } from "./src/studio.js";
 
-// Entry point inside the native World Info editor: a hammer icon in the
-// action row (#world_popup_bottom_holder — verified in ST's world-info.js:
-// it holds #world_popup_new / #world_popup_export / #world_popup_delete /
-// #world_duplicate as plain <div class="fa-solid fa-…" title="…"> icons).
+// Entry point in the native Worlds/Lorebooks panel header: a hammer icon
+// right before the "?" docs link. Target verified from the user's pasted
+// DOM: #WorldInfo > h3.margin0 > a.notes-link (fa-circle-question).
 function addWorldInfoButton() {
     if ($("#lf_world_button").length) return; // duplicate-mount guard
-    const holder = $("#world_popup_bottom_holder");
-    if (!holder.length) {
-        console.warn(`[${extensionName}] #world_popup_bottom_holder not found — WI editor markup differs in this ST version. Paste its outerHTML (F12) so I can re-target.`);
+    const anchor = $("#WorldInfo h3 a.notes-link");
+    if (!anchor.length) {
+        console.warn(`[${extensionName}] Worlds/Lorebooks header link not found — markup differs in this ST version.`);
         return;
     }
     const button = $(`
-        <div id="lf_world_button" class="fa-solid fa-hammer"
+        <div id="lf_world_button" class="fa-solid fa-hammer interactable" tabindex="0" role="button"
              title="Lorebook Forge Studio — research, distill, commit"></div>
     `);
-    holder.append(button);
+    anchor.before(button);
     button.on("click", openStudio);
-    console.log(`[${extensionName}] World Info editor button added`);
+    console.log(`[${extensionName}] World Info header button added (before the ? link)`);
 }
 
 jQuery(async () => {
@@ -38,7 +37,7 @@ jQuery(async () => {
         $("#lf_open_studio").on("click", openStudio);
         addWorldInfoButton();
 
-        // Safety net: if the WI editor mounts later than we do, retry once
+        // Safety net: if the panel mounts later than we do, retry once
         if (!$("#lf_world_button").length && event_types.APP_READY) {
             eventSource.once(event_types.APP_READY, addWorldInfoButton);
         }

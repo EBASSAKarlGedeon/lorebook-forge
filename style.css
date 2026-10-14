@@ -763,10 +763,12 @@
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Stage 11a: World Info editor entry point */
+/* Stage 11a: Worlds/Lorebooks header entry point (before the ? docs link) */
 #lf_world_button {
     cursor: pointer;
     color: #a78bfa;
+    margin-left: 10px;   /* same breathing room the ? link gets */
+    transition: color 0.15s ease;
 }
 
 #lf_world_button:hover {
