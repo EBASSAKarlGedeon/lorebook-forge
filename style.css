@@ -283,36 +283,30 @@
     white-space: nowrap;
 }
 
-/* ============ The Studio — 60/30/10 workspace ============
-   60% dominant  — tinted neutral canvas; deep enough that
-                    white panels visibly float on it.
-   30% secondary — solid white surfaces + inset cards + typography.
-   10% accent    — indigo, STRICTLY reserved for primary CTAs,
-                    links, and active/selected states.
+/* ============ The Studio — landing-page theme (purple) ============
+   Tokens mirror the landing-page extension exactly:
+   60% #16181d bg · 30% #1b1e24 surfaces + white text · 10% purple accent.
+   Per user spec: every button light purple, left rail light purple,
+   white text where it matters.
    ============ */
 #lf_studio_root {
-    --lfs-bg: #e8eaf3;
-    --lfs-surface: #fdfdff;
-    --lfs-surface-2: #f3f4fa;
-    --lfs-text: #1b1f33;
-    --lfs-text-dim: #4d5468;
-    --lfs-border: rgba(27, 31, 51, 0.14);
-    --lfs-border-strong: rgba(27, 31, 51, 0.24);
-    --lfs-accent: #4f46e5;
-    --lfs-accent-hover: #4338ca;
-    --lfs-accent-soft: rgba(79, 70, 229, 0.10);
-    --lfs-accent-border: rgba(79, 70, 229, 0.35);
-    --lfs-shadow: 0 10px 30px rgba(27, 31, 51, 0.10);
+    --lfs-bg: #16181d;
+    --lfs-surface: #1b1e24;
+    --lfs-card: rgba(255, 255, 255, 0.04);
+    --lfs-text: #ffffff;
+    --lfs-text-dim: rgba(255, 255, 255, 0.55);
+    --lfs-border: rgba(255, 255, 255, 0.10);
+    --lfs-accent: #a78bfa;
+    --lfs-accent-hover: #c4b5fd;
+    --lfs-accent-dim: #7c3aed;
 
     position: fixed;
     inset: 0;
     z-index: 10000;
+    background-color: var(--lfs-bg);
     color: var(--lfs-text);
     font-family: var(--mainFontFamily, sans-serif);
-    background:
-        radial-gradient(1100px 550px at 88% -8%, rgba(99, 102, 241, 0.10), transparent 60%),
-        radial-gradient(900px 450px at -8% 108%, rgba(236, 72, 153, 0.08), transparent 60%),
-        linear-gradient(135deg, #e8eaf3 0%, #edecf1 55%, #eceaf4 100%);
+    overflow: hidden;
 }
 
 #lf_studio_root .lf-studio-page {
@@ -321,81 +315,73 @@
     height: 100%;
 }
 
-/* ---- Inputs & neutral buttons: themed explicitly, not inherited ---- */
+/* ---- Inputs: landing-page search-box style ---- */
 #lf_studio_root .text_pole {
-    background: var(--lfs-surface);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--lfs-text);
-    border: 1px solid var(--lfs-border-strong);
+    border: 1px solid var(--lfs-border);
     border-radius: 8px;
     padding: 6px 10px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-#lf_studio_root .text_pole::placeholder { color: var(--lfs-text-dim); opacity: 0.7; }
+#lf_studio_root .text_pole::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
 
 #lf_studio_root .text_pole:focus {
-    outline: none;
     border-color: var(--lfs-accent);
-    box-shadow: 0 0 0 3px var(--lfs-accent-soft);
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
 }
 
 #lf_studio_root textarea.text_pole { resize: vertical; }
 
-#lf_studio_root .menu_button {
+#lf_studio_root select.text_pole option {
     background: var(--lfs-surface);
-    color: var(--lfs-text);
-    border: 1px solid var(--lfs-border-strong);
+    color: #fff;
+}
+
+/* ---- Buttons: ALL light purple ---- */
+/* Secondary buttons: light purple tint (like landing-page hover pills) */
+#lf_studio_root .menu_button {
+    background: rgba(167, 139, 250, 0.16);
+    color: #fff;
+    border: 1px solid rgba(167, 139, 250, 0.40);
     border-radius: 8px;
     padding: 5px 12px;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #lf_studio_root .menu_button:hover {
-    background: var(--lfs-surface-2);
-    border-color: var(--lfs-text-dim);
+    background: rgba(167, 139, 250, 0.28);
+    border-color: var(--lfs-accent);
+    box-shadow: 0 0 14px rgba(167, 139, 250, 0.25);
 }
 
 #lf_studio_root .menu_button:disabled { opacity: 0.55; cursor: default; }
 
-/* ---- 10% accent: PRIMARY CTAs only (solid indigo) ---- */
+/* Primary CTAs: full purple gradient (like landing-page "Continue") */
 #lf_studio_root #lf_search_btn,
 #lf_studio_root .lf-distill-go,
 #lf_studio_root .lf-draft-save,
 #lf_studio_root .lf-commit-go {
-    background: var(--lfs-accent);
+    background: linear-gradient(90deg, #a78bfa, #7c3aed);
     color: #fff;
-    border: 1px solid var(--lfs-accent);
-    font-weight: 600;
+    border: none;
 }
 
 #lf_studio_root #lf_search_btn:hover,
 #lf_studio_root .lf-distill-go:hover,
 #lf_studio_root .lf-draft-save:hover,
 #lf_studio_root .lf-commit-go:hover {
-    background: var(--lfs-accent-hover);
-    border-color: var(--lfs-accent-hover);
-    color: #fff;
+    filter: brightness(1.1);
+    box-shadow: 0 0 14px rgba(167, 139, 250, 0.4);
 }
 
-/* Accent-outline actions: the per-result "Read" and "Make Entry Draft" —
-   key interactions, but they repeat many times, so tinted outline
-   instead of solid fill keeps accent usage near the 10% budget. */
-#lf_studio_root .lf-read-btn,
-#lf_studio_root .lf-draft-btn {
-    background: var(--lfs-accent-soft);
-    color: var(--lfs-accent);
-    border: 1px solid var(--lfs-accent-border);
-    font-weight: 600;
-}
-
-#lf_studio_root .lf-read-btn:hover,
-#lf_studio_root .lf-draft-btn:hover {
-    background: rgba(79, 70, 229, 0.18);
-    color: var(--lfs-accent-hover);
-    border-color: var(--lfs-accent);
-}
-
-/* ---- Header ---- */
+/* ---- Header: landing-page topbar style ---- */
 #lf_studio_root .lf-studio-header {
     display: flex;
     align-items: center;
@@ -403,7 +389,9 @@
     gap: 12px;
     padding: 14px 24px;
     border-bottom: 1px solid var(--lfs-border);
-    background: var(--lfs-surface);
+    background: rgba(22, 24, 29, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     flex-shrink: 0;
 }
 
@@ -424,11 +412,11 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--lfs-text-dim);
+    color: var(--lfs-accent-hover);
     padding: 2px 10px;
-    border: 1px solid var(--lfs-border-strong);
+    border: 1px solid rgba(167, 139, 250, 0.35);
     border-radius: 999px;
-    background: var(--lfs-surface-2);
+    background: rgba(167, 139, 250, 0.12);
 }
 
 #lf_studio_root .lf-studio-close {
@@ -437,20 +425,19 @@
     justify-content: center;
     width: 38px;
     height: 38px;
-    border: 1px solid var(--lfs-border-strong);
+    border: 1px solid var(--lfs-border);
     border-radius: 10px;
-    background: var(--lfs-surface);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--lfs-text);
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 #lf_studio_root .lf-studio-close svg { width: 18px; height: 18px; }
 
 #lf_studio_root .lf-studio-close:hover {
-    background: var(--lfs-surface-2);
-    border-color: var(--lfs-text-dim);
-    color: var(--lfs-text);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* ---- Main row ---- */
@@ -462,7 +449,7 @@
     padding: 10px 14px 12px;
 }
 
-/* ---- Left icon rail (30% surface) ---- */
+/* ---- Left icon rail: LIGHT PURPLE ---- */
 #lf_studio_root .lf-rail {
     display: flex;
     flex-direction: column;
@@ -471,10 +458,9 @@
     padding: 10px 6px;
     width: 54px;
     flex-shrink: 0;
-    border: 1px solid var(--lfs-border);
+    border: 1px solid rgba(167, 139, 250, 0.35);
     border-radius: 16px;
-    background: var(--lfs-surface);
-    box-shadow: var(--lfs-shadow);
+    background: linear-gradient(180deg, rgba(167, 139, 250, 0.20), rgba(124, 58, 237, 0.10));
 }
 
 #lf_studio_root .lf-rail-brand {
@@ -487,7 +473,7 @@
     font-size: 13px;
     font-weight: 800;
     color: #fff;
-    background: var(--lfs-accent);
+    background: linear-gradient(135deg, #a78bfa, #7c3aed);
     margin-bottom: 8px;
     user-select: none;
 }
@@ -498,10 +484,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid transparent;
+    border: 1px solid rgba(167, 139, 250, 0.30);
     border-radius: 10px;
-    background: transparent;
-    color: var(--lfs-text-dim);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
     cursor: pointer;
     transition: all 0.15s ease;
 }
@@ -509,25 +495,25 @@
 #lf_studio_root .lf-rail-btn svg { width: 19px; height: 19px; }
 
 #lf_studio_root .lf-rail-btn:hover {
-    background: var(--lfs-accent-soft);
-    color: var(--lfs-accent);
+    background: rgba(167, 139, 250, 0.30);
+    border-color: var(--lfs-accent);
 }
 
-/* Active rail state = accent (selection feedback, part of the 10%) */
 #lf_studio_root .lf-rail-btn.active {
-    background: var(--lfs-accent-soft);
-    border-color: var(--lfs-accent-border);
-    color: var(--lfs-accent);
+    background: rgba(167, 139, 250, 0.32);
+    border-color: var(--lfs-accent);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.25);
 }
 
 #lf_studio_root .lf-rail-sep {
     width: 22px;
     height: 1px;
-    background: var(--lfs-border-strong);
+    background: rgba(167, 139, 250, 0.35);
     margin: 6px 0;
 }
 
-/* ---- Side panels (30% surface) ---- */
+/* ---- Side panels: landing-page modal surface ---- */
 #lf_studio_root .lf-panel {
     display: flex;
     flex-direction: column;
@@ -535,7 +521,7 @@
     border: 1px solid var(--lfs-border);
     border-radius: 16px;
     background: var(--lfs-surface);
-    box-shadow: var(--lfs-shadow);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
 }
@@ -560,7 +546,7 @@
     letter-spacing: 0.06em;
     color: var(--lfs-text-dim);
     border-bottom: 1px solid var(--lfs-border);
-    background: var(--lfs-surface-2);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 #lf_studio_root .lf-panel-body {
@@ -579,33 +565,53 @@
     max-height: none;
 }
 
-#lf_studio_root .lf-distill-bar { flex-shrink: 0; }
+#lf_studio_root .lf-distill-bar {
+    flex-shrink: 0;
+    border: 1px solid var(--lfs-border);
+    background: var(--lfs-card);
+}
 
-/* ---- Cards inside panels: inset secondary surface ---- */
+/* ---- Cards: landing-page chat-card style ---- */
 #lf_studio_root .lf-result,
 #lf_studio_root .lf-draft {
     padding: 8px 10px;
-    border: 1px solid var(--lfs-border-strong);
+    border: 1px solid var(--lfs-border);
     border-radius: 10px;
-    background: var(--lfs-surface-2);
+    background: var(--lfs-card);
 }
 
-/* Links = accent (part of the 10%) */
+/* Links = accent (landing-page notes-link color) */
 #lf_studio_root .lf-result-title {
-    color: var(--lfs-accent);
+    color: var(--lfs-accent-hover);
 }
 
-#lf_studio_root .lf-result-title:hover { color: var(--lfs-accent-hover); }
+#lf_studio_root .lf-result-title:hover { color: #fff; }
 
-/* Active/selected result = accent feedback */
+/* Active/selected result */
 #lf_studio_root .lf-result.active {
     border-color: var(--lfs-accent);
-    background: var(--lfs-accent-soft);
+    background: rgba(167, 139, 250, 0.14);
 }
 
 #lf_studio_root input[type="checkbox"] { accent-color: var(--lfs-accent); }
 
-/* ---- Reader pane (center, 30% surface) ---- */
+/* Engine / key pills */
+#lf_studio_root .lf-result-engines span,
+#lf_studio_root .lf-draft-keys span {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--lfs-text);
+    opacity: 0.85;
+}
+
+/* AI badge */
+#lf_studio_root .lf-ai-badge {
+    border: 1px solid rgba(167, 139, 250, 0.40);
+    background: rgba(167, 139, 250, 0.14);
+    color: var(--lfs-accent-hover);
+}
+
+/* ---- Reader pane (center, modal surface) ---- */
 #lf_studio_root .lf-reader-pane {
     flex: 1 1 0%;
     min-width: 0;
@@ -614,7 +620,7 @@
     border: 1px solid var(--lfs-border);
     border-radius: 16px;
     background: var(--lfs-surface);
-    box-shadow: var(--lfs-shadow);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
@@ -670,12 +676,12 @@
     flex-wrap: wrap;
     padding-bottom: 10px;
     margin-bottom: 10px;
-    border-bottom: 1px dashed var(--lfs-border-strong);
+    border-bottom: 1px dashed var(--lfs-border);
     font-size: 0.8rem;
     color: var(--lfs-text-dim);
 }
 
-/* Reader text fills the pane and scrolls inside; inset surface for contrast */
+/* Reader text fills the pane and scrolls inside */
 #lf_studio_root .lf-reader-text {
     flex: 1;
     min-height: 0;
@@ -690,7 +696,7 @@
     padding: 12px 14px;
     border: 1px solid var(--lfs-border);
     border-radius: 12px;
-    background: var(--lfs-surface-2);
+    background: var(--lfs-card);
 }
 
 /* Draft form lives at the bottom of the reader */
@@ -700,9 +706,9 @@
     overflow-y: auto;
     margin-top: 10px;
     padding: 12px;
-    border: 1px solid var(--lfs-border-strong);
+    border: 1px solid var(--lfs-border);
     border-radius: 12px;
-    background: var(--lfs-surface-2);
+    background: var(--lfs-card);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -711,6 +717,7 @@
 #lf_studio_root .lf-draft-form .lf-settings-label {
     font-size: 0.8rem;
     font-weight: 600;
+    color: var(--lfs-text);
 }
 
 #lf_studio_root .lf-draft-content {
@@ -721,7 +728,13 @@
     min-height: 110px;
 }
 
-/* ---- Status bar ---- */
+/* Commit form */
+#lf_studio_root .lf-commit-form {
+    border: 1px solid var(--lfs-border);
+    background: var(--lfs-card);
+}
+
+/* ---- Status bar: topbar style ---- */
 #lf_studio_root .lf-studio-statusbar {
     flex-shrink: 0;
     display: flex;
@@ -729,21 +742,23 @@
     gap: 8px;
     padding: 7px 18px;
     border-top: 1px solid var(--lfs-border);
-    background: var(--lfs-surface);
+    background: rgba(22, 24, 29, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     font-size: 0.78rem;
     color: var(--lfs-text-dim);
 }
 
-/* ---- Studio scrollbars ---- */
-#lf_studio_root ::-webkit-scrollbar { width: 8px; height: 8px; }
+/* ---- Studio scrollbars: landing-page style ---- */
+#lf_studio_root ::-webkit-scrollbar { width: 10px; height: 10px; }
 
 #lf_studio_root ::-webkit-scrollbar-track { background: transparent; }
 
 #lf_studio_root ::-webkit-scrollbar-thumb {
-    background: rgba(27, 31, 51, 0.22);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
 }
 
 #lf_studio_root ::-webkit-scrollbar-thumb:hover {
-    background: rgba(27, 31, 51, 0.38);
+    background: rgba(255, 255, 255, 0.2);
 }
