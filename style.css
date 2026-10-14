@@ -235,3 +235,50 @@
 .lf-commit-target {
     width: 100%;
 }
+
+/* Stage 8: distillation */
+.lf-distill-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 8px;
+}
+
+.lf-distill-bar .lf-distill-topic {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.lf-distill-status {
+    flex-basis: 100%;
+}
+
+.lf-draft-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.lf-draft-head .lf-draft-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.lf-draft-check {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.lf-ai-badge {
+    font-size: 0.7em;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 999px;
+    vertical-align: middle;
+    border: 1px solid rgba(128, 128, 128, 0.4);
+    opacity: 0.85;
+    white-space: nowrap;
+}

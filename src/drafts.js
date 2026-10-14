@@ -13,7 +13,7 @@ export function getDrafts() {
     return s.drafts;
 }
 
-export function saveDraft({ title, keys, content, sourceUrl, sourceTitle }) {
+export function saveDraft({ title, keys, content, sourceUrl, sourceTitle, sourceRaw, origin }){
     const drafts = getDrafts();
     const draft = {
         id: crypto.randomUUID(),
@@ -22,6 +22,8 @@ export function saveDraft({ title, keys, content, sourceUrl, sourceTitle }) {
         content: String(content || "").trim(),
         sourceUrl: String(sourceUrl || ""),
         sourceTitle: String(sourceTitle || ""),
+        sourceRaw: String(sourceRaw || ""),
+        origin: origin === "ai" ? "ai" : "research",
         createdAt: Date.now(),
     };
     drafts.unshift(draft);
@@ -118,7 +120,10 @@ export function renderDraftsList() {
     }
     container.html(drafts.map(d => `
         <div class="lf-draft" data-id="${escapeHtml(d.id)}">
-            <div class="lf-draft-title">${escapeHtml(d.title)}</div>
+            <div class="lf-draft-head">
+                <input type="checkbox" class="lf-draft-check" title="Select as distillation source" />
+                <div class="lf-draft-title">${escapeHtml(d.title)}${d.origin === "ai" ? ' <span class="lf-ai-badge">✨ AI</span>' : ""}</div>
+            </div>
             ${d.keys.length ? `<div class="lf-draft-keys">${d.keys.map(k => `<span>${escapeHtml(k)}</span>`).join("")}</div>` : ""}
             <div class="lf-draft-meta" title="${escapeHtml(d.sourceUrl)}">${escapeHtml(d.sourceTitle || d.sourceUrl)} · ${new Date(d.createdAt).toLocaleString()}</div>
             <div class="lf-draft-actions">

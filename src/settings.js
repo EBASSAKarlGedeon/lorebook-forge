@@ -4,6 +4,7 @@ import { defaultSettings, extensionName } from "./config.js";
 import { testSearxngConnection, searchSearxng, fetchPageText } from "./searchData.js";
 import { escapeHtml, suggestKeys } from "./helpers.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
+import { initDistiller } from "./distiller.js";
 
 // Full extracted text per URL (the reader only DISPLAYS 4000 chars,
 // but the draft form gets the complete text from here).
@@ -58,6 +59,7 @@ function showDraftForm(resultEl, url) {
             content: form.find(".lf-draft-content").val(),
             sourceUrl: url,
             sourceTitle: cached.title,
+            sourceRaw: cached.raw || cached.text,
         };
         if (!String(draft.content).trim()) {
             toastr.warning("Draft content is empty.", "Lorebook Forge");
@@ -87,7 +89,7 @@ async function onReadClick(event) {
     try {
         const { text, title, route } = await fetchPageText(url);
         const kb = (text.length / 1024).toFixed(1);
-        pageCache.set(url, { text, title: title || resultEl.find(".lf-result-title").text() });
+        pageCache.set(url, { text, title: title || resultEl.find(".lf-result-title").text(), raw: raw || text, route });
         reader.html(`
             <div class="lf-reader-meta">${kb} KB of text · ${route}
                 <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
@@ -143,6 +145,7 @@ export function initSettings() {
         console.debug(`[${extensionName}] searxngUrl = "${settings.searxngUrl}"`);
     });
     renderDraftsList();
+    initDistiller();
     $("#lf_test_connection").on("click", async function () {
         const btn = $(this);
         btn.prop("disabled", true);
