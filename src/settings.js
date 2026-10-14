@@ -3,6 +3,7 @@ import { saveSettingsDebounced } from "../../../../../script.js";
 import { defaultSettings, extensionName } from "./config.js";
 import { testSearxngConnection, searchSearxng } from "./searchData.js";
 import { escapeHtml } from "./helpers.js";
+import { testSearxngConnection, searchSearxng, fetchPageText } from "./searchData.js";
 
 export function getSettings() {
     if (!extension_settings[extensionName]) {
@@ -16,13 +17,46 @@ function resultItemHtml(result) {
         ? `<div class="lf-result-engines">${result.engines.map(e => `<span>${escapeHtml(e)}</span>`).join("")}</div>`
         : "";
     return `
-        <div class="lf-result">
+        <div class="lf-result" data-url="${escapeHtml(result.url)}">
             <a class="lf-result-title" href="${escapeHtml(result.url)}" target="_blank" rel="noreferrer">${escapeHtml(result.title)}</a>
             <div class="lf-result-url">${escapeHtml(result.url)}</div>
             <div class="lf-result-snippet">${escapeHtml(result.snippet)}</div>
+            <div class="lf-result-actions">
+                <button class="menu_button lf-read-btn" type="button">Read</button>
+            </div>
+            <div class="lf-reader" style="display:none;"></div>
             ${engines}
         </div>
     `;
+}
+
+async function onReadClick(event) {
+    const btn = $(event.currentTarget);
+    const resultEl = btn.closest(".lf-result");
+    const reader = resultEl.find(".lf-reader");
+    const url = resultEl.data("url");
+
+    // Toggle: if already showing this page, collapse it
+    if (reader.is(":visible")) {
+        reader.slideUp(150);
+        btn.text("Read");
+        return;
+    }
+
+    btn.prop("disabled", true).text("Loading…");
+    try {
+        const text = await fetchPageText(url);
+        const kb = (text.length / 1024).toFixed(1);
+        reader.html(`<div class="lf-reader-meta">${kb} KB of text — first 4000 chars shown</div><pre class="lf-reader-text">${escapeHtml(text.slice(0, 4000))}</pre>`);
+        reader.slideDown(150);
+        btn.text("Hide");
+    } catch (err) {
+        console.error(`[${extensionName}] Page read failed:`, err);
+        reader.html(`<div class="lf-reader-meta">Failed to read page: ${escapeHtml(err.message)}</div>`).slideDown(150);
+        btn.text("Read");
+    } finally {
+        btn.prop("disabled", false);
+    }
 }
 
 export function initSettings() {
@@ -87,6 +121,8 @@ export function initSettings() {
                       ? `<div class="lf-search-status">${results.length} results — showing first 10</div>`
                       : "")
                 : `<div class="lf-search-status">No results found.</div>`);
+            // Stage 5: wire the Read buttons
+            resultsEl.find(".lf-read-btn").on("click", onReadClick);
         } catch (err) {
             console.error(`[${extensionName}] Search failed:`, err);
             resultsEl.html(`<div class="lf-search-status">Search failed: ${escapeHtml(err.message)}</div>`);

@@ -64,3 +64,52 @@ export async function testSearxngConnection(baseUrl) {
     console.log(`[${extensionName}] <article> elements found: ${articleCount}`);
     return html;
 }
+
+// ---------- Page reading (Stage 5) ----------
+// Verified against ST's own WebScraper (public/scripts/scrapers.js):
+// POST /api/search/visit { url } → response body IS the page content.
+
+export async function fetchPageHtml(url) {
+    console.log(`[${extensionName}] Visiting page: ${url}`);
+    const response = await fetch("/api/search/visit", {
+        method: "POST",
+        headers: getContext().getRequestHeaders(),
+        cache: "no-cache",
+        body: JSON.stringify({ url }),
+    });
+    if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        console.error(`[${extensionName}] /visit failed: HTTP ${response.status}`, text.slice(0, 300));
+        throw new Error(`HTTP ${response.status}`);
+    }
+    const html = await response.text();
+    console.log(`[${extensionName}] Page fetched: ${html.length} chars`);
+    return html;
+}
+
+// Extract readable text from a full HTML page.
+// Strategy: prefer <article>/<main>, else <body>; strip the usual
+// noise containers first. Heuristic, not perfect — good enough for
+// research material that the user will curate anyway.
+export function extractPageText(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll("script, style, noscript, iframe, svg, nav, header, footer, aside, form, button").forEach(el => el.remove());
+    const source = doc.querySelector("article") || doc.querySelector("main") || doc.body;
+    if (!source) return "";
+    const text = source.textContent
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n\s*\n\s*\n+/g, "\n\n")
+        .split("\n")
+        .map(line => line.trim())
+        .join("\n")
+        .trim();
+    return text;
+}
+
+export async function fetchPageText(url) {
+    const html = await fetchPageHtml(url);
+    const text = extractPageText(html);
+    console.log(`[${extensionName}] Extracted ${text.length} chars of text. First 300 chars:\n`, text.slice(0, 300));
+    if (!text) throw new Error("No readable text found on this page.");
+    return text;
+}

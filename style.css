@@ -88,3 +88,39 @@
     border: 1px solid rgba(128, 128, 128, 0.3);
     opacity: 0.75;
 }
+
+/* Stage 5: page reader */
+.lf-result-actions {
+    margin-top: 6px;
+}
+
+.lf-read-btn {
+    padding: 4px 12px;
+    font-size: 0.85em;
+}
+
+.lf-reader {
+    margin-top: 8px;
+    border-top: 1px dashed rgba(128, 128, 128, 0.3);
+    padding-top: 8px;
+}
+
+.lf-reader-meta {
+    font-size: 0.78em;
+    opacity: 0.6;
+    margin-bottom: 6px;
+}
+
+.lf-reader-text {
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    font-size: 0.82em;
+    line-height: 1.5;
+    margin: 0;
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.08);
+}
