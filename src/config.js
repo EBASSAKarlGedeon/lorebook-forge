@@ -7,6 +7,7 @@ export const defaultSettings = {
     wizard: {
         canonRules: "", // free-text ground-truth policy, sent with every AI call
         sources: [],    // [{id, title, text, addedAt}] pasted source material
+        messages: [],   // [{role: "user"|"assistant", text, ts}] chat history
     },
     draftsPanelWidth: 300, // persisted drag-resize width (px)
 };

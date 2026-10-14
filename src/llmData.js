@@ -100,3 +100,76 @@ Convert the source material into lorebook entries now. Strict JSON array only.`;
     if (!entries.length) throw new Error("LLM returned no usable entries");
     return entries;
 }
+
+// ---------- Wizard chat (Stage 13) ----------
+
+const WIZARD_CHAT_TOKENS = 1200;
+const SOURCE_MATERIAL_CAP = 160_000; // soft cap on pasted material per call
+const HISTORY_TURNS = 24;            // transcript window sent with each call
+
+const WIZARD_CHAT_SYSTEM = `You are the Lorebook Wizard — a focused assistant inside SillyTavern that helps the user turn pasted source material into World Info lorebook entries through conversation.
+
+Behavior:
+- Ground every factual claim in the SOURCE MATERIAL provided. If something isn't in the sources, say so plainly instead of inventing it.
+- The user's CANON RULES override the sources whenever they conflict.
+- Be concise and concrete. No filler, no restating the question.
+- This is a working session, not a roleplay chat.`;
+
+// Newest sources first (that's storage order); oldest fall off the cap.
+function buildSourceMaterial(sources) {
+    let budget = SOURCE_MATERIAL_CAP;
+    const parts = [];
+    let omitted = 0;
+    for (const s of sources) {
+        if (s.text.length <= budget) {
+            parts.push(`### SOURCE: ${s.title}\n${s.text}`);
+            budget -= s.text.length;
+        } else {
+            parts.push(`### SOURCE: ${s.title}\n[omitted from this call — material cap reached]`);
+            omitted++;
+        }
+    }
+    if (omitted) console.warn(`[${extensionName}] ${omitted} source(s) over the ${SOURCE_MATERIAL_CAP} char cap were omitted from this call`);
+    return parts.join("\n\n");
+}
+
+/**
+ * One conversational turn. Stateless by design: canon rules + sources go in
+ * the system prompt, the recent transcript + new message in the user prompt.
+ * @param {{canonRules: string, sources: Array, history: Array, message: string}} args
+ * @returns {Promise<string>} assistant reply (reasoning already stripped)
+ */
+export async function wizardChat({ canonRules, sources, history, message }) {
+    const ctx = getContext();
+    if (typeof ctx.generateQuietPrompt !== "function") {
+        throw new Error("generateQuietPrompt not available in this ST version");
+    }
+
+    const canon = String(canonRules ?? "").trim();
+    const systemPrompt = `${WIZARD_CHAT_SYSTEM}
+
+CANON RULES (user-defined, override sources):
+${canon || "(none set yet)"}
+
+SOURCE MATERIAL:
+${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer from the conversation alone, and say clearly when you're missing sources)"}`;
+
+    const transcript = (history || []).slice(-HISTORY_TURNS)
+        .map(m => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.text}`)
+        .join("\n\n");
+
+    const quietPrompt = `${transcript ? `CONVERSATION SO FAR\n${transcript}\n\n` : ""}NEW MESSAGE\nUser: ${message}`;
+
+    console.log(`[${extensionName}] Wizard chat call: system ${systemPrompt.length} chars, prompt ${quietPrompt.length} chars, ${sources.length} source(s)`);
+    const t0 = Date.now();
+
+    let reply = await ctx.generateQuietPrompt({
+        quietPrompt,
+        systemPrompt,
+        responseLength: WIZARD_CHAT_TOKENS,
+    });
+
+    reply = await stripReasoning(reply);
+    console.log(`[${extensionName}] Wizard replied in ${((Date.now() - t0) / 1000).toFixed(1)}s, ${reply.length} chars`);
+    return reply;
+}

@@ -1,15 +1,17 @@
 // Wizard session storage: the ONLY module that reads/writes the wizard
-// session in extension_settings. Stage 12: single session, canon rules
-// + pasted sources. (Multi-session manager comes later.)
+// session in extension_settings. Stage 13: canon rules, sources, chat.
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
 
 export function getWizardSession() {
     const s = extension_settings[extensionName];
-    if (!s.wizard || typeof s.wizard !== "object") s.wizard = { canonRules: "", sources: [] };
+    if (!s.wizard || typeof s.wizard !== "object") {
+        s.wizard = { canonRules: "", sources: [], messages: [] };
+    }
     if (typeof s.wizard.canonRules !== "string") s.wizard.canonRules = "";
     if (!Array.isArray(s.wizard.sources)) s.wizard.sources = [];
+    if (!Array.isArray(s.wizard.messages)) s.wizard.messages = [];
     return s.wizard;
 }
 
@@ -40,4 +42,24 @@ export function deleteSource(id) {
         w.sources.splice(i, 1);
         saveSettingsDebounced();
     }
+}
+
+// ---------- Chat history (Stage 13) ----------
+
+export function pushWizardMessage(role, text) {
+    const w = getWizardSession();
+    const msg = {
+        role: role === "assistant" ? "assistant" : "user",
+        text: String(text ?? ""),
+        ts: Date.now(),
+    };
+    w.messages.push(msg);
+    saveSettingsDebounced();
+    return msg;
+}
+
+export function clearWizardMessages() {
+    const w = getWizardSession();
+    w.messages = [];
+    saveSettingsDebounced();
 }
