@@ -762,3 +762,13 @@
 #lf_studio_root ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
 }
+
+/* Stage 11a: World Info editor entry point */
+#lf_world_button {
+    cursor: pointer;
+    color: #a78bfa;
+}
+
+#lf_world_button:hover {
+    color: #c4b5fd;
+}
