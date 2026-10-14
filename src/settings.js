@@ -1,15 +1,9 @@
+// Drawer settings (Extensions panel): Studio launcher + SearXNG config.
+// The research workspace itself lives in the Studio overlay (studio.js).
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { defaultSettings, extensionName } from "./config.js";
-import { testSearxngConnection, searchSearxng, fetchPageText } from "./searchData.js";
-import { escapeHtml, suggestKeys } from "./helpers.js";
-import { saveDraft, renderDraftsList } from "./drafts.js";
-import { initDistiller } from "./distiller.js";
-import { openStudio } from "./studio.js";
-
-// Full extracted text per URL (the reader only DISPLAYS 4000 chars,
-// but the draft form gets the complete text from here).
-const pageCache = new Map(); // url -> { text, title }
+import { testSearxngConnection } from "./searchData.js";
 
 export function getSettings() {
     if (!extension_settings[extensionName]) {
@@ -18,127 +12,22 @@ export function getSettings() {
     return extension_settings[extensionName];
 }
 
-function resultItemHtml(result) {
-    const engines = result.engines.length
-        ? `<div class="lf-result-engines">${result.engines.map(e => `<span>${escapeHtml(e)}</span>`).join("")}</div>`
-        : "";
-    return `
-        <div class="lf-result" data-url="${escapeHtml(result.url)}">
-            <a class="lf-result-title" href="${escapeHtml(result.url)}" target="_blank" rel="noreferrer">${escapeHtml(result.title)}</a>
-            <div class="lf-result-url">${escapeHtml(result.url)}</div>
-            <div class="lf-result-snippet">${escapeHtml(result.snippet)}</div>
-            <div class="lf-result-actions">
-                <button class="menu_button lf-read-btn" type="button">Read</button>
-            </div>
-            <div class="lf-reader" style="display:none;"></div>
-            ${engines}
-        </div>
-    `;
-}
-
-function showDraftForm(resultEl, url) {
-    const cached = pageCache.get(url);
-    if (!cached) return;
-    const form = resultEl.find(".lf-draft-form");
-    const keys = suggestKeys(cached.title);
-    form.html(`
-        <label class="lf-settings-label">Title</label>
-        <input class="text_pole lf-text-input lf-draft-title" value="${escapeHtml(cached.title)}" />
-        <label class="lf-settings-label">Keys (comma-separated — what triggers this entry in chat)</label>
-        <input class="text_pole lf-text-input lf-draft-keys" value="${escapeHtml(keys.join(", "))}" />
-        <label class="lf-settings-label">Content</label>
-        <textarea class="text_pole lf-draft-content" rows="10">${escapeHtml(cached.text)}</textarea>
-        <div class="lf-draft-form-actions">
-            <button class="menu_button lf-draft-save" type="button">Save Draft</button>
-        </div>
-    `);
-    form.slideDown(150);
-    form.find(".lf-draft-save").on("click", () => {
-        const draft = {
-            title: form.find(".lf-draft-title").val(),
-            keys: String(form.find(".lf-draft-keys").val()).split(",").map(k => k.trim()).filter(Boolean),
-            content: form.find(".lf-draft-content").val(),
-            sourceUrl: url,
-            sourceTitle: cached.title,
-            sourceRaw: cached.raw || cached.text,
-        };
-        if (!String(draft.content).trim()) {
-            toastr.warning("Draft content is empty.", "Lorebook Forge");
-            return;
-        }
-        saveDraft(draft);
-        renderDraftsList();
-        toastr.success(`Draft saved: "${draft.title}"`, "Lorebook Forge");
-        form.slideUp(150);
-    });
-}
-
-async function onReadClick(event) {
-    const btn = $(event.currentTarget);
-    const resultEl = btn.closest(".lf-result");
-    const reader = resultEl.find(".lf-reader");
-    const url = resultEl.data("url");
-
-    // Toggle: if already showing this page, collapse it
-    if (reader.is(":visible")) {
-        reader.slideUp(150);
-        btn.text("Read");
-        return;
-    }
-
-    btn.prop("disabled", true).text("Loading…");
-    try {
-        const { text, title, raw, route } = await fetchPageText(url);
-        const kb = (text.length / 1024).toFixed(1);
-        pageCache.set(url, { text, title: title || resultEl.find(".lf-result-title").text(), raw: raw || text, route });
-        reader.html(`
-            <div class="lf-reader-meta">${kb} KB of text · ${route}
-                <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
-            </div>
-            <pre class="lf-reader-text">${escapeHtml(text.slice(0, 4000))}</pre>
-            <div class="lf-draft-form" style="display:none;"></div>
-        `);
-        reader.find(".lf-draft-btn").on("click", () => showDraftForm(resultEl, url));
-        reader.slideDown(150);
-        btn.text("Hide");
-    } catch (err) {
-        console.error(`[${extensionName}] Page read failed:`, err);
-        reader.html(`<div class="lf-reader-meta">Failed to read page: ${escapeHtml(err.message)}</div>`).slideDown(150);
-        btn.text("Read");
-    } finally {
-        btn.prop("disabled", false);
-    }
-}
-
 export function initSettings() {
     const settings = getSettings();
 
     const html = `
         <div class="lf-settings-block">
+            <button id="lf_open_studio" class="menu_button" type="button">⚒️ Open Lorebook Forge Studio</button>
+        </div>
+        <div class="lf-settings-block">
             <label class="lf-settings-label" for="lf_searxng_url">SearXNG base URL</label>
             <input id="lf_searxng_url" class="text_pole lf-text-input" type="text"
                    placeholder="http://localhost:8888"
                    value="${settings.searxngUrl}" />
-            <div class="lf-settings-hint">Your self-hosted SearXNG instance (Docker). Default: http://localhost:8888</div>
-        </div>
-        <div class="lf-settings-block">
-            <button id="lf_open_studio" class="menu_button" type="button">⚒️ Open Lorebook Forge Studio</button>
+            <div class="lf-settings-hint">Your self-hosted SearXNG instance (Docker). Used by web research. Default: http://localhost:8888</div>
         </div>
         <div class="lf-settings-block">
             <button id="lf_test_connection" class="menu_button" type="button">Test SearXNG connection</button>
-        </div>
-        <div class="lf-settings-block">
-            <label class="lf-settings-label" for="lf_search_query">Test search</label>
-            <div class="lf-search-row">
-                <input id="lf_search_query" class="text_pole lf-text-input" type="text"
-                       placeholder="e.g. medieval castles" />
-                <button id="lf_search_btn" class="menu_button" type="button">Go</button>
-            </div>
-            <div id="lf_search_results" class="lf-search-results"></div>
-        </div>
-        <div class="lf-settings-block">
-            <label class="lf-settings-label">Entry Drafts</label>
-            <div id="lf_drafts_list" class="lf-drafts-list"></div>
         </div>
     `;
     $(".lorebook-forge-settings .inline-drawer-content").append(html);
@@ -148,9 +37,7 @@ export function initSettings() {
         saveSettingsDebounced();
         console.debug(`[${extensionName}] searxngUrl = "${settings.searxngUrl}"`);
     });
-    renderDraftsList();
-    initDistiller();
-    $("#lf_open_studio").on("click", openStudio);
+
     $("#lf_test_connection").on("click", async function () {
         const btn = $(this);
         btn.prop("disabled", true);
@@ -164,35 +51,5 @@ export function initSettings() {
         } finally {
             btn.prop("disabled", false);
         }
-    });
-
-    const runSearch = async () => {
-        const query = String($("#lf_search_query").val()).trim();
-        const resultsEl = $("#lf_search_results");
-        if (!query) return;
-        $("#lf_search_btn").prop("disabled", true);
-        resultsEl.html(`<div class="lf-search-status">Searching…</div>`);
-        try {
-            const results = await searchSearxng(getSettings().searxngUrl, query);
-            const shown = results.slice(0, 10);
-            resultsEl.html(shown.length
-                ? shown.map(resultItemHtml).join("") +
-                  (results.length > shown.length
-                      ? `<div class="lf-search-status">${results.length} results — showing first 10</div>`
-                      : "")
-                : `<div class="lf-search-status">No results found.</div>`);
-            // Stage 5: wire the Read buttons
-            resultsEl.find(".lf-read-btn").on("click", onReadClick);
-        } catch (err) {
-            console.error(`[${extensionName}] Search failed:`, err);
-            resultsEl.html(`<div class="lf-search-status">Search failed: ${escapeHtml(err.message)}</div>`);
-        } finally {
-            $("#lf_search_btn").prop("disabled", false);
-        }
-    };
-
-    $("#lf_search_btn").on("click", runSearch);
-    $("#lf_search_query").on("keydown", (e) => {
-        if (e.key === "Enter") runSearch();
     });
 }

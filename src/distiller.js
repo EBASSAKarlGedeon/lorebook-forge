@@ -9,8 +9,9 @@ export function initDistiller() {
     const container = $("#lf_drafts_list");
     if (!container.length) return;
 
+    if ($("#lf_distill_bar").length) return; // already mounted (Studio reopen guard)
     const bar = $(`
-        <div class="lf-distill-bar">
+        <div id="lf_distill_bar" class="lf-distill-bar">
             <input class="text_pole lf-text-input lf-distill-topic" type="text"
                    placeholder="Focus / topic (optional — e.g. 'combat lore only')" />
             <button class="menu_button lf-distill-go" type="button">✨ Distill selected → AI</button>

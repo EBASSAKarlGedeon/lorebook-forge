@@ -283,23 +283,20 @@
     white-space: nowrap;
 }
 
-/* ============ Stage 9: The Studio overlay (light gradient theme) ============ */
+/* ============ The Studio — light gradient workspace ============ */
 #lf_studio_root {
-    /* Design tokens — light, colorful, gradient-accented */
     --lfs-bg: #f6f7fb;
     --lfs-surface: #ffffff;
     --lfs-text: #1c2033;
     --lfs-text-dim: #5a6178;
     --lfs-border: rgba(28, 32, 51, 0.10);
-    --lfs-accent: #6366f1;    /* indigo */
-    --lfs-accent-2: #ec4899;  /* pink */
-    --lfs-accent-3: #38bdf8;  /* sky */
+    --lfs-accent: #6366f1;
+    --lfs-accent-2: #ec4899;
+    --lfs-accent-3: #38bdf8;
 
     position: fixed;
     inset: 0;
     z-index: 10000;
-    display: flex;
-    flex-direction: column;
     color: var(--lfs-text);
     font-family: var(--mainFontFamily, sans-serif);
     background:
@@ -308,6 +305,13 @@
         linear-gradient(135deg, #f6f7fb 0%, #eef1f9 50%, #f9f4fb 100%);
 }
 
+#lf_studio_root .lf-studio-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* ---- Header ---- */
 #lf_studio_root .lf-studio-header {
     display: flex;
     align-items: center;
@@ -329,9 +333,7 @@
     font-size: 1.1rem;
 }
 
-#lf_studio_root .lf-studio-logo {
-    font-size: 1.3rem;
-}
+#lf_studio_root .lf-studio-logo { font-size: 1.3rem; }
 
 #lf_studio_root .lf-studio-name {
     background: linear-gradient(90deg, var(--lfs-accent), var(--lfs-accent-2));
@@ -366,10 +368,7 @@
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-#lf_studio_root .lf-studio-close svg {
-    width: 18px;
-    height: 18px;
-}
+#lf_studio_root .lf-studio-close svg { width: 18px; height: 18px; }
 
 #lf_studio_root .lf-studio-close:hover {
     background: rgba(236, 72, 153, 0.12);
@@ -377,38 +376,284 @@
     color: var(--lfs-accent-2);
 }
 
-#lf_studio_root .lf-studio-body {
+/* ---- Main row ---- */
+#lf_studio_root .lf-studio-main {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    padding: 32px 24px;
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px 12px;
 }
 
-#lf_studio_root .lf-studio-placeholder {
-    max-width: 560px;
-    margin: 10vh auto 0;
-    text-align: center;
-    padding: 48px 32px;
+/* ---- Left icon rail ---- */
+#lf_studio_root .lf-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    width: 54px;
+    flex-shrink: 0;
     border: 1px solid var(--lfs-border);
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 12px 40px rgba(99, 102, 241, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
-#lf_studio_root .lf-studio-placeholder-icon {
-    font-size: 2.6rem;
-    margin-bottom: 12px;
+#lf_studio_root .lf-rail-brand {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, var(--lfs-accent), var(--lfs-accent-2));
+    margin-bottom: 8px;
+    user-select: none;
 }
 
-#lf_studio_root .lf-studio-placeholder h3 {
-    margin: 0 0 8px;
-    font-size: 1.3rem;
-}
-
-#lf_studio_root .lf-studio-placeholder p {
-    margin: 0;
+#lf_studio_root .lf-rail-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
     color: var(--lfs-text-dim);
-    line-height: 1.6;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+#lf_studio_root .lf-rail-btn svg { width: 19px; height: 19px; }
+
+#lf_studio_root .lf-rail-btn:hover {
+    background: rgba(99, 102, 241, 0.10);
+    color: var(--lfs-accent);
+}
+
+#lf_studio_root .lf-rail-btn.active {
+    background: rgba(99, 102, 241, 0.14);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--lfs-accent);
+}
+
+#lf_studio_root .lf-rail-sep {
+    width: 22px;
+    height: 1px;
+    background: var(--lfs-border);
+    margin: 6px 0;
+}
+
+/* ---- Side panels ---- */
+#lf_studio_root .lf-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: 1px solid var(--lfs-border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.07);
+    overflow: hidden;
+    transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
+}
+
+#lf_studio_root .lf-panel-search { width: 380px; min-width: 380px; }
+#lf_studio_root .lf-panel-drafts { width: 350px; min-width: 350px; }
+
+#lf_studio_root .lf-panel-hidden {
+    width: 0 !important;
+    min-width: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+    border-color: transparent;
+}
+
+#lf_studio_root .lf-panel-header {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--lfs-text-dim);
+    border-bottom: 1px solid var(--lfs-border);
+}
+
+#lf_studio_root .lf-panel-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+}
+
+/* Lists fill their panels and scroll inside (grid-trap rule) */
+#lf_studio_root .lf-panel-body .lf-search-results,
+#lf_studio_root .lf-panel-body .lf-drafts-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+}
+
+#lf_studio_root .lf-distill-bar { flex-shrink: 0; }
+
+/* ---- Reader pane (center) ---- */
+#lf_studio_root .lf-reader-pane {
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--lfs-border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.07);
+    overflow: hidden;
+}
+
+#lf_studio_root #lf_reader {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#lf_studio_root .lf-reader-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--lfs-text-dim);
+    padding: 24px;
+}
+
+#lf_studio_root .lf-reader-empty-icon {
+    font-size: 2.4rem;
+    margin-bottom: 10px;
+    opacity: 0.6;
+}
+
+#lf_studio_root .lf-reader-empty h3 {
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+    color: var(--lfs-text);
+}
+
+#lf_studio_root .lf-reader-empty p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+#lf_studio_root .lf-reader-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+}
+
+#lf_studio_root .lf-reader-meta {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed var(--lfs-border);
+    font-size: 0.8rem;
+    color: var(--lfs-text-dim);
+}
+
+/* Reader text fills the pane and scrolls inside */
+#lf_studio_root .lf-reader-text {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.05);
+}
+
+/* Draft form lives at the bottom of the reader */
+#lf_studio_root .lf-draft-form {
+    flex-shrink: 0;
+    max-height: 42%;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid var(--lfs-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#lf_studio_root .lf-draft-form .lf-settings-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+#lf_studio_root .lf-draft-content {
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    min-height: 110px;
+}
+
+/* Active search result */
+#lf_studio_root .lf-result.active {
+    border-color: var(--lfs-accent);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+/* ---- Status bar ---- */
+#lf_studio_root .lf-studio-statusbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 18px;
+    border-top: 1px solid var(--lfs-border);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 0.78rem;
+    color: var(--lfs-text-dim);
+}
+
+/* ---- Studio scrollbars ---- */
+#lf_studio_root ::-webkit-scrollbar { width: 8px; height: 8px; }
+
+#lf_studio_root ::-webkit-scrollbar-track { background: transparent; }
+
+#lf_studio_root ::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: 4px;
+}
+
+#lf_studio_root ::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.45);
 }
