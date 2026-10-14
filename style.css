@@ -527,7 +527,7 @@
 }
 
 #lf_studio_root .lf-panel-search { width: 380px; min-width: 380px; }
-#lf_studio_root .lf-panel-drafts { width: 350px; min-width: 350px; }
+/* Drafts width is drag-resizable — see Stage 12 block at the end of this file */
 
 #lf_studio_root .lf-panel-hidden {
     width: 0 !important;
@@ -610,6 +610,15 @@
     background: rgba(167, 139, 250, 0.14);
     color: var(--lfs-accent-hover);
 }
+
+/* ---- Center slot: Wizard (default) or Reader ---- */
+#lf_studio_root .lf-center {
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex;
+}
+
+#lf_studio_root .lf-hidden { display: none !important; }
 
 /* ---- Reader pane (center, modal surface) ---- */
 #lf_studio_root .lf-reader-pane {
@@ -773,4 +782,152 @@
 
 #lf_world_button:hover {
     color: #c4b5fd;
+}
+
+/* ============ Stage 12: Wizard center pane + drafts resizer ============ */
+#lf_studio_root .lf-wizard {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--lfs-border);
+    border-radius: 16px;
+    background: var(--lfs-surface);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+#lf_studio_root .lf-wizard-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#lf_studio_root .lf-wizard-name { font-weight: 700; font-size: 1rem; }
+
+#lf_studio_root .lf-wizard-meta {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-wizard-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+}
+
+#lf_studio_root .lf-wizard-section {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid var(--lfs-border);
+    border-radius: 12px;
+    background: var(--lfs-card);
+}
+
+#lf_studio_root .lf-wizard-canon,
+#lf_studio_root .lf-source-text-input {
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+#lf_studio_root .lf-wizard-canon { min-height: 60px; }
+#lf_studio_root .lf-source-text-input { min-height: 110px; }
+
+#lf_studio_root .lf-wizard-sources {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-source {
+    flex-shrink: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--lfs-border);
+    border-radius: 10px;
+    background: var(--lfs-card);
+}
+
+#lf_studio_root .lf-source-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-source-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#lf_studio_root .lf-source-chars {
+    font-size: 0.72rem;
+    color: var(--lfs-text-dim);
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-source-delete {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-source-preview {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: var(--lfs-text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+/* ---- Drafts panel: drag-to-resize ---- */
+#lf_studio_root .lf-panel-drafts {
+    position: relative;
+    width: var(--lf-drafts-w, 300px);
+    min-width: var(--lf-drafts-w, 300px);
+}
+
+#lf_studio_root .lf-drafts-resize {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 5;
+}
+
+#lf_studio_root .lf-drafts-resize:hover,
+#lf_studio_root.lf-resizing .lf-drafts-resize {
+    background: rgba(167, 139, 250, 0.35);
+}
+
+/* Kill the width transition while dragging, or the panel lags behind the cursor */
+#lf_studio_root.lf-resizing .lf-panel-drafts { transition: none; }
+
+#lf_studio_root.lf-resizing {
+    user-select: none;
+    cursor: col-resize;
 }

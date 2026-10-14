@@ -95,6 +95,8 @@ async function onReadClick(event) {
             </div>
         `);
         reader.find(".lf-draft-btn").on("click", () => showDraftForm(reader, url));
+        // Ask the Studio shell to swap the center pane: Wizard → Reader
+        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-reader"));
         setStatus(`Read "${title}" — ${kb} KB via ${route}`);
     } catch (err) {
         console.error(`[${extensionName}] Page read failed:`, err);
