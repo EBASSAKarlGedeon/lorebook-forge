@@ -124,3 +124,88 @@
     border-radius: 8px;
     background: rgba(128, 128, 128, 0.08);
 }
+
+/* Stage 6: entry drafts */
+.lf-drafts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.lf-draft {
+    padding: 8px 10px;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.06);
+}
+
+.lf-draft-title {
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.lf-draft-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.lf-draft-keys span {
+    font-size: 0.72em;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    opacity: 0.8;
+}
+
+.lf-draft-meta {
+    font-size: 0.75em;
+    opacity: 0.55;
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lf-draft-delete {
+    margin-top: 6px;
+    padding: 3px 10px;
+    font-size: 0.8em;
+}
+
+.lf-draft-btn {
+    padding: 3px 10px;
+    font-size: 0.8em;
+    margin-left: 8px;
+}
+
+.lf-draft-form {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lf-draft-form .lf-settings-label {
+    font-size: 0.85em;
+}
+
+.lf-draft-content {
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.85em;
+    line-height: 1.45;
+    min-height: 120px;
+}
+
+.lf-draft-form-actions {
+    display: flex;
+    justify-content: flex-end;
+}

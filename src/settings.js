@@ -1,8 +1,13 @@
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { defaultSettings, extensionName } from "./config.js";
-import { escapeHtml } from "./helpers.js";
 import { testSearxngConnection, searchSearxng, fetchPageText } from "./searchData.js";
+import { escapeHtml, suggestKeys } from "./helpers.js";
+import { saveDraft, renderDraftsList } from "./drafts.js";
+
+// Full extracted text per URL (the reader only DISPLAYS 4000 chars,
+// but the draft form gets the complete text from here).
+const pageCache = new Map(); // url -> { text, title }
 
 export function getSettings() {
     if (!extension_settings[extensionName]) {
@@ -29,6 +34,8 @@ function resultItemHtml(result) {
     `;
 }
 
+
+
 async function onReadClick(event) {
     const btn = $(event.currentTarget);
     const resultEl = btn.closest(".lf-result");
@@ -46,7 +53,15 @@ async function onReadClick(event) {
     try {
         const text = await fetchPageText(url);
         const kb = (text.length / 1024).toFixed(1);
-        reader.html(`<div class="lf-reader-meta">${kb} KB of text — first 4000 chars shown</div><pre class="lf-reader-text">${escapeHtml(text.slice(0, 4000))}</pre>`);
+        pageCache.set(url, { text, title: resultEl.find(".lf-result-title").text() });
+        reader.html(`
+            <div class="lf-reader-meta">${kb} KB of text
+                <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
+            </div>
+            <pre class="lf-reader-text">${escapeHtml(text.slice(0, 4000))}</pre>
+            <div class="lf-draft-form" style="display:none;"></div>
+        `);
+        reader.find(".lf-draft-btn").on("click", () => showDraftForm(resultEl, url));
         reader.slideDown(150);
         btn.text("Hide");
     } catch (err) {
@@ -81,6 +96,10 @@ export function initSettings() {
             </div>
             <div id="lf_search_results" class="lf-search-results"></div>
         </div>
+        <div class="lf-settings-block">
+            <label class="lf-settings-label">Entry Drafts</label>
+            <div id="lf_drafts_list" class="lf-drafts-list"></div>
+        </div>
     `;
     $(".lorebook-forge-settings .inline-drawer-content").append(html);
 
@@ -89,7 +108,7 @@ export function initSettings() {
         saveSettingsDebounced();
         console.debug(`[${extensionName}] searxngUrl = "${settings.searxngUrl}"`);
     });
-
+    renderDraftsList();
     $("#lf_test_connection").on("click", async function () {
         const btn = $(this);
         btn.prop("disabled", true);
