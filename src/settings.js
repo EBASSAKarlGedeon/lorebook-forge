@@ -34,7 +34,41 @@ function resultItemHtml(result) {
     `;
 }
 
-
+function showDraftForm(resultEl, url) {
+    const cached = pageCache.get(url);
+    if (!cached) return;
+    const form = resultEl.find(".lf-draft-form");
+    const keys = suggestKeys(cached.title);
+    form.html(`
+        <label class="lf-settings-label">Title</label>
+        <input class="text_pole lf-text-input lf-draft-title" value="${escapeHtml(cached.title)}" />
+        <label class="lf-settings-label">Keys (comma-separated — what triggers this entry in chat)</label>
+        <input class="text_pole lf-text-input lf-draft-keys" value="${escapeHtml(keys.join(", "))}" />
+        <label class="lf-settings-label">Content</label>
+        <textarea class="text_pole lf-draft-content" rows="10">${escapeHtml(cached.text)}</textarea>
+        <div class="lf-draft-form-actions">
+            <button class="menu_button lf-draft-save" type="button">Save Draft</button>
+        </div>
+    `);
+    form.slideDown(150);
+    form.find(".lf-draft-save").on("click", () => {
+        const draft = {
+            title: form.find(".lf-draft-title").val(),
+            keys: String(form.find(".lf-draft-keys").val()).split(",").map(k => k.trim()).filter(Boolean),
+            content: form.find(".lf-draft-content").val(),
+            sourceUrl: url,
+            sourceTitle: cached.title,
+        };
+        if (!String(draft.content).trim()) {
+            toastr.warning("Draft content is empty.", "Lorebook Forge");
+            return;
+        }
+        saveDraft(draft);
+        renderDraftsList();
+        toastr.success(`Draft saved: "${draft.title}"`, "Lorebook Forge");
+        form.slideUp(150);
+    });
+}
 
 async function onReadClick(event) {
     const btn = $(event.currentTarget);
