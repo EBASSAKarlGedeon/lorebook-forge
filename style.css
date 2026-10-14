@@ -931,3 +931,27 @@
     user-select: none;
     cursor: col-resize;
 }
+
+/* Stage 12.1: center-pane toggle empty hint */
+#lf_studio_root .lf-center-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--lfs-text-dim);
+    padding: 24px;
+}
+
+#lf_studio_root .lf-center-empty h3 {
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+    color: var(--lfs-text);
+}
+
+#lf_studio_root .lf-center-empty p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}

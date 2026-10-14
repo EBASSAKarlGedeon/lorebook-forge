@@ -1,8 +1,9 @@
 // The Studio overlay: full-screen workspace.
 // Layout: header / [rail | search panel | center (wizard | reader) | drafts panel] / status bar.
-// The Wizard owns the center by default; reading a search result swaps
-// the center to the Reader (research.js asks via the "lf-show-reader"
-// DOM event — avoids a circular studio→research→studio import).
+// Center panes are INDEPENDENT toggles (wand = Wizard, book = Reader),
+// like the side panels. Reading a search result auto-shows the Reader
+// (research.js asks via the "lf-show-reader" DOM event — avoids a
+// circular studio→research→studio import).
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
@@ -12,7 +13,7 @@ import { initDistiller } from "./distiller.js";
 import { initWizard } from "./wizard.js";
 
 let studioRoot = null;
-const railState = { search: true, drafts: true };
+const railState = { search: true, drafts: true, wizard: true, reader: false };
 
 export function isStudioOpen() {
     return !!studioRoot;
@@ -40,24 +41,36 @@ export function setStudioStatus(text) {
     }
 }
 
-function togglePanel(name) {
+function toggleSidePanel(name) {
     if (!studioRoot) return;
     railState[name] = !railState[name];
     studioRoot.querySelector(`.lf-panel-${name}`).classList.toggle("lf-panel-hidden", !railState[name]);
     studioRoot.querySelector(`#lf_rail_${name}`).classList.toggle("active", railState[name]);
 }
 
-// Center pane switching: wizard (default) ↔ reader (when a page is read)
-function showCenter(which) {
+const CENTER_PANES = {
+    wizard: { pane: "#lf_wizard", button: "#lf_rail_wizard" },
+    reader: { pane: "#lf_reader_pane", button: "#lf_rail_reader" },
+};
+
+function toggleCenter(name) {
     if (!studioRoot) return;
-    const showWizard = which === "wizard";
-    studioRoot.querySelector("#lf_wizard").classList.toggle("lf-hidden", !showWizard);
-    studioRoot.querySelector("#lf_reader_pane").classList.toggle("lf-hidden", showWizard);
-    studioRoot.querySelector("#lf_rail_wizard").classList.toggle("active", showWizard);
+    railState[name] = !railState[name];
+    const { pane, button } = CENTER_PANES[name];
+    studioRoot.querySelector(pane).classList.toggle("lf-hidden", !railState[name]);
+    studioRoot.querySelector(button).classList.toggle("active", railState[name]);
+    updateCenterEmpty();
 }
 
+// Tiny hint when BOTH center panes are toggled off
+function updateCenterEmpty() {
+    const anyVisible = railState.wizard || railState.reader;
+    studioRoot.querySelector("#lf_center_empty")?.classList.toggle("lf-hidden", anyVisible);
+}
+
+// research.js fired "lf-show-reader" — make sure the Reader is visible
 function onShowReader() {
-    showCenter("reader");
+    if (!railState.reader) toggleCenter("reader");
 }
 
 // Drag-to-resize the drafts panel; width persists in settings.
@@ -103,8 +116,11 @@ function buildStudio() {
             <div class="lf-studio-main">
                 <nav class="lf-rail">
                     <div class="lf-rail-brand" title="Lorebook Forge">LF</div>
-                    <button id="lf_rail_wizard" class="lf-rail-btn active" type="button" title="Lorebook Wizard — conversational builder">
+                    <button id="lf_rail_wizard" class="lf-rail-btn active" type="button" title="Toggle Lorebook Wizard">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l9-9"/><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h.01"/></svg>
+                    </button>
+                    <button id="lf_rail_reader" class="lf-rail-btn" type="button" title="Toggle Reader">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                     </button>
                     <button id="lf_rail_search" class="lf-rail-btn active" type="button" title="Toggle research panel">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -129,7 +145,7 @@ function buildStudio() {
                 </section>
                 <section class="lf-center">
                     <div id="lf_wizard" class="lf-wizard"></div>
-                    <div class="lf-reader-pane" id="lf_reader_pane">
+                    <div class="lf-reader-pane lf-hidden" id="lf_reader_pane">
                         <div id="lf_reader">
                             <div class="lf-reader-empty">
                                 <div class="lf-reader-empty-icon">📖</div>
@@ -137,6 +153,11 @@ function buildStudio() {
                                 <p>Search in the Research panel, then click "Read" on a result.<br>Page content appears here, ready to become a draft.</p>
                             </div>
                         </div>
+                    </div>
+                    <div id="lf_center_empty" class="lf-center-empty lf-hidden">
+                        <div class="lf-reader-empty-icon">🧭</div>
+                        <h3>Nothing here</h3>
+                        <p>Toggle the Wizard (wand) or Reader (book) from the rail.</p>
                     </div>
                 </section>
                 <section class="lf-panel lf-panel-drafts">
@@ -154,11 +175,12 @@ function buildStudio() {
     `;
 
     el.querySelector(".lf-studio-close").addEventListener("click", closeStudio);
-    el.querySelector("#lf_rail_wizard").addEventListener("click", () => showCenter("wizard"));
-    el.querySelector("#lf_rail_search").addEventListener("click", () => togglePanel("search"));
-    el.querySelector("#lf_rail_drafts").addEventListener("click", () => togglePanel("drafts"));
+    el.querySelector("#lf_rail_wizard").addEventListener("click", () => toggleCenter("wizard"));
+    el.querySelector("#lf_rail_reader").addEventListener("click", () => toggleCenter("reader"));
+    el.querySelector("#lf_rail_search").addEventListener("click", () => toggleSidePanel("search"));
+    el.querySelector("#lf_rail_drafts").addEventListener("click", () => toggleSidePanel("drafts"));
     el.querySelector("#lf_rail_distill").addEventListener("click", () => {
-        if (!railState.drafts) togglePanel("drafts");
+        if (!railState.drafts) toggleSidePanel("drafts");
         const topic = el.querySelector("#lf_distill_bar .lf-distill-topic");
         if (topic) topic.focus();
         else toastr.info("Drafts panel not ready yet.", "Lorebook Forge");
