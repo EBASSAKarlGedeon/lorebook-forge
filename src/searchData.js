@@ -205,13 +205,13 @@ async function fetchMediaWikiText(url) {
     const u = new URL(url);
     const title = getMediaWikiPageTitle(url);
     const apiUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&prop=wikitext`;
-    console.log(`[${extensionName}] MediaWiki route: ${apiUrl}`);
+    console.log(`[${extensionName}] MediaWiki API response (first 300 chars):`, body.slice(0, 300));
 
     const response = await fetch("/api/search/visit", {
         method: "POST",
         headers: getContext().getRequestHeaders(),
         cache: "no-cache",
-        body: JSON.stringify({ url: apiUrl }),
+        body: JSON.stringify({ url: apiUrl, html: false }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.text();
