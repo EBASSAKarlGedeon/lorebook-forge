@@ -70,12 +70,23 @@ export async function testSearxngConnection(baseUrl) {
 // POST /api/search/visit { url } → response body IS the page content.
 
 export async function fetchPageHtml(url) {
-    console.log(`[${extensionName}] Visiting page: ${url}`);
+    // Reddit's modern UI is a JS shell with no server-rendered text;
+    // old.reddit serves real HTML for the same URLs.
+    let fetchUrl = url;
+    try {
+        const u = new URL(url);
+        if (/(^|\.)reddit\.com$/i.test(u.hostname)) {
+            u.hostname = "old.reddit.com";
+            fetchUrl = u.toString();
+            console.log(`[${extensionName}] Reddit rewrite: ${fetchUrl}`);
+        }
+    } catch { /* leave URL as-is */ }
+    console.log(`[${extensionName}] Visiting page: ${fetchUrl}`);
     const response = await fetch("/api/search/visit", {
         method: "POST",
         headers: getContext().getRequestHeaders(),
         cache: "no-cache",
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: fetchUrl }),
     });
     if (!response.ok) {
         const text = await response.text().catch(() => "");
@@ -133,10 +144,103 @@ export function extractPageText(html) {
     return text;
 }
 
+// ---------- Smart source routing (Stage 6.5) ----------
+
+const MEDIAWIKI_HOST_PATTERNS = [
+    /\.fandom\.com$/i,
+    /\.wiki\.gg$/i,
+    /(^|\.)wikipedia\.org$/i,
+];
+
+function getMediaWikiPageTitle(url) {
+    try {
+        const u = new URL(url);
+        const m = u.pathname.match(/^\/wiki\/([^/]+)/);
+        return m ? decodeURIComponent(m[1]) : null;
+    } catch { return null; }
+}
+
+export function isMediaWikiUrl(url) {
+    try {
+        const u = new URL(url);
+        return MEDIAWIKI_HOST_PATTERNS.some(p => p.test(u.hostname)) && !!getMediaWikiPageTitle(url);
+    } catch { return false; }
+}
+
+// Wikitext → readable text. Templates/refs/tables stripped (innermost-first,
+// repeated passes for nesting); links resolved to their display text.
+export function wikitextToText(wikitext) {
+    let text = String(wikitext ?? "");
+    text = text.replace(/<!--[\s\S]*?-->/g, "");                    // HTML comments
+    text = text.replace(/<ref[^>]*\/>/gi, "");                      // self-closing refs
+    text = text.replace(/<ref[\s\S]*?<\/ref>/gi, "");               // ref blocks
+    text = text.replace(/<br\s*\/?>/gi, "\n");                      // line breaks
+    for (let i = 0; i < 20; i++) {                                  // tables {| ... |}
+        const next = text.replace(/\{\|[^{}]*\|\}/g, "");
+        if (next === text) break;
+        text = next;
+    }
+    for (let i = 0; i < 20; i++) {                                  // templates {{ ... }}
+        const next = text.replace(/\{\{[^{}]*\}\}/g, "");
+        if (next === text) break;
+        text = next;
+    }
+    text = text.replace(/\[\[(?:Category|File|Image|wp|w):[^\]]*\]\]/gi, ""); // metadata links
+    text = text.replace(/\[\[(?:[^\[\]|]*\|)?([^\[\]|]*)\]\]/g, "$1");        // [[a|b]] → b
+    text = text.replace(/\[(https?:\/\/[^\s\]]+)\s+([^\]]*)\]/g, "$2");       // [url label] → label
+    text = text.replace(/\[(https?:\/\/[^\s\]]+)\]/g, "$1");                  // [url] → url
+    text = text.replace(/^=+\s*(.*?)\s*=+$/gm, "$1");               // headings → plain lines
+    text = text.replace(/^[*#:]+ */gm, "");                         // list bullets
+    text = text.replace(/'''''([^']*)'''''/g, "$1");                // bold-italic
+    text = text.replace(/'''([^']*)'''/g, "$1");                    // bold
+    text = text.replace(/''([^']*)''/g, "$1");                      // italic
+    text = text.replace(/__(NOTOC|TOC|FORCETOC|NOEDITSECTION)__\b/gi, "");
+    return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+// MediaWiki wikis: fetch clean wikitext through their api.php, via ST's
+// server-side /visit proxy (no CORS, and the API bypasses the Cloudflare
+// wall that blocks page views). Verified: api.php 200, page view 403.
+async function fetchMediaWikiText(url) {
+    const u = new URL(url);
+    const title = getMediaWikiPageTitle(url);
+    const apiUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&prop=wikitext`;
+    console.log(`[${extensionName}] MediaWiki route: ${apiUrl}`);
+
+    const response = await fetch("/api/search/visit", {
+        method: "POST",
+        headers: getContext().getRequestHeaders(),
+        cache: "no-cache",
+        body: JSON.stringify({ url: apiUrl }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const body = await response.text();
+
+    let data;
+    try { data = JSON.parse(body); } catch {
+        console.error(`[${extensionName}] MediaWiki API returned non-JSON (first 300 chars):`, body.slice(0, 300));
+        throw new Error("MediaWiki API returned non-JSON (bot wall?)");
+    }
+    if (data?.error) throw new Error(`MediaWiki: ${data.error.info || data.error.code}`);
+
+    const wikitext = data?.parse?.wikitext?.["*"];
+    if (typeof wikitext !== "string" || !wikitext.trim()) throw new Error("No wikitext in API response");
+
+    const pageTitle = data?.parse?.title || title;
+    const text = wikitextToText(wikitext);
+    console.log(`[${extensionName}] MediaWiki "${pageTitle}": ${wikitext.length} chars wikitext → ${text.length} chars text`);
+    return { text, title: pageTitle, route: "MediaWiki API" };
+}
+
 export async function fetchPageText(url) {
+    if (isMediaWikiUrl(url)) {
+        const result = await fetchMediaWikiText(url);
+        if (!result.text) throw new Error("No readable text found on this page.");
+        return result;
+    }
     const html = await fetchPageHtml(url);
     const text = extractPageText(html);
     console.log(`[${extensionName}] Extracted ${text.length} chars of text. First 300 chars:\n`, text.slice(0, 300));
     if (!text) throw new Error("No readable text found on this page.");
-    return text;
+    return { text, title: null, route: "HTML" };
 }

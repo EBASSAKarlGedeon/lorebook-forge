@@ -85,11 +85,11 @@ async function onReadClick(event) {
 
     btn.prop("disabled", true).text("Loading…");
     try {
-        const text = await fetchPageText(url);
+        const { text, title, route } = await fetchPageText(url);
         const kb = (text.length / 1024).toFixed(1);
-        pageCache.set(url, { text, title: resultEl.find(".lf-result-title").text() });
+        pageCache.set(url, { text, title: title || resultEl.find(".lf-result-title").text() });
         reader.html(`
-            <div class="lf-reader-meta">${kb} KB of text
+            <div class="lf-reader-meta">${kb} KB of text · ${route}
                 <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
             </div>
             <pre class="lf-reader-text">${escapeHtml(text.slice(0, 4000))}</pre>
