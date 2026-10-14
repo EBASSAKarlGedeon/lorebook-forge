@@ -230,7 +230,7 @@ async function fetchMediaWikiText(url) {
     const pageTitle = data?.parse?.title || title;
     const text = wikitextToText(wikitext);
     console.log(`[${extensionName}] MediaWiki "${pageTitle}": ${wikitext.length} chars wikitext → ${text.length} chars text`);
-    return { text, title: pageTitle, route: "MediaWiki API" };
+    return { text, title: pageTitle, raw: wikitext, route: "MediaWiki API" };
 }
 
 export async function fetchPageText(url) {
@@ -243,5 +243,5 @@ export async function fetchPageText(url) {
     const text = extractPageText(html);
     console.log(`[${extensionName}] Extracted ${text.length} chars of text. First 300 chars:\n`, text.slice(0, 300));
     if (!text) throw new Error("No readable text found on this page.");
-    return { text, title: null, route: "HTML" };
+    return { text, title: null, raw: text, route: "HTML" };
 }

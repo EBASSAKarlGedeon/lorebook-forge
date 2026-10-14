@@ -87,7 +87,7 @@ async function onReadClick(event) {
 
     btn.prop("disabled", true).text("Loading…");
     try {
-        const { text, title, route } = await fetchPageText(url);
+        const { text, title, raw, route } = await fetchPageText(url);
         const kb = (text.length / 1024).toFixed(1);
         pageCache.set(url, { text, title: title || resultEl.find(".lf-result-title").text(), raw: raw || text, route });
         reader.html(`
