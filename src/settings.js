@@ -1,6 +1,7 @@
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { defaultSettings, extensionName } from "./config.js";
+import { testSearxngConnection } from "./searchData.js";
 
 export function getSettings() {
     if (!extension_settings[extensionName]) {
@@ -20,6 +21,9 @@ export function initSettings() {
                    value="${settings.searxngUrl}" />
             <div class="lf-settings-hint">Your self-hosted SearXNG instance (Docker). Used by web research. Default: http://localhost:8888</div>
         </div>
+        <div class="lf-settings-block">
+            <button id="lf_test_connection" class="menu_button" type="button">Test SearXNG connection</button>
+        </div>
     `;
     $(".lorebook-forge-settings .inline-drawer-content").append(html);
 
@@ -27,5 +31,20 @@ export function initSettings() {
         settings.searxngUrl = String($(this).val()).trim();
         saveSettingsDebounced();
         console.debug(`[${extensionName}] searxngUrl = "${settings.searxngUrl}"`);
+    });
+
+    $("#lf_test_connection").on("click", async function () {
+        const btn = $(this);
+        btn.prop("disabled", true);
+        try {
+            const html = await testSearxngConnection(getSettings().searxngUrl);
+            const kb = (html.length / 1024).toFixed(1);
+            toastr.success(`SearXNG responded — ${kb} KB of results HTML. Raw dump in console (F12).`, "Lorebook Forge");
+        } catch (err) {
+            console.error(`[${extensionName}] Connection test failed:`, err);
+            toastr.error(`Connection failed: ${err.message}. Is the Docker container running?`, "Lorebook Forge");
+        } finally {
+            btn.prop("disabled", false);
+        }
     });
 }
