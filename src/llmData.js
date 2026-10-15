@@ -4,6 +4,22 @@
 import { getContext } from "../../../../extensions.js";
 import { extensionName } from "./config.js";
 
+// Preset-free LLM call. generateRaw (verified in st-context.js; used by
+// ST's own Summarize/Expressions extensions) sends ONLY our system prompt
+// + prompt — no active chat preset, no jailbreak, no persona, no history.
+// Falls back to generateQuietPrompt on older builds (preset may leak there).
+async function callLLM({ systemPrompt, prompt, responseLength }) {
+    const ctx = getContext();
+    if (typeof ctx.generateRaw === "function") {
+        return ctx.generateRaw({ prompt, systemPrompt, responseLength });
+    }
+    console.warn(`[${extensionName}] generateRaw unavailable — falling back to generateQuietPrompt (the active preset may leak into the reply)`);
+    if (typeof ctx.generateQuietPrompt !== "function") {
+        throw new Error("No LLM generation API available in this ST version");
+    }
+    return ctx.generateQuietPrompt({ quietPrompt: prompt, systemPrompt, responseLength });
+}
+
 const DISTILL_RESPONSE_TOKENS = 4000; // ~6 entries x 200 words, JSON overhead
 
 const DISTILL_SYSTEM_PROMPT = `You are a lorebook editor for SillyTavern roleplay. You convert raw source material (wiki articles, web pages) into World Info lorebook entries.
@@ -73,8 +89,8 @@ Convert the source material into lorebook entries now. Strict JSON array only.`;
     console.log(`[${extensionName}] Distilling ${sources.length} source(s), ${quietPrompt.length} chars of material → LLM (${DISTILL_RESPONSE_TOKENS} token budget)`);
     const t0 = Date.now();
 
-    let reply = await ctx.generateQuietPrompt({
-        quietPrompt,
+    let reply = await callLLM({
+        prompt: quietPrompt,
         systemPrompt: DISTILL_SYSTEM_PROMPT,
         responseLength: DISTILL_RESPONSE_TOKENS,
     });
@@ -140,11 +156,6 @@ function buildSourceMaterial(sources) {
  * @returns {Promise<string>} assistant reply (reasoning already stripped)
  */
 export async function wizardChat({ canonRules, sources, history, message }) {
-    const ctx = getContext();
-    if (typeof ctx.generateQuietPrompt !== "function") {
-        throw new Error("generateQuietPrompt not available in this ST version");
-    }
-
     const canon = String(canonRules ?? "").trim();
     const systemPrompt = `${WIZARD_CHAT_SYSTEM}
 
@@ -163,8 +174,8 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer f
     console.log(`[${extensionName}] Wizard chat call: system ${systemPrompt.length} chars, prompt ${quietPrompt.length} chars, ${sources.length} source(s)`);
     const t0 = Date.now();
 
-    let reply = await ctx.generateQuietPrompt({
-        quietPrompt,
+    let reply = await callLLM({
+        prompt: quietPrompt,
         systemPrompt,
         responseLength: WIZARD_CHAT_TOKENS,
     });
