@@ -2,7 +2,7 @@
 // Moved out of the drawer (settings.js) — the drawer is now just a launcher.
 import { extensionName } from "./config.js";
 import { escapeHtml, suggestKeys } from "./helpers.js";
-import { searchSearxng, fetchPageText } from "./searchData.js";
+import { searchSearxng, fetchPageText, collectWikiLinks } from "./searchData.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
 import { getSettings } from "./settings.js";
 
@@ -85,37 +85,66 @@ function showDraftForm(readerEl, url) {
     });
 }
 
+// Loads any URL into the Reader pane — from a search result or a wiki-link chip.
+// resultEl is optional (the search result to highlight; wiki-link clicks pass none).
+async function loadIntoReader(url, resultEl = null) {
+    if (resultEl) {
+        $("#lf_search_results .lf-result").removeClass("active");
+        resultEl.addClass("active");
+    }
+
+    const { text, title, raw, route, html } = await fetchPageText(url);
+    const kb = (text.length / 1024).toFixed(1);
+    pageCache.set(url, { text, title, raw, html });
+
+    // Stage 18: links from the rendered HTML (MediaWiki route only —
+    // plain HTML reads return no `html` and simply skip the strip).
+    const links = html ? collectWikiLinks(html, url) : [];
+
+    const reader = $("#lf_reader");
+    reader.html(`
+        <div class="lf-reader-content">
+            <div class="lf-reader-meta">${kb} KB · ${escapeHtml(route)}
+                <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
+                <button class="menu_button lf-reader-close" type="button" title="Reset the Reader tab">✕</button>
+            </div>
+            <pre class="lf-reader-text">${escapeHtml(text)}</pre>
+            ${links.length ? `
+            <div class="lf-reader-links">
+                <div class="lf-reader-links-label">Wiki links on this page (${links.length})</div>
+                <div class="lf-reader-links-scroll">
+                    ${links.map(l => `<button class="menu_button lf-reader-link" type="button"
+                        data-url="${escapeHtml(l.url)}" title="${escapeHtml(l.url)}">${escapeHtml(l.label)}</button>`).join("")}
+                </div>
+            </div>` : ""}
+            <div class="lf-draft-form" style="display:none;"></div>
+        </div>
+    `);
+    reader.find(".lf-draft-btn").on("click", () => showDraftForm(reader, url));
+    reader.find(".lf-reader-close").on("click", closeReader);
+    reader.find(".lf-reader-link").on("click", function () {
+        const btn = $(this);
+        const linkUrl = String(btn.data("url"));
+        setStatus(`Reading "${btn.text()}"…`);
+        loadIntoReader(linkUrl).catch(err => {
+            console.error(`[${extensionName}] Wiki-link read failed:`, err);
+            toastr.error(`Could not read "${btn.text()}": ${err.message}`, "Lorebook Forge");
+            setStatus(`Read failed: ${err.message}`);
+        });
+    });
+
+    // Ask the Studio shell to make sure the Reader pane is visible
+    document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-reader"));
+    setStatus(`Read "${title}" — ${kb} KB via ${route} · ${links.length} wiki link(s)`);
+}
+
 async function onReadClick(event) {
     const btn = $(event.currentTarget);
     const resultEl = btn.closest(".lf-result");
     const url = resultEl.data("url");
-
     btn.prop("disabled", true).text("Loading…");
     try {
-        const { text, title, raw, route } = await fetchPageText(url);
-        const kb = (text.length / 1024).toFixed(1);
-        pageCache.set(url, { text, title, raw });
-
-        // Highlight the result currently loaded in the reader
-        $("#lf_search_results .lf-result").removeClass("active");
-        resultEl.addClass("active");
-
-        const reader = $("#lf_reader");
-        reader.html(`
-            <div class="lf-reader-content">
-                <div class="lf-reader-meta">${kb} KB · ${escapeHtml(route)}
-                    <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
-                    <button class="menu_button lf-reader-close" type="button" title="Reset the Reader tab">✕</button>
-                </div>
-                <pre class="lf-reader-text">${escapeHtml(text)}</pre>
-                <div class="lf-draft-form" style="display:none;"></div>
-            </div>
-        `);
-        reader.find(".lf-draft-btn").on("click", () => showDraftForm(reader, url));
-        reader.find(".lf-reader-close").on("click", closeReader);
-        // Ask the Studio shell to swap the center pane: Wizard → Reader
-        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-reader"));
-        setStatus(`Read "${title}" — ${kb} KB via ${route}`);
+        await loadIntoReader(url, resultEl);
     } catch (err) {
         console.error(`[${extensionName}] Page read failed:`, err);
         toastr.error(`Could not read page: ${err.message}`, "Lorebook Forge");

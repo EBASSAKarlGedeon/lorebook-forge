@@ -1479,3 +1479,33 @@
 #lf_studio_root .lf-reader-meta .lf-reader-close {
     margin-left: auto;
 }
+
+/* ============ Stage 18: wiki links strip in the Reader ============ */
+#lf_studio_root .lf-reader-links {
+    flex-shrink: 0;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#lf_studio_root .lf-reader-links-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-reader-links-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+#lf_studio_root .lf-reader-link {
+    padding: 2px 10px;
+    font-size: 0.78rem;
+}

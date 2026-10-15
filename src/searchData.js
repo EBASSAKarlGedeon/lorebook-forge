@@ -265,6 +265,38 @@ function renderedMediaWikiToText(html) {
         .trim();
 }
 
+// ---------- Stage 18: wiki link discovery ----------
+// Harvest internal /wiki/ links from the MediaWiki rendered HTML. Same noise
+// pruning as the text route (navboxes/refs/toc would flood the list).
+// URL shape verified against a real api.php sample:
+// <a href="/wiki/Page_title" ...> inside .mw-parser-output.
+const WIKI_LINK_SKIP_PREFIXES = /^(File|Image|Special|Template|Help|User|Talk|MediaWiki|Draft|Project|Forum):/i;
+
+export function collectWikiLinks(html, originUrl) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll(MEDIAWIKI_NOISE_SELECTORS.join(", ")).forEach(el => el.remove());
+    const origin = new URL(originUrl);
+    const seen = new Map();
+    for (const a of doc.querySelectorAll("a[href^='/wiki/']")) {
+        const href = a.getAttribute("href") || "";
+        if (/[?&](action|oldid|redlink|diff|veaction)=/i.test(href)) continue;
+        try {
+            const u = new URL(href, origin);
+            const m = u.pathname.match(/^\/wiki\/([^?#]+)/);
+            if (!m) continue;
+            const pageTitle = decodeURIComponent(m[1]).replace(/_/g, " ");
+            if (WIKI_LINK_SKIP_PREFIXES.test(pageTitle)) continue;
+            if (decodeURIComponent(u.pathname) === decodeURIComponent(origin.pathname)) continue; // self-link
+            const url = `${u.origin}/wiki/${m[1]}`;
+            const label = String(a.textContent || "").replace(/\s+/g, " ").trim() || pageTitle;
+            if (!seen.has(url)) seen.set(url, { label: label.slice(0, 80), title: pageTitle, url });
+        } catch { /* bad href — skip */ }
+    }
+    const links = [...seen.values()];
+    console.log(`[${extensionName}] collectWikiLinks: ${links.length} unique internal link(s) from "${originUrl}"`, links.slice(0, 8));
+    return links;
+}
+
 // Legacy fallback: entity-decoding patch for the wikitext cleaner, so
 // &mdash; / &#8212; / &nbsp; don't leak into drafts if this path is ever hit.
 function decodeHtmlEntities(text) {
@@ -302,7 +334,7 @@ async function fetchMediaWikiText(url) {
                 if (!text) throw new Error("Rendered text came back empty");
                 console.log(`[${extensionName}] MediaWiki rendered "${data.parse.title || title}": ` +
                     `${renderedHtml.length} chars HTML → ${text.length} chars text. First 300:\n`, text.slice(0, 300));
-                return { text, title: data.parse.title || title, raw: text, route: "MediaWiki (rendered)" };
+                return { text, title: data.parse.title || title, raw: text, route: "MediaWiki (rendered)", html: renderedHtml };
             }
         }
         // fall through to legacy route
