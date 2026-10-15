@@ -57,12 +57,46 @@ function renderProposals() {
     const w = getWizardSession();
     const el = $("#lf_wizard_proposals");
     if (!el.length) return;
+
+    // Preserve the carousel position across re-renders (accept/reject)
+    const prevTrack = el.find(".lf-carousel-track")[0];
+    const prevScroll = prevTrack ? prevTrack.scrollLeft : 0;
+
     if (!w.proposals.length) {
-        el.html("").hide();
+        el.addClass("lf-hidden").empty();
         return;
     }
+    el.removeClass("lf-hidden");
     const texts = w.sources.map(s => s.text);
-    el.show().html(w.proposals.map(p => proposalCardHtml(p, verifyQuote(p.quote, texts))).join(""));
+    el.html(`
+        <div class="lf-carousel-bar">
+            <b>Proposals</b>
+            <span class="lf-carousel-count"></span>
+            <button class="menu_button lf-carousel-prev" type="button" title="Previous">◀</button>
+            <button class="menu_button lf-carousel-next" type="button" title="Next">▶</button>
+        </div>
+        <div class="lf-carousel-track">
+            ${w.proposals.map(p => proposalCardHtml(p, verifyQuote(p.quote, texts))).join("")}
+        </div>
+    `);
+
+    const track = el.find(".lf-carousel-track")[0];
+    const count = el.find(".lf-carousel-count");
+    const step = () => {
+        const card = el.find(".lf-proposal").first()[0];
+        return card ? card.offsetWidth + 10 : 350; // card width + gap
+    };
+    const updateCount = () => {
+        const n = w.proposals.length;
+        const i = Math.min(n, Math.round(track.scrollLeft / step()) + 1);
+        count.text(`${i} / ${n}`);
+    };
+    el.find(".lf-carousel-track").on("scroll", () => requestAnimationFrame(updateCount));
+    el.find(".lf-carousel-prev").on("click", () => track.scrollBy({ left: -step(), behavior: "smooth" }));
+    el.find(".lf-carousel-next").on("click", () => track.scrollBy({ left: step(), behavior: "smooth" }));
+    updateCount();
+    track.scrollLeft = prevScroll; // stay where the user was
+
     el.find(".lf-proposal-accept").on("click", function () {
         const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
         if (!p) return;
@@ -166,6 +200,8 @@ async function onExtract() {
             `⚡ Proposed ${proposals.length} entr${proposals.length === 1 ? "y" : "ies"} — ` +
             `${counts.verified} verified ✅, ${counts.fuzzy} near-match ⚠️, ${counts.missing} unverified ❌. Review the cards below.`);
         renderChat();
+        const trackEl = document.querySelector("#lf_wizard_proposals .lf-carousel-track");
+        if (trackEl) trackEl.scrollTo({ left: trackEl.scrollWidth }); // newest cards are appended at the end
         setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`);
     } catch (err) {
         console.error(`[${extensionName}] Extraction failed:`, err);

@@ -1208,3 +1208,72 @@
 #lf_studio_root .lf-proposal-statusline { color: var(--lfs-text-dim); }
 
 #lf_studio_root .lf-wizard-extract { flex-shrink: 0; }
+
+/* ============ Stage 14.1: proposals as a horizontal carousel ============ */
+/* Overrides the Stage 14 vertical-list rules (equal specificity, later wins) */
+#lf_studio_root .lf-wizard-proposals {
+    display: flex;
+    flex-direction: column;
+    height: 46%;
+    min-height: 230px;
+    max-height: none;
+    overflow: visible;
+    padding: 0 16px 10px;
+}
+
+#lf_studio_root .lf-carousel-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+#lf_studio_root .lf-carousel-count {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-carousel-bar .menu_button { padding: 2px 10px; font-size: 0.8rem; }
+
+#lf_studio_root .lf-carousel-track {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    padding: 2px 2px 8px;
+}
+
+#lf_studio_root .lf-carousel-track::-webkit-scrollbar { height: 8px; }
+
+/* Card: fixed width, internal vertical scrolling for long content */
+#lf_studio_root .lf-proposal {
+    flex: 0 0 340px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    scroll-snap-align: start;
+}
+
+#lf_studio_root .lf-proposal-head,
+#lf_studio_root .lf-proposal .lf-draft-keys { flex-shrink: 0; }
+
+#lf_studio_root .lf-proposal-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+#lf_studio_root .lf-proposal-quote {
+    flex-shrink: 0;
+    max-height: 96px;
+    overflow-y: auto;
+}
+
+#lf_studio_root .lf-proposal-actions,
+#lf_studio_root .lf-proposal-statusline { flex-shrink: 0; }
