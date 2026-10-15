@@ -184,3 +184,56 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer f
     console.log(`[${extensionName}] Wizard replied in ${((Date.now() - t0) / 1000).toFixed(1)}s, ${reply.length} chars`);
     return reply;
 }
+
+// ---------- Wizard extraction (Stage 14) ----------
+
+const EXTRACT_RESPONSE_TOKENS = 4000;
+
+const WIZARD_EXTRACT_SYSTEM = `You are the extraction engine of the Lorebook Wizard. You convert SOURCE MATERIAL into World Info lorebook entry proposals.
+
+Rules:
+- Propose entries only for lore actually present in the sources.
+- Every entry MUST include a "quote" field: a VERBATIM passage copied character-for-character from the source material (at least 15 words) that directly supports the entry's content.
+- If you cannot find a verbatim supporting passage, do NOT propose an entry for it. No quote, no entry.
+- Keys = exact trigger terms (names, aliases, titles), short.
+- Content = compact factual lore for an AI to use as roleplay context. No meta commentary, no addressing the reader.
+- Prefer several focused entries over one giant entry. Typically 3-8 entries per extraction.
+- CANON RULES override the sources on conflict.
+- If an EXTRACTION FOCUS is given, propose only entries within that scope.
+
+Output STRICT JSON only — no markdown fences, no commentary before or after. Schema:
+[{"title": "Entry Title", "keys": ["key1"], "content": "Lore text...", "quote": "verbatim text copied from the sources"}]`;
+
+/**
+ * Extract entry proposals from the session's sources.
+ * @param {{canonRules: string, sources: Array, focus?: string}} args
+ * @returns {Promise<{title, keys, content, quote}[]>}
+ */
+export async function wizardExtract({ canonRules, sources, focus }) {
+    const canon = String(canonRules ?? "").trim();
+    const systemPrompt = `${WIZARD_EXTRACT_SYSTEM}
+
+CANON RULES (user-defined, override sources):
+${canon || "(none set)"}
+
+SOURCE MATERIAL:
+${sources.length ? buildSourceMaterial(sources) : "(none pasted — return an empty [])"}`;
+
+    const prompt = `${focus ? `EXTRACTION FOCUS:\n${focus}\n\n` : ""}Propose lorebook entries from the source material now. Strict JSON array only.`;
+
+    console.log(`[${extensionName}] Extraction call: ${sources.length} source(s), focus: "${focus || "(all)"}"`);
+    const t0 = Date.now();
+
+    const reply = await callLLM({ prompt, systemPrompt, responseLength: EXTRACT_RESPONSE_TOKENS });
+    const clean = await stripReasoning(reply);
+    console.log(`[${extensionName}] Extraction replied in ${((Date.now() - t0) / 1000).toFixed(1)}s, ${clean.length} chars`);
+
+    const parsed = extractJsonArray(clean);
+    if (!parsed) {
+        console.error(`[${extensionName}] Extraction JSON parse failed. First 500 chars:\n`, clean.slice(0, 500));
+        throw new Error("Extraction reply was not valid JSON — check console for the raw reply");
+    }
+    const items = (Array.isArray(parsed) ? parsed : [parsed]);
+    console.log(`[${extensionName}] Parsed ${items.length} proposal(s), ${items.filter(i => i?.quote).length} with quotes`);
+    return items;
+}

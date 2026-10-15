@@ -1,11 +1,13 @@
 // Lorebook Wizard (center pane): conversational lorebook builder.
-// Stage 13: chat round-trip via generateQuietPrompt. Canon rules +
-// pasted sources ride in the system prompt; history in the user prompt.
+// Stage 14: extraction protocol — [⚡ Extract] proposes entry cards with
+// mandatory evidence quotes, auto-verified against the pasted sources.
 import { extensionName } from "./config.js";
-import { escapeHtml } from "./helpers.js";
+import { escapeHtml, verifyQuote } from "./helpers.js";
 import { getWizardSession, setCanonRules, addSource, deleteSource,
-         pushWizardMessage, clearWizardMessages } from "./wizardData.js";
-import { wizardChat } from "./llmData.js";
+         pushWizardMessage, clearWizardMessages,
+         addWizardProposals, updateWizardProposal } from "./wizardData.js";
+import { wizardChat, wizardExtract } from "./llmData.js";
+import { saveDraft, renderDraftsList } from "./drafts.js";
 
 let drawerOpen = null; // tri-state: null = decide from source count on first render
 
@@ -19,6 +21,72 @@ function messageHtml(m) {
     return `<div class="lf-msg ${m.role}"><div class="lf-msg-bubble">${escapeHtml(m.text)}</div></div>`;
 }
 
+const VERDICTS = {
+    verified: { icon: "✅", label: "Verified in sources", cls: "verified" },
+    fuzzy:    { icon: "⚠️", label: "Near-match — check it", cls: "fuzzy" },
+    missing:  { icon: "❌", label: "NOT found in sources", cls: "missing" },
+};
+
+function proposalCardHtml(p, verdict) {
+    const v = VERDICTS[verdict];
+    const statusHtml = p.status === "pending"
+        ? `
+        <div class="lf-proposal-actions">
+            <button class="menu_button lf-proposal-accept" type="button">Accept → Drafts</button>
+            <button class="menu_button lf-proposal-reject" type="button">Reject</button>
+        </div>`
+        : `<div class="lf-proposal-statusline lf-proposal-${p.status}">${p.status === "accepted" ? "✓ Accepted — in Drafts" : "✕ Rejected"}</div>`;
+    return `
+        <div class="lf-proposal lf-proposal-${p.status}" data-id="${escapeHtml(p.id)}">
+            <div class="lf-proposal-head">
+                <div class="lf-proposal-title">${escapeHtml(p.title)}</div>
+                <span class="lf-proposal-verdict ${v.cls}" title="${v.label}">${v.icon}</span>
+            </div>
+            ${p.keys.length ? `<div class="lf-draft-keys">${p.keys.map(k => `<span>${escapeHtml(k)}</span>`).join("")}</div>` : ""}
+            <div class="lf-proposal-content">${escapeHtml(p.content)}</div>
+            <div class="lf-proposal-quote">
+                <span class="lf-proposal-quote-label">Evidence</span>
+                ${p.quote ? escapeHtml(p.quote) : "<i>(no quote provided — flagged by design)</i>"}
+            </div>
+            ${statusHtml}
+        </div>
+    `;
+}
+
+function renderProposals() {
+    const w = getWizardSession();
+    const el = $("#lf_wizard_proposals");
+    if (!el.length) return;
+    if (!w.proposals.length) {
+        el.html("").hide();
+        return;
+    }
+    const texts = w.sources.map(s => s.text);
+    el.show().html(w.proposals.map(p => proposalCardHtml(p, verifyQuote(p.quote, texts))).join(""));
+    el.find(".lf-proposal-accept").on("click", function () {
+        const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
+        if (!p) return;
+        saveDraft({
+            title: p.title,
+            keys: p.keys.length ? p.keys : [p.title],
+            content: p.content,
+            sourceUrl: "",
+            sourceTitle: "Wizard extraction · " + (p.quote ? "quote verified check card" : "no quote"),
+            sourceRaw: p.quote,
+            origin: "ai",
+        });
+        updateWizardProposal(p.id, "accepted");
+        renderDraftsList();
+        renderProposals();
+        toastr.success(`"${p.title}" accepted — see the Drafts panel.`, "Lorebook Forge");
+    });
+    el.find(".lf-proposal-reject").on("click", function () {
+        const id = $(this).closest(".lf-proposal").data("id");
+        updateWizardProposal(id, "rejected");
+        renderProposals();
+    });
+}
+
 function renderChat() {
     const chatEl = $("#lf_wizard_chat");
     const w = getWizardSession();
@@ -27,14 +95,15 @@ function renderChat() {
             <div class="lf-wizard-chat-empty">
                 <div class="lf-reader-empty-icon">✨</div>
                 <h3>Lorebook Wizard</h3>
-                <p>Paste sources below, set your canon rules, then talk to me.<br>
-                e.g. "What factions appear in these sources?" or "Propose entries for the magic system."</p>
+                <p>Paste sources below, set your canon rules, then talk to me —<br>
+                or hit <b>⚡ Extract</b> to propose entries with verified evidence quotes.</p>
             </div>
         `);
-        return;
+    } else {
+        chatEl.html(w.messages.map(messageHtml).join(""));
     }
-    chatEl.html(w.messages.map(messageHtml).join(""));
     chatEl.scrollTop(chatEl[0].scrollHeight);
+    renderProposals();
 }
 
 async function onSend() {
@@ -69,7 +138,42 @@ async function onSend() {
         input.val(text); // don't lose what the user typed
     } finally {
         input.prop("disabled", false).trigger("focus");
-        btn.prop("disabled", false).text("Send");
+        btn.prop("enabled", true).text("Send");
+    }
+}
+
+async function onExtract() {
+    const input = $("#lf_wizard_input");
+    const btn = $("#lf_wizard_extract");
+    const w = getWizardSession();
+    if (!w.sources.length) {
+        toastr.warning("Paste at least one source first — extraction works from sources only.", "Lorebook Forge");
+        return;
+    }
+    const focus = String(input.val()).trim(); // optional: use the input box as the focus
+    input.val("");
+    btn.prop("disabled", true).text("…");
+    setStatus(`Extracting entries from ${w.sources.length} source(s)${focus ? ` — focus: "${focus}"` : ""}…`);
+
+    try {
+        const items = await wizardExtract({ canonRules: w.canonRules, sources: w.sources, focus });
+        const proposals = addWizardProposals(items);
+        if (focus) pushWizardMessage("user", focus); // keep a conversational trace of the focus
+        const texts = w.sources.map(s => s.text);
+        const counts = { verified: 0, fuzzy: 0, missing: 0 };
+        for (const p of proposals) counts[verifyQuote(p.quote, texts)]++;
+        pushWizardMessage("assistant",
+            `⚡ Proposed ${proposals.length} entr${proposals.length === 1 ? "y" : "ies"} — ` +
+            `${counts.verified} verified ✅, ${counts.fuzzy} near-match ⚠️, ${counts.missing} unverified ❌. Review the cards below.`);
+        renderChat();
+        setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`);
+    } catch (err) {
+        console.error(`[${extensionName}] Extraction failed:`, err);
+        toastr.error(`Extraction failed: ${err.message}`, "Lorebook Forge");
+        setStatus(`Extraction failed: ${err.message}`);
+        if (focus) input.val(focus);
+    } finally {
+        btn.prop("disabled", false).html("&#9889; Extract");
     }
 }
 
@@ -92,8 +196,15 @@ function sourceCardHtml(s) {
 function renderHeaderMeta() {
     const w = getWizardSession();
     const totalChars = w.sources.reduce((n, s) => n + s.text.length, 0);
-    $("#lf_wizard_meta").text(`${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${(totalChars / 1024).toFixed(1)} KB`);
-    $("#lf_wizard_drawer_count").text(`${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${(totalChars / 1024).toFixed(1)} KB`);
+    $("#lf_wizard_meta, #lf_wizard_drawer_count").text(`${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${(totalChars / 1024).toFixed(1)} KB`);
+}
+
+// drafts.js asks us to add a source via this event (avoids drafts↔wizard cycle)
+function onDraftToWizard(e) {
+    const src = addSource(e.originalEvent?.detail ?? e.detail);
+    console.log(`[${extensionName}] Source added from draft: "${src.title}" (${src.text.length} chars)`);
+    toastr.success(`"${src.title}" is now a Wizard source.`, "Lorebook Forge");
+    renderWizard();
 }
 
 // ---------- Root render ----------
@@ -109,13 +220,15 @@ export function renderWizard() {
             <span class="lf-wizard-logo">✨</span>
             <span class="lf-wizard-name">Lorebook Wizard</span>
             <span id="lf_wizard_meta" class="lf-wizard-meta"></span>
-            <button class="menu_button lf-wizard-clear" type="button" title="Delete the whole conversation">Clear chat</button>
+            <button class="menu_button lf-wizard-clear" type="button" title="Delete the conversation AND proposals">Clear chat</button>
         </div>
         <div id="lf_wizard_chat" class="lf-wizard-chat"></div>
+        <div id="lf_wizard_proposals" class="lf-wizard-proposals"></div>
         <div class="lf-wizard-input">
             <textarea id="lf_wizard_input" class="text_pole" rows="2"
-                      placeholder="Talk to the wizard… (Enter to send, Shift+Enter for a new line)"></textarea>
+                      placeholder="Talk to the wizard… or type an extraction focus and hit ⚡ (Enter = send, Shift+Enter = newline)"></textarea>
             <button id="lf_wizard_send" class="menu_button lf-wizard-send" type="button">Send</button>
+            <button id="lf_wizard_extract" class="menu_button lf-wizard-extract" type="button" title="Propose entries from your sources, with verified evidence quotes">&#9889; Extract</button>
         </div>
         <div id="lf_wizard_drawer_bar" class="lf-wizard-sourcesbar">
             <span class="fa-solid fa-circle-chevron-down inline-drawer-icon ${drawerOpen ? "" : "up"}"></span>
@@ -149,8 +262,9 @@ export function renderWizard() {
     renderChat();
     renderHeaderMeta();
 
-    // Chat
+    // Chat + extraction
     $("#lf_wizard_send").on("click", onSend);
+    $("#lf_wizard_extract").on("click", onExtract);
     $("#lf_wizard_input").on("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -160,8 +274,9 @@ export function renderWizard() {
 
     // Clear chat (destructive — confirm first)
     root.find(".lf-wizard-clear").on("click", function () {
-        if (!getWizardSession().messages.length) return;
-        if (!window.confirm("Delete the whole wizard conversation? Sources and canon rules stay.")) return;
+        const w = getWizardSession();
+        if (!w.messages.length && !w.proposals.length) return;
+        if (!window.confirm("Delete the wizard conversation AND all pending proposals? Sources and canon rules stay. Accepted drafts are already saved.")) return;
         clearWizardMessages();
         renderChat();
         setStatus("Wizard chat cleared");
@@ -201,6 +316,9 @@ export function renderWizard() {
 
 export function initWizard() {
     drawerOpen = null; // re-decide collapse state on each Studio open
+    // Same function reference → addEventListener dedupes across Studio reopens
+    document.removeEventListener("lf-wizard-add-source", onDraftToWizard);
+    document.addEventListener("lf-wizard-add-source", onDraftToWizard);
     renderWizard();
-    console.log(`[${extensionName}] Wizard initialized (${getWizardSession().sources.length} sources, ${getWizardSession().messages.length} messages)`);
+    console.log(`[${extensionName}] Wizard initialized (${getWizardSession().sources.length} sources, ${getWizardSession().messages.length} messages, ${getWizardSession().proposals.length} proposals)`);
 }

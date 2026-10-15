@@ -1097,3 +1097,114 @@
     padding: 3px 8px;
     font-size: 0.78rem;
 }
+
+/* ============ Stage 14: extraction proposals ============ */
+#lf_studio_root .lf-wizard-proposals {
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+    display: none; /* shown by renderProposals when proposals exist */
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px 10px;
+}
+
+#lf_studio_root .lf-proposal {
+    padding: 10px 12px;
+    border: 1px solid var(--lfs-border);
+    border-left: 3px solid var(--lfs-accent);
+    border-radius: 10px;
+    background: var(--lfs-card);
+}
+
+#lf_studio_root .lf-proposal-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-proposal-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-proposal-verdict {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+#lf_studio_root .lf-proposal-verdict.verified {
+    color: #51cf66;
+    background: rgba(81, 207, 102, 0.12);
+    border: 1px solid rgba(81, 207, 102, 0.4);
+}
+
+#lf_studio_root .lf-proposal-verdict.fuzzy {
+    color: #ffd43b;
+    background: rgba(255, 212, 59, 0.10);
+    border: 1px solid rgba(255, 212, 59, 0.4);
+}
+
+#lf_studio_root .lf-proposal-verdict.missing {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.12);
+    border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+#lf_studio_root .lf-proposal-content {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-proposal-quote {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.75rem;
+    opacity: 0.75;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-proposal-quote-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.8;
+    margin-bottom: 2px;
+}
+
+#lf_studio_root .lf-proposal-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#lf_studio_root .lf-proposal-actions .menu_button { padding: 3px 10px; font-size: 0.78rem; }
+
+#lf_studio_root .lf-proposal-accepted,
+#lf_studio_root .lf-proposal-rejected { opacity: 0.5; }
+
+#lf_studio_root .lf-proposal-statusline {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+#lf_studio_root .lf-proposal-statusline { color: var(--lfs-text-dim); }
+
+#lf_studio_root .lf-wizard-extract { flex-shrink: 0; }

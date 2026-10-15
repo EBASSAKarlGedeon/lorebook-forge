@@ -22,3 +22,30 @@ export function suggestKeys(title) {
         .filter(w => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()))
         .slice(0, 4);
 }
+
+// ---------- Wizard evidence-quote verification (Stage 14) ----------
+
+//比对 normalization: lowercase + strip all whitespace/punctuation.
+// Exact inclusion of the raw quote wins outright; normalized inclusion
+// = "fuzzy" (paraphrase-level); anything else = "missing".
+const QUOTE_STRIP = /[\s\p{P}]+/gu;
+
+function normalizeForQuoteCompare(text) {
+    return String(text ?? "").toLowerCase().replace(QUOTE_STRIP, "");
+}
+
+/**
+ * Verify an evidence quote against pasted source texts.
+ * @param {string} quote Verbatim quote claimed by the LLM
+ * @param {string[]} sourceTexts Pasted source texts
+ * @returns {"verified"|"fuzzy"|"missing"}
+ */
+export function verifyQuote(quote, sourceTexts) {
+    const q = String(quote ?? "").trim();
+    if (normalizeForQuoteCompare(q).length < 10) return "missing"; // too short to prove anything
+    const joined = (sourceTexts || []).join("\n");
+    if (joined.includes(q)) return "verified";
+    const nq = normalizeForQuoteCompare(q);
+    const nj = normalizeForQuoteCompare(joined);
+    return nj.includes(nq) ? "fuzzy" : "missing";
+}

@@ -6,8 +6,6 @@ import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
 import { escapeHtml } from "./helpers.js";
 import { listLorebooks, commitDraftToLorebook } from "./wiData.js";
-import { addSource } from "./wizardData.js";
-import { renderWizard } from "./wizard.js";
 
 export function getDrafts() {
     const s = extension_settings[extensionName];
@@ -141,17 +139,15 @@ export function renderDraftsList() {
         deleteDraft($(this).closest(".lf-draft").data("id"));
         renderDraftsList();
     });
+    // Decoupled from wizard.js via a DOM event (avoids drafts↔wizard cycle)
     container.find(".lf-draft-towizard").on("click", function () {
         const id = $(this).closest(".lf-draft").data("id");
         const draft = getDrafts().find(d => d.id === id);
         if (!draft) return;
-        const src = addSource({
-            title: `Draft: ${draft.title}`,
-            text: draft.content,
-        });
-        console.log(`[${extensionName}] Draft "${draft.title}" sent to Wizard (${src.text.length} chars)`);
-        toastr.success(`"${draft.title}" is now a Wizard source — ask the wizard about it.`, "Lorebook Forge");
-        renderWizard(); // refresh source list + counts (chat history untouched)
+        document.dispatchEvent(new CustomEvent("lf-wizard-add-source", {
+            detail: { title: `Draft: ${draft.title}`, text: draft.content },
+        }));
+        console.log(`[${extensionName}] Draft "${draft.title}" sent to Wizard`);
     });
     container.find(".lf-draft-commit").on("click", function () {
         const id = $(this).closest(".lf-draft").data("id");

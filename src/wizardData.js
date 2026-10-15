@@ -12,6 +12,7 @@ export function getWizardSession() {
     if (typeof s.wizard.canonRules !== "string") s.wizard.canonRules = "";
     if (!Array.isArray(s.wizard.sources)) s.wizard.sources = [];
     if (!Array.isArray(s.wizard.messages)) s.wizard.messages = [];
+    if (!Array.isArray(s.wizard.proposals)) s.wizard.proposals = [];
     return s.wizard;
 }
 
@@ -61,5 +62,36 @@ export function pushWizardMessage(role, text) {
 export function clearWizardMessages() {
     const w = getWizardSession();
     w.messages = [];
+    w.proposals = [];
     saveSettingsDebounced();
+}
+
+// ---------- Entry proposals (Stage 14) ----------
+
+export function addWizardProposals(items) {
+    const w = getWizardSession();
+    const proposals = (items || [])
+        .filter(e => String(e?.content ?? "").trim())
+        .map(e => ({
+            id: crypto.randomUUID(),
+            title: String(e?.title || "Untitled").trim(),
+            keys: Array.isArray(e?.keys) ? e.keys.map(k => String(k).trim()).filter(Boolean) : [],
+            content: String(e?.content ?? "").trim(),
+            quote: String(e?.quote ?? "").trim(),
+            status: "pending", // pending | accepted | rejected
+            createdAt: Date.now(),
+        }));
+    w.proposals.push(...proposals); // chronological — rendered in order
+    saveSettingsDebounced();
+    return proposals;
+}
+
+export function updateWizardProposal(id, status) {
+    const w = getWizardSession();
+    const p = w.proposals.find(p => p.id === id);
+    if (p) {
+        p.status = status;
+        saveSettingsDebounced();
+    }
+    return p;
 }
