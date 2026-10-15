@@ -124,8 +124,7 @@ export async function loadLorebookEntries(name) {
 // Titles come from the memo/comment field (LF commits append provenance
 // there — "Title — LF source: url" — so we strip that suffix).
 export function lorebookToSourceText(name, entries) {
-    const cleanTitle = c => String(c || "")
-        .split(/\s+[—–-]\s+LF source:/)[0].trim() || "(untitled)";
+    const cleanTitle = entryDisplayTitle;
     const list = Object.values(entries)
         .sort((a, b) => (a.displayIndex ?? 0) - (b.displayIndex ?? 0));
     const parts = list.map((e, i) => {
@@ -135,4 +134,58 @@ export function lorebookToSourceText(name, entries) {
     return `EXISTING LOREBOOK: "${name}" — the entries below ALREADY EXIST in the user's lorebook. ` +
         `They are current state, not new material. When other sources extend or contradict them, ` +
         `propose an UPDATE targeting that entry's title rather than a duplicate.\n\n${parts.join("\n\n")}`;
+}
+
+// ---------- Stage 16b: apply update proposals in place ----------
+
+// Display title of an entry = its comment with LF provenance suffixes stripped.
+// Handles both "Title — LF source: url" (Stage 7 commits) and
+// "Title — LF update YYYY-MM-DD" (Stage 16b updates).
+export function entryDisplayTitle(comment) {
+    return String(comment || "")
+        .split(/\s+[—–-]\s+LF (source|update)[\s\S]*$/)[0].trim() || "(untitled)";
+}
+
+// Find the entry titled `entryTitle` in `lorebookName` and replace its
+// content/keys in place. Everything else (uid, order, position, flags,
+// displayIndex) is preserved. Fails loudly with the available titles on
+// no-match, and refuses ambiguous matches.
+export async function applyUpdateToLorebook(lorebookName, entryTitle, { content, keys }) {
+    const ctx = getContext();
+    if (typeof ctx.loadWorldInfo !== "function" || typeof ctx.saveWorldInfo !== "function") {
+        throw new Error("World Info API not available in this ST version");
+    }
+    const title = String(entryTitle ?? "").trim();
+    if (!title) throw new Error("Proposal has no target title");
+
+    const data = (await ctx.loadWorldInfo(lorebookName)) || { entries: {} };
+    if (!data.entries || typeof data.entries !== "object") data.entries = {};
+
+    const matches = Object.values(data.entries)
+        .filter(e => entryDisplayTitle(e.comment).toLowerCase() === title.toLowerCase());
+
+    if (matches.length === 0) {
+        const available = Object.values(data.entries)
+            .map(e => entryDisplayTitle(e.comment)).slice(0, 12).join(" | ");
+        throw new Error(`No entry titled "${title}" in "${lorebookName}". Available: ${available}`);
+    }
+    if (matches.length > 1) {
+        throw new Error(`"${lorebookName}" has ${matches.length} entries titled "${title}" — rename the duplicates in the World Info editor first`);
+    }
+
+    const entry = matches[0];
+    if (Array.isArray(keys) && keys.length) {
+        entry.key = keys.map(k => String(k).trim()).filter(Boolean);
+    }
+    entry.content = String(content ?? entry.content);
+    entry.comment = `${title} — LF update ${new Date().toISOString().slice(0, 10)}`;
+
+    await ctx.saveWorldInfo(lorebookName, data);
+    if (typeof ctx.updateWorldInfoList === "function") {
+        try { await ctx.updateWorldInfoList(lorebookName); } catch (e) {
+            console.warn(`[${extensionName}] updateWorldInfoList failed (non-fatal):`, e);
+        }
+    }
+    console.log(`[${extensionName}] Update applied: "${title}" in "${lorebookName}" (uid ${entry.uid})`);
+    return { lorebook: lorebookName, uid: entry.uid, title };
 }

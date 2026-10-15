@@ -9,7 +9,7 @@ import { getWizardSession, setCanonRules, addSource, deleteSource,
          addWizardProposals, updateWizardProposal } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
-import { listLorebooks, loadLorebookEntries, lorebookToSourceText } from "./wiData.js";
+import { listLorebooks, loadLorebookEntries, lorebookToSourceText, applyUpdateToLorebook } from "./wiData.js";
 
 let drawerOpen = null;        // tri-state: null = decide from source count on first render
 let proposalsOpen = true;     // carousel expanded?
@@ -37,13 +37,16 @@ const VERDICTS = {
 
 function proposalCardHtml(p, verdict) {
     const v = VERDICTS[verdict];
+    const isUpdate = p.action === "update";
     const statusHtml = p.status === "pending"
         ? `
         <div class="lf-proposal-actions">
-            <button class="menu_button lf-proposal-accept" type="button">Accept → Drafts</button>
+            <button class="menu_button lf-proposal-accept" type="button">${isUpdate ? "Apply update" : "Accept → Drafts"}</button>
             <button class="menu_button lf-proposal-reject" type="button">Reject</button>
         </div>`
-        : `<div class="lf-proposal-statusline lf-proposal-${p.status}">${p.status === "accepted" ? "✓ Accepted — in Drafts" : "✕ Rejected"}</div>`;
+        : `<div class="lf-proposal-statusline lf-proposal-${p.status}">${p.status === "accepted"
+            ? (isUpdate ? `✓ Applied → ${escapeHtml(p.target || "lorebook")}` : "✓ Accepted — in Drafts")
+            : "✕ Rejected"}</div>`;
     return `
         <div class="lf-proposal lf-proposal-${p.status}" data-id="${escapeHtml(p.id)}">
             <div class="lf-proposal-head">
