@@ -1473,3 +1473,9 @@
 }
 
 #lf_studio_root .lf-wizard-lb-select { width: 100%; }
+
+/* Reader tab reset: the title bar has flex-wrap; pin the ✕ to the far right
+   so it never drifts next to the route label on narrow panes */
+#lf_studio_root .lf-reader-meta .lf-reader-close {
+    margin-left: auto;
+}

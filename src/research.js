@@ -14,6 +14,20 @@ function setStatus(text) {
     $("#lf_studio_status").text(text);
 }
 
+// Reset the Reader tab back to its empty state (the ✕ in the title bar).
+// pageCache is deliberately NOT touched: the page stays draftable/re-readable.
+function closeReader() {
+    $("#lf_reader").html(`
+        <div class="lf-reader-empty">
+            <div class="lf-reader-empty-icon">📖</div>
+            <h3>Reader</h3>
+            <p>Search in the Research panel, then click "Read" on a result.<br>Page content appears here, ready to become a draft.</p>
+        </div>
+    `);
+    $("#lf_search_results .lf-result").removeClass("active");
+    setStatus("Reader closed");
+}
+
 function resultItemHtml(result) {
     const engines = result.engines.length
         ? `<div class="lf-result-engines">${result.engines.map(e => `<span>${escapeHtml(e)}</span>`).join("")}</div>`
@@ -91,12 +105,14 @@ async function onReadClick(event) {
             <div class="lf-reader-content">
                 <div class="lf-reader-meta">${kb} KB · ${escapeHtml(route)}
                     <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
+                    <button class="menu_button lf-reader-close" type="button" title="Reset the Reader tab">✕</button>
                 </div>
                 <pre class="lf-reader-text">${escapeHtml(text)}</pre>
                 <div class="lf-draft-form" style="display:none;"></div>
             </div>
         `);
         reader.find(".lf-draft-btn").on("click", () => showDraftForm(reader, url));
+        reader.find(".lf-reader-close").on("click", closeReader);
         // Ask the Studio shell to swap the center pane: Wizard → Reader
         document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-reader"));
         setStatus(`Read "${title}" — ${kb} KB via ${route}`);
