@@ -183,10 +183,12 @@ export function renderDraftsList() {
             <div class="lf-draft-meta" title="${escapeHtml(d.sourceUrl)}">${escapeHtml(d.sourceTitle || d.sourceUrl)} · ${new Date(d.createdAt).toLocaleString()}</div>
             <div class="lf-draft-actions">
                 <button class="menu_button lf-draft-commit" type="button">Commit to lorebook</button>
+                <button class="menu_button lf-draft-edit" type="button">Edit</button>
                 <button class="menu_button lf-draft-towizard" type="button" title="Send this draft to the Wizard as a source">→ Wizard</button>
                 <button class="menu_button lf-draft-delete" type="button">Delete</button>
             </div>
             <div class="lf-commit-form" data-id="${escapeHtml(d.id)}" style="display:none;"></div>
+            <div class="lf-edit-form" data-id="${escapeHtml(d.id)}" style="display:none;"></div>
         </div>
     `).join(""));
 
@@ -206,9 +208,12 @@ export function renderDraftsList() {
     });
     container.find(".lf-draft-commit").on("click", function () {
         const id = $(this).closest(".lf-draft").data("id");
-        hideAllCommitForms(id);
+        hideAllDraftForms(id);
         const form = $(`#lf_drafts_list .lf-commit-form[data-id="${CSS.escape(id)}"]`);
         if (form.is(":visible") && form.children().length) form.slideUp(100).html("");
         else showCommitForm(id);
+    });
+    container.find(".lf-draft-edit").on("click", function () {
+        showEditForm($(this).closest(".lf-draft").data("id"));
     });
 }
