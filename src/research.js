@@ -45,9 +45,11 @@ function showDraftForm(readerEl, url) {
         <textarea class="text_pole lf-draft-content" rows="8">${escapeHtml(cached.text)}</textarea>
         <div class="lf-draft-form-actions">
             <button class="menu_button lf-draft-save" type="button">Save Draft</button>
+            <button class="menu_button lf-draft-close" type="button">✕ Close</button>
         </div>
     `);
     form.slideDown(150);
+    form.find(".lf-draft-close").on("click", () => form.slideUp(150));
     form.find(".lf-draft-save").on("click", () => {
         const draft = {
             title: form.find(".lf-draft-title").val(),

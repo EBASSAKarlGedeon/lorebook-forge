@@ -208,6 +208,8 @@
 .lf-draft-form-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 /* Stage 7: commit-to-lorebook */
