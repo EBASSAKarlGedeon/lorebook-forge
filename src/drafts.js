@@ -42,10 +42,24 @@ export function deleteDraft(id) {
     }
 }
 
+// Stage 15: in-place edit. Only touches the fields given.
+export function updateDraft(id, { title, keys, content }) {
+    const drafts = getDrafts();
+    const d = drafts.find(x => x.id === id);
+    if (!d) return null;
+    if (title !== undefined) d.title = String(title || d.title).trim();
+    if (keys !== undefined) d.keys = keys.map(k => String(k).trim()).filter(Boolean);
+    if (content !== undefined) d.content = String(content ?? d.content);
+    saveSettingsDebounced();
+    console.log(`[${extensionName}] Draft updated: "${d.title}"`);
+    return d;
+}
+
 // ---------- Commit UI (Stage 7) ----------
 
-function hideAllCommitForms(exceptId) {
-    $("#lf_drafts_list .lf-commit-form").each(function () {
+// Closes every open commit/edit form in the drafts list (except one, optional)
+function hideAllDraftForms(exceptId) {
+    $("#lf_drafts_list .lf-commit-form, #lf_drafts_list .lf-edit-form").each(function () {
         if (!exceptId || $(this).data("id") !== exceptId) {
             $(this).stop(true, true).slideUp(100).html("");
         }
@@ -107,6 +121,47 @@ async function showCommitForm(draftId) {
             toastr.error(`Commit failed: ${err.message}`, "Lorebook Forge");
             btn.prop("disabled", false).text("Commit");
         }
+    });
+}
+
+async function showEditForm(draftId) {
+    const draft = getDrafts().find(d => d.id === draftId);
+    if (!draft) return;
+    hideAllDraftForms(draftId);
+    const form = $(`#lf_drafts_list .lf-edit-form[data-id="${CSS.escape(draftId)}"]`);
+
+    if (form.is(":visible") && form.children().length) {
+        form.slideUp(100).html("");
+        return; // second click on Edit = close
+    }
+
+    form.html(`
+        <label class="lf-settings-label">Title</label>
+        <input class="text_pole lf-text-input lf-edit-title" value="${escapeHtml(draft.title)}" />
+        <label class="lf-settings-label">Keys (comma-separated — what triggers this entry in chat)</label>
+        <input class="text_pole lf-text-input lf-edit-keys" value="${escapeHtml(draft.keys.join(", "))}" />
+        <label class="lf-settings-label">Content</label>
+        <textarea class="text_pole lf-draft-content lf-edit-content" rows="8">${escapeHtml(draft.content)}</textarea>
+        <div class="lf-draft-form-actions">
+            <button class="menu_button lf-edit-cancel" type="button">Cancel</button>
+            <button class="menu_button lf-edit-save" type="button">Save</button>
+        </div>
+    `).slideDown(150);
+
+    form.find(".lf-edit-cancel").on("click", () => form.slideUp(100).html(""));
+    form.find(".lf-edit-save").on("click", function () {
+        const content = String(form.find(".lf-edit-content").val());
+        if (!content.trim()) {
+            toastr.warning("Draft content is empty.", "Lorebook Forge");
+            return;
+        }
+        updateDraft(draftId, {
+            title: form.find(".lf-edit-title").val(),
+            keys: String(form.find(".lf-edit-keys").val()).split(",").map(k => k.trim()).filter(Boolean),
+            content,
+        });
+        renderDraftsList();
+        toastr.success(`Draft updated: "${draft.title}"`, "Lorebook Forge");
     });
 }
 
