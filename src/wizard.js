@@ -114,9 +114,34 @@ function renderProposals() {
     updateCount();
     track.scrollLeft = prevScroll;
 
-    el.find(".lf-proposal-accept").on("click", function () {
+    el.find(".lf-proposal-accept").on("click", async function () {
         const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
         if (!p) return;
+
+        // Update proposal → write into the target lorebook directly (Stage 16b)
+        if (p.action === "update" && p.target) {
+            const target = w.lorebookTarget;
+            if (!target) {
+                toastr.warning("No update target in this session. Import the lorebook (Sources & Canon) or reject this card.", "Lorebook Forge");
+                return;
+            }
+            if (!window.confirm(`Apply this update to the entry "${p.target}" in lorebook "${target}"?\nThis REPLACES that entry's content in place.`)) return;
+            const btn = $(this).prop("disabled", true).text("Applying…");
+            try {
+                const res = await applyUpdateToLorebook(target, p.target, { content: p.content, keys: p.keys });
+                updateWizardProposal(p.id, "accepted");
+                renderProposals();
+                toastr.success(`"${p.target}" updated in "${res.lorebook}" — verify in the World Info editor.`, "Lorebook Forge");
+                setStatus(`Update applied: "${p.target}" → ${res.lorebook}`);
+            } catch (err) {
+                console.error(`[${extensionName}] Update apply failed:`, err);
+                toastr.error(`Update failed: ${err.message}`, "Lorebook Forge");
+                btn.prop("disabled", false).text("Apply update");
+            }
+            return;
+        }
+
+        // New proposal → drafts pipeline (unchanged)
         saveDraft({
             title: p.title,
             keys: p.keys.length ? p.keys : [p.title],

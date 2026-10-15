@@ -195,21 +195,129 @@ export function wikitextToText(wikitext) {
     text = text.replace(/'''([^']*)'''/g, "$1");                    // bold
     text = text.replace(/''([^']*)''/g, "$1");                      // italic
     text = text.replace(/__(NOTOC|TOC|FORCETOC|NOEDITSECTION)__\b/gi, "");
-    return text.replace(/\n{3,}/g, "\n\n").trim();
+    return decodeHtmlEntities(text.replace(/\n{3,}/g, "\n\n").trim());
 }
 
-// MediaWiki wikis: fetch clean wikitext through their api.php, via ST's
-// server-side /visit proxy (no CORS, and the API bypasses the Cloudflare
-// wall that blocks page views). Verified: api.php 200, page view 403.
+// ---------- Stage 17: MediaWiki rendered-HTML route ----------
+// Primary: action=parse&prop=text — the wiki engine expands ALL templates
+// ({{Nihongo}} terms survive, entities decode) and returns just the article
+// body HTML. Verified against Fandom: contains rendered ruby readings,
+// reference superscripts, and prunable navboxes. Falls back to the legacy
+// wikitext route if prop=text is unavailable.
+
+const MEDIAWIKI_NOISE_SELECTORS = [
+    "sup.reference",        // citation superscripts [1]
+    ".mw-cite-backlink",    // ↑ arrows in the reference list
+    ".mw-references-wrap",  // the whole References section output
+    ".references",          // some wiki skins use this instead
+    "table.nav",             // navigation boxes (e.g. Skills NavBox)
+    ".navbox",
+    "#toc",
+    ".mw-editsection",
+    ".article-tabs",
+    ".mw-empty-elt",
+];
+
+// Rendered-HTML (media wiki) → readable text. Structure-aware, no regex.
+function renderedMediaWikiToText(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+
+    // 1) Prune noise
+    doc.querySelectorAll(MEDIAWIKI_NOISE_SELECTORS.join(", ")).forEach(el => el.remove());
+
+    // 2) Infobox → "Label: Value" lines (canonical facts: names, debuts, users).
+    //    piped data comes as .pi-data label/value pairs on Fandom.
+    for (const aside of [...doc.querySelectorAll("aside.portable-infobox")]) {
+        const parts = [];
+        const title = aside.querySelector(".pi-title")?.textContent.trim() || "";
+        for (const data of aside.querySelectorAll(".pi-data")) {
+            const label = data.querySelector(".pi-data-label")?.textContent.trim() || "";
+            const value = (data.querySelector(".pi-data-value")?.textContent || "").replace(/\s+/g, " ").trim();
+            if (label && value) parts.push(`${label}: ${value}`);
+        }
+        const div = doc.createElement("div");
+        div.textContent = (title ? `== Infobox: ${title} ==\n` : "") + parts.join("\n") + "\n";
+        aside.replaceWith(div);
+    }
+
+    // 3) Headings → "== Title ==" lines so section structure survives flattening
+    for (const h of [...doc.querySelectorAll("h2, h3, h4")]) {
+        const level = h.tagName === "H2" ? "==" : "===";
+        const div = doc.createElement("div");
+        div.textContent = `\n\n${level} ${h.textContent.trim()} ${level}\n`;
+        h.replaceWith(div);
+    }
+
+    // 4) Block elements → newline boundaries so paragraphs/list rows stay readable
+    for (const p of doc.querySelectorAll("p, li, tr, dd, dt, blockquote, figure")) {
+        p.appendChild(doc.createTextNode("\n"));
+    }
+
+    // 5) The rendered body always ships inside .mw-parser-output — target it
+    //    directly instead of content-scoring fallbacks.
+    const root = doc.querySelector(".mw-parser-output") || doc.body;
+    return root.textContent
+        .replace(/[ \t]+/g, " ")
+        .split("\n")
+        .map(line => line.trim())
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
+// Legacy fallback: entity-decoding patch for the wikitext cleaner, so
+// &mdash; / &#8212; / &nbsp; don't leak into drafts if this path is ever hit.
+function decodeHtmlEntities(text) {
+    const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "—",
+                    ndash: "–", hellip: "…", laquo: "«", raquo: "»", middot: "·", bull: "•" };
+    return String(text)
+        .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+        .replace(/&([a-z]+);/gi, (m, name) => named[name.toLowerCase()] ?? m);
+}
+
 async function fetchMediaWikiText(url) {
     const u = new URL(url);
     const title = getMediaWikiPageTitle(url);
+    const ctx = getContext();
+
+    // --- Primary route: rendered HTML (prop=text) ---
+    try {
+        const renderedUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}` +
+            `&format=json&prop=text&disabletoc=1&disableeditsection=1&disablelimitreport=1`;
+        console.log(`[${extensionName}] MediaWiki rendered route: ${renderedUrl}`);
+        const response = await fetch("/api/search/visit", {
+            method: "POST",
+            headers: ctx.getRequestHeaders(),
+            cache: "no-cache",
+            body: JSON.stringify({ url: renderedUrl, html: false }),
+        });
+        if (response.ok) {
+            const body = await response.text();
+            const data = JSON.parse(body); // throws → caught below
+            if (data?.error) throw new Error(`MediaWiki: ${data.error.info || data.error.code}`);
+            const renderedHtml = data?.parse?.text?.["*"];
+            if (typeof renderedHtml === "string" && renderedHtml.trim()) {
+                const text = renderedMediaWikiToText(renderedHtml);
+                if (!text) throw new Error("Rendered text came back empty");
+                console.log(`[${extensionName}] MediaWiki rendered "${data.parse.title || title}": ` +
+                    `${renderedHtml.length} chars HTML → ${text.length} chars text. First 300:\n`, text.slice(0, 300));
+                return { text, title: data.parse.title || title, raw: text, route: "MediaWiki (rendered)" };
+            }
+        }
+        // fall through to legacy route
+        console.warn(`[${extensionName}] prop=text unavailable (HTTP ${response.status}) — falling back to wikitext route`);
+    } catch (err) {
+        console.warn(`[${extensionName}] Rendered route failed (${err.message}) — falling back to wikitext route`);
+    }
+
+    // --- Fallback route: raw wikitext (Stage 6.5 behavior) ---
     const apiUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&prop=wikitext`;
-    console.log(`[${extensionName}] MediaWiki route: ${apiUrl}`);
+    console.log(`[${extensionName}] MediaWiki wikitext fallback: ${apiUrl}`);
 
     const response = await fetch("/api/search/visit", {
         method: "POST",
-        headers: getContext().getRequestHeaders(),
+        headers: ctx.getRequestHeaders(),
         cache: "no-cache",
         body: JSON.stringify({ url: apiUrl, html: false }),
     });
@@ -230,7 +338,7 @@ async function fetchMediaWikiText(url) {
     const pageTitle = data?.parse?.title || title;
     const text = wikitextToText(wikitext);
     console.log(`[${extensionName}] MediaWiki "${pageTitle}": ${wikitext.length} chars wikitext → ${text.length} chars text`);
-    return { text, title: pageTitle, raw: wikitext, route: "MediaWiki API" };
+    return { text, title: pageTitle, raw: text, route: "MediaWiki (wikitext)" };
 }
 
 export async function fetchPageText(url) {
