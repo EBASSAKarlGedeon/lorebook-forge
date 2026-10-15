@@ -12,6 +12,7 @@ export function getWizardSession() {
     if (typeof s.wizard.canonRules !== "string") s.wizard.canonRules = "";
     if (!Array.isArray(s.wizard.sources)) s.wizard.sources = [];
     if (!Array.isArray(s.wizard.messages)) s.wizard.messages = [];
+    if (typeof s.wizard.lorebookTarget !== "string") s.wizard.lorebookTarget = "";
     if (!Array.isArray(s.wizard.proposals)) s.wizard.proposals = [];
     return s.wizard;
 }
@@ -66,6 +67,12 @@ export function clearWizardMessages() {
     saveSettingsDebounced();
 }
 
+export function setLorebookTarget(name) {
+    const w = getWizardSession();
+    w.lorebookTarget = String(name ?? "").trim();
+    saveSettingsDebounced();
+}
+
 // ---------- Entry proposals (Stage 14) ----------
 
 export function addWizardProposals(items) {
@@ -74,6 +81,8 @@ export function addWizardProposals(items) {
         .filter(e => String(e?.content ?? "").trim())
         .map(e => ({
             id: crypto.randomUUID(),
+            action: e?.action === "update" ? "update" : "new",
+            target: String(e?.target ?? "").trim(),
             title: String(e?.title || "Untitled").trim(),
             keys: Array.isArray(e?.keys) ? e.keys.map(k => String(k).trim()).filter(Boolean) : [],
             content: String(e?.content ?? "").trim(),

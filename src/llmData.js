@@ -199,19 +199,23 @@ Rules:
 - Content = compact factual lore for an AI to use as roleplay context. No meta commentary, no addressing the reader.
 - Prefer several focused entries over one giant entry. Typically 3-8 entries per extraction.
 - CANON RULES override the sources on conflict.
+- If the SOURCE MATERIAL contains an EXISTING LOREBOOK (current state), do NOT re-propose its entries unchanged. If other material revises, extends, or corrects one of those entries, propose it with "action": "update" and "target" set to that existing entry's exact title. Genuinely new lore gets "action": "new".
 - If an EXTRACTION FOCUS is given, propose only entries within that scope.
 
 Output STRICT JSON only — no markdown fences, no commentary before or after. Schema:
-[{"title": "Entry Title", "keys": ["key1"], "content": "Lore text...", "quote": "verbatim text copied from the sources"}]`;
+[{"action": "new", "target": null, "title": "Entry Title", "keys": ["key1"], "content": "Lore text...", "quote": "verbatim text copied from the sources"}]
+("action" is "new" or "update"; "target" is the existing entry's title — required for updates, null for new entries.)`;
 
 /**
  * Extract entry proposals from the session's sources.
  * @param {{canonRules: string, sources: Array, focus?: string}} args
  * @returns {Promise<{title, keys, content, quote}[]>}
  */
-export async function wizardExtract({ canonRules, sources, focus }) {
+export async function wizardExtract({ canonRules, sources, focus, lorebookTarget }) {
     const canon = String(canonRules ?? "").trim();
+    const target = String(lorebookTarget ?? "").trim();
     const systemPrompt = `${WIZARD_EXTRACT_SYSTEM}
+${target ? `\nUPDATE TARGET: the existing lorebook "${target}" is loaded among the sources. Updates you accept here will later be applied to "${target}" directly, so keep "target" titles EXACTLY as they appear in the EXISTING LOREBOOK section.\n` : ""}
 
 CANON RULES (user-defined, override sources):
 ${canon || "(none set)"}
@@ -221,7 +225,7 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted — return an em
 
     const prompt = `${focus ? `EXTRACTION FOCUS:\n${focus}\n\n` : ""}Propose lorebook entries from the source material now. Strict JSON array only.`;
 
-    console.log(`[${extensionName}] Extraction call: ${sources.length} source(s), focus: "${focus || "(all)"}"`);
+    console.log(`[${extensionName}] Extraction call: ${sources.length} source(s), focus: "${focus || "(all)"}"${target ? `, target: "${target}"` : ""}`);
     const t0 = Date.now();
 
     const reply = await callLLM({ prompt, systemPrompt, responseLength: EXTRACT_RESPONSE_TOKENS });

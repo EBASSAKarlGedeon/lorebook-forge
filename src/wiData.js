@@ -102,3 +102,37 @@ export async function commitDraftToLorebook(draft, lorebookName) {
     console.log(`[${extensionName}] Committed "${draft.title}" → "${lorebookName}" (uid ${newUid}, ${total} entries total)`);
     return { name: lorebookName, uid: newUid, total };
 }
+
+// ---------- Updater mode (Stage 16a) ----------
+
+// Reads a lorebook's entries. Returns the raw entries object.
+export async function loadLorebookEntries(name) {
+    const ctx = getContext();
+    if (typeof ctx.loadWorldInfo !== "function") {
+        throw new Error("World Info API not available in this ST version");
+    }
+    const data = await ctx.loadWorldInfo(name);
+    const entries = data?.entries;
+    if (!entries || typeof entries !== "object" || Object.keys(entries).length === 0) {
+        throw new Error("Lorebook is empty or unreadable");
+    }
+    return entries;
+}
+
+// Entries → source text, in display order. Existing entries are labeled
+// so the LLM knows it is looking at CURRENT STATE, not new material.
+// Titles come from the memo/comment field (LF commits append provenance
+// there — "Title — LF source: url" — so we strip that suffix).
+export function lorebookToSourceText(name, entries) {
+    const cleanTitle = c => String(c || "")
+        .split(/\s+[—–-]\s+LF source:/)[0].trim() || "(untitled)";
+    const list = Object.values(entries)
+        .sort((a, b) => (a.displayIndex ?? 0) - (b.displayIndex ?? 0));
+    const parts = list.map((e, i) => {
+        const keys = Array.isArray(e.key) && e.key.length ? e.key.join(", ") : "constant";
+        return `## Entry ${i + 1}: "${cleanTitle(e.comment)}" (keys: ${keys})\n${String(e.content ?? "").trim()}`;
+    });
+    return `EXISTING LOREBOOK: "${name}" — the entries below ALREADY EXIST in the user's lorebook. ` +
+        `They are current state, not new material. When other sources extend or contradict them, ` +
+        `propose an UPDATE targeting that entry's title rather than a duplicate.\n\n${parts.join("\n\n")}`;
+}

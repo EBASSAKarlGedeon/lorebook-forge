@@ -1302,3 +1302,21 @@
 }
 
 #lf_studio_root .lf-draft-actions .lf-draft-edit { padding: 3px 10px; font-size: 0.8em; }
+
+/* ============ Stage 16a: updater mode ============ */
+#lf_studio_root .lf-wizard-lb-select { width: 100%; }
+
+#lf_studio_root .lf-proposal-updbadge {
+    flex-shrink: 0;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: var(--lfs-accent-hover);
+    background: rgba(167, 139, 250, 0.14);
+    border: 1px solid rgba(167, 139, 250, 0.40);
+}

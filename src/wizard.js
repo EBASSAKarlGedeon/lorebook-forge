@@ -5,9 +5,10 @@ import { extensionName } from "./config.js";
 import { escapeHtml, verifyQuote } from "./helpers.js";
 import { getWizardSession, setCanonRules, addSource, deleteSource,
          pushWizardMessage, clearWizardMessages,
-         addWizardProposals, updateWizardProposal } from "./wizardData.js";
+         addWizardProposals, updateWizardProposal, setLorebookTarget  } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
+import { listLorebooks, loadLorebookEntries, lorebookToSourceText } from "./wiData.js";
 
 let drawerOpen = null; // tri-state: null = decide from source count on first render
 
@@ -40,6 +41,7 @@ function proposalCardHtml(p, verdict) {
         <div class="lf-proposal lf-proposal-${p.status}" data-id="${escapeHtml(p.id)}">
             <div class="lf-proposal-head">
                 <div class="lf-proposal-title">${escapeHtml(p.title)}</div>
+                ${p.action === "update" ? `<span class="lf-proposal-updbadge" title="Replaces the existing entry in the target lorebook">&#10227;${p.target ? ` ${escapeHtml(p.target)}` : " update"}</span>` : ""}
                 <span class="lf-proposal-verdict ${v.cls}" title="${v.label}">${v.icon}</span>
             </div>
             ${p.keys.length ? `<div class="lf-draft-keys">${p.keys.map(k => `<span>${escapeHtml(k)}</span>`).join("")}</div>` : ""}
@@ -105,7 +107,9 @@ function renderProposals() {
             keys: p.keys.length ? p.keys : [p.title],
             content: p.content,
             sourceUrl: "",
-            sourceTitle: "Wizard extraction · " + (p.quote ? "quote verified check card" : "no quote"),
+            sourceTitle: p.action === "update"
+                ? `Wizard update → ${p.target || "(target missing)"}${p.quote ? " · quote verified check card" : ""}`
+                : "Wizard extraction · " + (p.quote ? "quote verified check card" : "no quote"),
             sourceRaw: p.quote,
             origin: "ai",
         });
@@ -190,7 +194,7 @@ async function onExtract() {
     setStatus(`Extracting entries from ${w.sources.length} source(s)${focus ? ` — focus: "${focus}"` : ""}…`);
 
     try {
-        const items = await wizardExtract({ canonRules: w.canonRules, sources: w.sources, focus });
+        const items = await wizardExtract({ canonRules: w.canonRules, sources: w.sources, focus, lorebookTarget: w.lorebookTarget });
         const proposals = addWizardProposals(items);
         if (focus) pushWizardMessage("user", focus); // keep a conversational trace of the focus
         const texts = w.sources.map(s => s.text);
@@ -278,6 +282,12 @@ export function renderWizard() {
                     placeholder="e.g. Manga canon only. Ignore anime-original arcs, filler and movies. If sources conflict, the manga wins.">${escapeHtml(w.canonRules)}</textarea>
             </div>
             <div class="lf-wizard-section">
+                <label class="lf-settings-label">Load existing lorebook — updater mode</label>
+                <select class="text_pole lf-wizard-lb-select"><option value="">Loading lorebooks…</option></select>
+                <button class="menu_button lf-wizard-lb-import" type="button">Import entries as source</button>
+                <div class="lf-search-status lf-wizard-lb-target">${w.lorebookTarget ? `Update target set: ${escapeHtml(w.lorebookTarget)}` : "No update target — imports set it."}</div>
+            </div>
+            <div class="lf-wizard-section">
                 <label class="lf-settings-label">Add source — paste page text</label>
                 <input class="text_pole lf-text-input lf-source-title-input" type="text"
                        placeholder="Source title (e.g. 'Eldoria wiki — Geography section')" />
@@ -347,6 +357,44 @@ export function renderWizard() {
     root.find(".lf-source-delete").on("click", function () {
         deleteSource($(this).closest(".lf-source").data("id"));
         renderWizard();
+    });
+
+    // ---- Updater mode: lorebook import (Stage 16a) ----
+    const lbSelect = root.find(".lf-wizard-lb-select");
+    listLorebooks().then(books => {
+        lbSelect.html(`<option value="">— pick a lorebook —</option>` +
+            books.map(b => `<option value="${escapeHtml(b.file_id)}">${escapeHtml(b.name)}</option>`).join(""));
+    }).catch(err => {
+        console.error(`[${extensionName}] Lorebook list failed:`, err);
+        lbSelect.html(`<option value="">(failed to list lorebooks)</option>`);
+    });
+
+    root.find(".lf-wizard-lb-import").on("click", async function () {
+        const btn = $(this).prop("disabled", true);
+        const name = String(lbSelect.val() || "").trim();
+        try {
+            if (!name) {
+                toastr.warning("Pick a lorebook first.", "Lorebook Forge");
+                return;
+            }
+            const sourceTitle = `Lorebook: ${name}`;
+            if (getWizardSession().sources.some(s => s.title === sourceTitle)) {
+                toastr.warning(`"${name}" is already imported as a source.`, "Lorebook Forge");
+                return;
+            }
+            const entries = await loadLorebookEntries(name);
+            const text = lorebookToSourceText(name, entries);
+            addSource({ title: sourceTitle, text });
+            setLorebookTarget(name);
+            console.log(`[${extensionName}] Lorebook imported: "${name}" (${Object.keys(entries).length} entries, ${text.length} chars)`);
+            toastr.success(`"${name}" imported — ${Object.keys(entries).length} entries are now wizard sources.`, "Lorebook Forge");
+            renderWizard();
+        } catch (err) {
+            console.error(`[${extensionName}] Lorebook import failed:`, err);
+            toastr.error(`Import failed: ${err.message}`, "Lorebook Forge");
+        } finally {
+            btn.prop("disabled", false);
+        }
     });
 }
 
