@@ -147,7 +147,10 @@ async function loadIntoReader(url, resultEl = null) {
 
     // One delegated handler for ALL chips (wiki links + category members):
     // category chips enumerate in place, page chips load into the reader.
-    reader.on("click", ".lf-reader-link", function () {
+    // .lfchips namespace + off-before-on: loadIntoReader re-runs on every
+    // read, and #lf_reader persists — without this, handlers stack and a
+    // single click fires once per page ever read.
+    reader.off("click.lfchips").on("click.lfchips", ".lf-reader-link", function () {
         const btn = $(this);
         const linkUrl = String(btn.data("url"));
         if (btn.data("cat")) {
