@@ -1523,3 +1523,15 @@
     flex-direction: column;
     gap: 6px;
 }
+
+/* Stage 20: ⚡ Read-all button — red while a batch runs (it's the stop button) */
+#lf_studio_root .lf-batch-btn {
+    margin-left: 8px;
+    padding: 1px 8px;
+    font-size: 0.72rem;
+}
+
+#lf_studio_root .lf-batch-btn.lf-batch-running {
+    border-color: #ef4444;
+    color: #ef4444;
+}

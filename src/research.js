@@ -28,6 +28,77 @@ function closeReader() {
     setStatus("Reader closed");
 }
 
+// Fetch a page and store it (with its harvested links) in the page cache.
+// Single choke point for both single reads and the batch runner.
+async function fetchAndCache(url) {
+    const fetched = await fetchPageText(url);
+    const links = fetched.html ? collectWikiLinks(fetched.html, url) : [];
+    const entry = { ...fetched, links };
+    pageCache.set(url, entry);
+    return entry;
+}
+
+// ---------- Stage 20: batch read (crawl hygiene) ----------
+// "⚡ Read all" on a link/category strip: serialized ~1 req/s, seen-URLs =
+// pageCache, 25-page budget per run, and the button itself is the off-switch.
+const BATCH_DELAY_MS = 1000;
+const BATCH_BUDGET = 25;
+let batchRunning = false;
+let batchStop = false;
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runBatchRead(urls) {
+    const reader = $("#lf_reader");
+    const setBtns = (label, running) =>
+        reader.find(".lf-batch-btn").text(label).toggleClass("lf-batch-running", running);
+
+    // A click while running means STOP — whichever batch button it lands on.
+    if (batchRunning) {
+        batchStop = true;
+        setStatus("Stopping batch read…");
+        return;
+    }
+
+    const fresh = urls.filter(u => !pageCache.has(u));
+    const alreadyCached = urls.length - fresh.length;
+    const queue = fresh.slice(0, BATCH_BUDGET);
+    const deferred = fresh.length - queue.length;
+
+    batchRunning = true;
+    batchStop = false;
+    setBtns("■ Stop", true);
+    let ok = 0;
+    let failed = 0;
+    try {
+        for (const [i, url] of queue.entries()) {
+            if (batchStop) break;
+            setStatus(`Batch read ${i + 1}/${queue.length} — ${ok} ok${failed ? `, ${failed} failed` : ""}`);
+            try {
+                await fetchAndCache(url);
+                ok++;
+            } catch (err) {
+                failed++;
+                console.warn(`[${extensionName}] Batch read failed: ${url} — ${err.message}`);
+            }
+            if (i < queue.length - 1) await delay(BATCH_DELAY_MS);
+        }
+    } finally {
+        batchRunning = false;
+        setBtns("⚡ Read all", false);
+    }
+
+    const summary = [
+        `${ok} read`,
+        failed ? `${failed} failed` : null,
+        alreadyCached ? `${alreadyCached} cached` : null,
+        deferred ? `${deferred} deferred (budget ${BATCH_BUDGET}/run)` : null,
+        batchStop ? "stopped early" : null,
+    ].filter(Boolean).join(", ");
+    setStatus(`Batch read done — ${summary}. Chip pages now load from cache.`);
+    toastr.info(`Batch read done: ${summary}.`, "Lorebook Forge");
+}
+
 function resultItemHtml(result) {
     const engines = result.engines.length
         ? `<div class="lf-result-engines">${result.engines.map(e => `<span>${escapeHtml(e)}</span>`).join("")}</div>`
@@ -93,13 +164,20 @@ async function loadIntoReader(url, resultEl = null) {
         resultEl.addClass("active");
     }
 
-    const { text, title, raw, route, html } = await fetchPageText(url);
+    // Cache-first: batch-read pages (and re-reads) render instantly.
+    let entry;
+    if (pageCache.has(url)) {
+        entry = pageCache.get(url);
+        console.log(`[${extensionName}] Reader cache hit: ${url}`);
+    } else {
+        entry = await fetchAndCache(url);
+    }
+    const { text, title, raw, route, html, links } = entry;
     const kb = (text.length / 1024).toFixed(1);
-    pageCache.set(url, { text, title, raw, html });
 
     // Stage 18: links from the rendered HTML (MediaWiki route only —
     // plain HTML reads return no `html` and simply skip the strip).
-    const links = html ? collectWikiLinks(html, url) : [];
+    const wikiLinks = links || (html ? collectWikiLinks(html, url) : []);
 
     const reader = $("#lf_reader");
     reader.html(`
@@ -109,11 +187,14 @@ async function loadIntoReader(url, resultEl = null) {
                 <button class="menu_button lf-reader-close" type="button" title="Reset the Reader tab">✕</button>
             </div>
             <pre class="lf-reader-text">${escapeHtml(text)}</pre>
-            ${links.length ? `
+            ${wikiLinks.length ? `
             <div class="lf-reader-links">
-                <div class="lf-reader-links-label">Wiki links on this page (${links.length})</div>
+                <div class="lf-reader-links-label">
+                    Wiki links on this page (${wikiLinks.length})
+                    <button class="menu_button lf-batch-btn" type="button" title="Read every un-cached link above, ~1/sec">⚡ Read all</button>
+                </div>
                 <div class="lf-reader-links-scroll">
-                    ${links.map(l => {
+                    ${wikiLinks.map(l => {
                         const isCat = l.title.startsWith("Category:");
                         return `<button class="menu_button lf-reader-link${isCat ? " lf-cat-chip" : ""}" type="button"
                         data-url="${escapeHtml(l.url)}" data-title="${escapeHtml(l.title)}"${isCat ? ' data-cat="1"' : ""}
@@ -137,7 +218,10 @@ async function loadIntoReader(url, resultEl = null) {
             data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(item.title)}"${isCat ? ' data-cat="1"' : ""}
             title="${escapeHtml(item.url)}">${isCat ? "📁 " : ""}${escapeHtml(item.title.replace(/^Category:/, ""))}</button>`;
         holder.html(`
-            <div class="lf-reader-links-label">Category members — ${pages.length} page(s) · ${subcats.length} subcategor(y/ies)</div>
+            <div class="lf-reader-links-label">
+                Category members — ${pages.length} page(s) · ${subcats.length} subcategor(y/ies)
+                <button class="menu_button lf-batch-btn" type="button" title="Read every un-cached member page, ~1/sec">⚡ Read all</button>
+            </div>
             <div class="lf-reader-links-scroll">
                 ${subcats.map(s => chip(s, true)).join("")}
                 ${pages.map(p => chip(p, false)).join("")}
@@ -180,9 +264,17 @@ async function loadIntoReader(url, resultEl = null) {
         });
     });
 
+    // ⚡ Read all: every un-cached chip URL in this strip (page chips only —
+    // category chips would need per-subcat enumeration, not batch fetching).
+    reader.off("click.lfbatch").on("click.lfbatch", ".lf-batch-btn", function () {
+        const urls = [...reader.find(".lf-reader-link").not("[data-cat]")].map(el => String($(el).data("url")));
+        if (!urls.length) return;
+        runBatchRead([...new Set(urls)]);
+    });
+
     // Ask the Studio shell to make sure the Reader pane is visible
     document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-reader"));
-    setStatus(`Read "${title}" — ${kb} KB via ${route} · ${links.length} wiki link(s)`);
+    setStatus(`Read "${title}" — ${kb} KB via ${route} · ${wikiLinks.length} wiki link(s)`);
 }
 
 async function onReadClick(event) {
