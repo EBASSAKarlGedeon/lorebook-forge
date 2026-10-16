@@ -6,7 +6,9 @@ import { extensionName } from "./config.js";
 import { escapeHtml, verifyQuote } from "./helpers.js";
 import { getWizardSession, setCanonRules, addSource, deleteSource,
          pushWizardMessage, clearWizardMessages, setLorebookTarget,
-         addWizardProposals, updateWizardProposal } from "./wizardData.js";
+         addWizardProposals, updateWizardProposal,
+         listWizardSessions, createWizardSession, switchWizardSession,
+         deleteWizardSession, renameWizardSession } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
 import { listLorebooks, loadLorebookEntries, lorebookToSourceText, applyUpdateToLorebook } from "./wiData.js";
@@ -319,6 +321,15 @@ export function renderWizard() {
             <button class="menu_button lf-wizard-drawertoggle" type="button">Sources &amp; Canon</button>
             <button class="menu_button lf-wizard-clear" type="button" title="Delete the conversation AND proposals">Clear</button>
         </div>
+        <div class="lf-sessions-bar">
+            <div class="lf-sessions-strip">
+                ${listWizardSessions().map(sess => `
+                    <button class="menu_button lf-session-chip${sess.active ? " active" : ""}" type="button"
+                        data-id="${escapeHtml(sess.id)}" title="${escapeHtml(sess.name)} — ${sess.sources} sources, ${sess.messages} messages
+Click = switch · double-click = rename · right-click = delete">${escapeHtml(sess.name)}</button>`).join("")}
+            </div>
+            <button class="menu_button lf-session-new" type="button" title="New wizard session">＋</button>
+        </div>
         <div class="lf-wizard-body">
             <div id="lf_wizard_chat" class="lf-wizard-chat"></div>
             <div id="lf_wizard_proposals" class="lf-wizard-proposals lf-hidden"></div>
@@ -378,6 +389,38 @@ export function renderWizard() {
     // Drawer open/close — no full re-render, just the class
     root.find(".lf-wizard-drawertoggle, #lf_wizard_meta, #lf_wizard_target, .lf-wizard-drawer-close")
         .on("click", () => setDrawer(!drawerOpen));
+
+    // ---- Sessions bar (Stage 21) ----
+    root.find(".lf-session-chip").on("click", function () {
+        const id = String($(this).data("id"));
+        if (switchWizardSession(id)) {
+            renderWizard();
+            setStatus(`Switched to wizard session`);
+        }
+    }).on("dblclick", function () {
+        const id = String($(this).data("id"));
+        const current = listWizardSessions().find(x => x.id === id);
+        const name = window.prompt("Rename session:", current?.name || "");
+        if (name === null) return;
+        if (renameWizardSession(id, name)) renderWizard();
+    }).on("contextmenu", function (e) {
+        e.preventDefault();
+        const id = String($(this).data("id"));
+        const sess = listWizardSessions().find(x => x.id === id);
+        if (!sess) return;
+        if (!window.confirm(`Delete session "${sess.name}"? Sources, chat and proposals in it are gone.`)) return;
+        deleteWizardSession(id);
+        renderWizard();
+        setStatus("Session deleted");
+    });
+
+    root.find(".lf-session-new").on("click", function () {
+        const name = window.prompt("New wizard session name:", "");
+        if (name === null) return;
+        createWizardSession(name.trim() || undefined);
+        renderWizard();
+        setStatus("New wizard session created");
+    });
 
     // Chat + extraction
     $("#lf_wizard_send").on("click", onSend);

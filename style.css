@@ -1333,6 +1333,45 @@
 
 #lf_studio_root .lf-wizard-name { font-size: 0.95rem; }
 
+/* Stage 21: multi-session bar — horizontal strip under the wizard header */
+#lf_studio_root .lf-sessions-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: rgba(255, 255, 255, 0.015);
+}
+
+#lf_studio_root .lf-sessions-strip {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+#lf_studio_root .lf-session-chip {
+    flex-shrink: 0;
+    padding: 2px 12px;
+    font-size: 0.78rem;
+    opacity: 0.75;
+}
+
+#lf_studio_root .lf-session-chip.active {
+    opacity: 1;
+    border-color: var(--lfs-accent);
+    color: var(--lfs-accent);
+}
+
+#lf_studio_root .lf-session-new {
+    flex-shrink: 0;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+}
+
 #lf_studio_root .lf-chip {
     font-size: 0.72rem;
     padding: 2px 10px;
