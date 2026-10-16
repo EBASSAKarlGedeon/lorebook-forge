@@ -7,13 +7,14 @@
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
-import { initResearch } from "./research.js";
+import { initResearch, getPageCache } from "./research.js";
 import { renderDraftsList } from "./drafts.js";
 import { initDistiller } from "./distiller.js";
 import { initWizard } from "./wizard.js";
+import { renderGraph } from "./graph.js";
 
 let studioRoot = null;
-const railState = { search: true, drafts: true, wizard: true, reader: false };
+const railState = { search: true, drafts: true, wizard: true, reader: false, graph: false };
 
 export function isStudioOpen() {
     return !!studioRoot;
@@ -51,20 +52,22 @@ function toggleSidePanel(name) {
 const CENTER_PANES = {
     wizard: { pane: "#lf_wizard", button: "#lf_rail_wizard" },
     reader: { pane: "#lf_reader_pane", button: "#lf_rail_reader" },
+    graph: { pane: "#lf_graph_pane", button: "#lf_rail_graph", onShow: () => renderGraph(getPageCache()) },
 };
 
 function toggleCenter(name) {
     if (!studioRoot) return;
     railState[name] = !railState[name];
-    const { pane, button } = CENTER_PANES[name];
+    const { pane, button, onShow } = CENTER_PANES[name];
     studioRoot.querySelector(pane).classList.toggle("lf-hidden", !railState[name]);
     studioRoot.querySelector(button).classList.toggle("active", railState[name]);
+    if (railState[name] && onShow) onShow(); // fresh render every show — cache may have grown
     updateCenterEmpty();
 }
 
-// Tiny hint when BOTH center panes are toggled off
+// Tiny hint when ALL center panes are toggled off
 function updateCenterEmpty() {
-    const anyVisible = railState.wizard || railState.reader;
+    const anyVisible = railState.wizard || railState.reader || railState.graph;
     studioRoot.querySelector("#lf_center_empty")?.classList.toggle("lf-hidden", anyVisible);
 }
 
@@ -122,6 +125,9 @@ function buildStudio() {
                     <button id="lf_rail_reader" class="lf-rail-btn" type="button" title="Toggle Reader">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                     </button>
+                    <button id="lf_rail_graph" class="lf-rail-btn" type="button" title="Toggle road-map graph">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 6h10M6.5 7.5l3.5 3M17.5 7.5l-3.5 3M6.5 16.5l3.5-3M17.5 16.5l-3.5-3M7 18h10"/></svg>
+                    </button>
                     <button id="lf_rail_search" class="lf-rail-btn active" type="button" title="Toggle research panel">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </button>
@@ -145,6 +151,9 @@ function buildStudio() {
                 </section>
                 <section class="lf-center">
                     <div id="lf_wizard" class="lf-wizard"></div>
+                    <div class="lf-graph-pane lf-hidden" id="lf_graph_pane">
+                        <div id="lf_graph"></div>
+                    </div>
                     <div class="lf-reader-pane lf-hidden" id="lf_reader_pane">
                         <div id="lf_reader">
                             <div class="lf-reader-empty">
@@ -177,6 +186,7 @@ function buildStudio() {
     el.querySelector(".lf-studio-close").addEventListener("click", closeStudio);
     el.querySelector("#lf_rail_wizard").addEventListener("click", () => toggleCenter("wizard"));
     el.querySelector("#lf_rail_reader").addEventListener("click", () => toggleCenter("reader"));
+    el.querySelector("#lf_rail_graph").addEventListener("click", () => toggleCenter("graph"));
     el.querySelector("#lf_rail_search").addEventListener("click", () => toggleSidePanel("search"));
     el.querySelector("#lf_rail_drafts").addEventListener("click", () => toggleSidePanel("drafts"));
     el.querySelector("#lf_rail_distill").addEventListener("click", () => {

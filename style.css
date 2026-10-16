@@ -635,6 +635,124 @@
     overflow: hidden;
 }
 
+/* Stage 22: road-map graph pane */
+#lf_studio_root .lf-graph-pane {
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--lfs-border);
+    border-radius: 16px;
+    background: var(--lfs-surface);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    position: relative;
+}
+
+#lf_studio_root #lf_graph {
+    flex: 1;
+    min-height: 0; /* the ONE flexible scroll region in this pane */
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(139, 92, 246, 0.05), transparent 40%),
+        radial-gradient(circle at 75% 80%, rgba(59, 130, 246, 0.04), transparent 45%),
+        #131519; /* map-dark surface, below the chart surface band */
+}
+
+#lf_studio_root .lf-graph-svg {
+    display: block;
+    cursor: grab;
+}
+
+#lf_studio_root .lf-graph-svg:active {
+    cursor: grabbing;
+}
+
+#lf_studio_root .lf-graph-edge {
+    stroke: rgba(255, 255, 255, 0.18);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 5; /* the road look */
+}
+
+#lf_studio_root .lf-graph-node circle {
+    cursor: pointer;
+}
+
+#lf_studio_root .lf-graph-node:hover circle {
+    stroke: #ffffff;
+    stroke-width: 2.5;
+}
+
+#lf_studio_root .lf-graph-label {
+    font-size: 10px;
+    fill: var(--lfs-text-dim);
+    paint-order: stroke;
+    stroke: #131519;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    user-select: none;
+    pointer-events: none;
+}
+
+#lf_studio_root .lf-graph-legend {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    display: flex;
+    gap: 12px;
+    padding: 6px 10px;
+    background: rgba(22, 24, 29, 0.85);
+    border: 1px solid var(--lfs-border);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-graph-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#lf_studio_root .lf-graph-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+#lf_studio_root .lf-graph-tip {
+    display: none;
+    position: absolute;
+    z-index: 5;
+    max-width: 280px;
+    padding: 8px 10px;
+    background: rgba(22, 24, 29, 0.95);
+    border: 1px solid var(--lfs-border);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--lfs-text);
+    pointer-events: none;
+}
+
+#lf_studio_root .lf-graph-tip-dim {
+    color: var(--lfs-text-dim);
+    font-size: 0.72rem;
+}
+
+#lf_studio_root .lf-graph-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--lfs-text-dim);
+    text-align: center;
+    padding: 24px;
+}
+
 #lf_studio_root #lf_reader {
     flex: 1;
     min-height: 0;

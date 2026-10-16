@@ -319,6 +319,21 @@ async function runSearch() {
     }
 }
 
+// Open a URL in the Reader from outside the research module (graph clicks).
+export function openInReader(url) {
+    setStatus(`Opening "${url}"…`);
+    return loadIntoReader(url).catch(err => {
+        console.error(`[${extensionName}] Graph open failed:`, err);
+        toastr.error(`Could not open "${url}": ${err.message}`, "Lorebook Forge");
+        setStatus(`Open failed: ${err.message}`);
+    });
+}
+
+// The page cache itself — exported read-only for the graph pane.
+export function getPageCache() {
+    return pageCache;
+}
+
 export function initResearch() {
     $("#lf_search_btn").on("click", runSearch);
     $("#lf_search_query").on("keydown", (e) => {
