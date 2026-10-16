@@ -70,23 +70,12 @@ export async function testSearxngConnection(baseUrl) {
 // POST /api/search/visit { url } → response body IS the page content.
 
 export async function fetchPageHtml(url) {
-    // Reddit's modern UI is a JS shell with no server-rendered text;
-    // old.reddit serves real HTML for the same URLs.
-    let fetchUrl = url;
-    try {
-        const u = new URL(url);
-        if (/(^|\.)reddit\.com$/i.test(u.hostname)) {
-            u.hostname = "old.reddit.com";
-            fetchUrl = u.toString();
-            console.log(`[${extensionName}] Reddit rewrite: ${fetchUrl}`);
-        }
-    } catch { /* leave URL as-is */ }
-    console.log(`[${extensionName}] Visiting page: ${fetchUrl}`);
+    console.log(`[${extensionName}] Visiting page: ${url}`);
     const response = await fetch("/api/search/visit", {
         method: "POST",
         headers: getContext().getRequestHeaders(),
         cache: "no-cache",
-        body: JSON.stringify({ url: fetchUrl }),
+        body: JSON.stringify({ url }),
     });
     if (!response.ok) {
         const text = await response.text().catch(() => "");
@@ -96,6 +85,76 @@ export async function fetchPageHtml(url) {
     const html = await response.text();
     console.log(`[${extensionName}] Page fetched: ${html.length} chars`);
     return html;
+}
+
+// ---------- Reddit route ----------
+// Reddit walls logged-out scraping: old.reddit HTML redirects to a login
+// page (reason=lor2) and the .json API returns 403. The Atom .rss feed on
+// www.reddit.com is the one public route left — post body + comments,
+// verified 2026-10 through ST's /visit proxy header set (200, real feed).
+function isRedditUrl(url) {
+    try { return /(^|\.)reddit\.com$/i.test(new URL(url).hostname); }
+    catch { return false; }
+}
+
+function buildRedditRssUrl(url) {
+    const u = new URL(url);
+    u.hostname = "www.reddit.com";
+    u.hash = "";
+    u.search = "";
+    if (!u.pathname.endsWith(".rss")) u.pathname += ".rss";
+    return u.toString();
+}
+
+// Atom feed → readable text. Entry 0 is the post, the rest are comments.
+// <content type="html"> holds escaped HTML; textContent unescapes it.
+function redditFeedToText(xml) {
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    const entries = [...doc.querySelectorAll("entry")];
+    if (!entries.length) throw new Error("No entries in Reddit feed");
+    const parts = [];
+    entries.forEach((entry, i) => {
+        const title = entry.querySelector("title")?.textContent?.trim() || "";
+        const author = entry.querySelector("author > name")?.textContent?.trim() || "";
+        const contentHtml = entry.querySelector("content")?.textContent || "";
+        const frag = new DOMParser().parseFromString(contentHtml, "text/html");
+        // tables are Reddit's favorite layout tool — rows → lines
+        frag.querySelectorAll("p, li, tr, blockquote").forEach(el => el.appendChild(frag.createTextNode("\n")));
+        const body = (frag.body?.textContent || "")
+            .replace(/[ \t]+/g, " ")
+            .split("\n").map(l => l.trim()).join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+        if (!body) return;
+        // Comment titles are all "/u/X on <post title>" — pure repetition,
+        // so only the post itself keeps a title line.
+        const header = i === 0
+            ? `POST — ${author}${title ? ` — ${title}` : ""}`
+            : `COMMENT — ${author}`;
+        parts.push(`${header}\n${body}`);
+    });
+    if (!parts.length) throw new Error("Reddit feed entries had no content");
+    return parts.join("\n\n———\n\n");
+}
+
+async function fetchRedditText(url) {
+    const rssUrl = buildRedditRssUrl(url);
+    console.log(`[${extensionName}] Reddit RSS route: ${rssUrl}`);
+    const response = await fetch("/api/search/visit", {
+        method: "POST",
+        headers: getContext().getRequestHeaders(),
+        cache: "no-cache",
+        body: JSON.stringify({ url: rssUrl, html: false }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const xml = await response.text();
+    if (!xml.includes("<entry")) {
+        throw new Error("Reddit returned no feed (blocked?)");
+    }
+    const text = redditFeedToText(xml);
+    const title = (xml.match(/<title>([^<]*)<\/title>/) || [])[1]?.trim() || null;
+    console.log(`[${extensionName}] Reddit feed: ${xml.length} chars XML → ${text.length} chars text, ${text.split("———").length - 1} separator(s). First 300:\n`, text.slice(0, 300));
+    return { text, title, raw: text, route: "Reddit (RSS)" };
 }
 
 // Extract readable text from a full HTML page.
@@ -392,6 +451,7 @@ export async function fetchPageText(url) {
         if (!result.text) throw new Error("No readable text found on this page.");
         return result;
     }
+    if (isRedditUrl(url)) return fetchRedditText(url);
     const html = await fetchPageHtml(url);
     const text = extractPageText(html);
     console.log(`[${extensionName}] Extracted ${text.length} chars of text. First 300 chars:\n`, text.slice(0, 300));
