@@ -308,37 +308,58 @@ function decodeHtmlEntities(text) {
         .replace(/&([a-z]+);/gi, (m, name) => named[name.toLowerCase()] ?? m);
 }
 
+// Fetch a MediaWiki api.php URL: DIRECT browser fetch first, ST proxy
+// fallback. wiki.gg 500s ST's server-side /visit while serving browsers
+// fine — and api.php with origin=* is CORS-open (verified via curl:
+// access-control-allow-origin: *), so the extension can hit it straight
+// from the page. No custom headers → simple request, no preflight.
+// Any failure (CORS-blocked wiki, CSP, bot wall) falls back to the proxy,
+// preserving the old behavior for wikis where that works (Fandom).
+async function fetchMediaWikiApi(apiUrl) {
+    const directUrl = `${apiUrl}${apiUrl.includes("?") ? "&" : "?"}origin=*`;
+    try {
+        const response = await fetch(directUrl, { cache: "no-cache" });
+        if (response.ok) {
+            const body = await response.text();
+            JSON.parse(body); // throws on non-JSON bot walls → proxy
+            console.log(`[${extensionName}] MediaWiki direct fetch OK (${body.length} chars)`);
+            return body;
+        }
+        console.warn(`[${extensionName}] Direct fetch HTTP ${response.status} — retrying via ST proxy`);
+    } catch (err) {
+        console.warn(`[${extensionName}] Direct fetch failed (${err.message}) — retrying via ST proxy`);
+    }
+    const response = await fetch("/api/search/visit", {
+        method: "POST",
+        headers: getContext().getRequestHeaders(),
+        cache: "no-cache",
+        body: JSON.stringify({ url: apiUrl, html: false }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+}
+
 async function fetchMediaWikiText(url) {
     const u = new URL(url);
     const title = getMediaWikiPageTitle(url);
-    const ctx = getContext();
 
     // --- Primary route: rendered HTML (prop=text) ---
     try {
         const renderedUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}` +
             `&format=json&prop=text&disabletoc=1&disableeditsection=1&disablelimitreport=1`;
         console.log(`[${extensionName}] MediaWiki rendered route: ${renderedUrl}`);
-        const response = await fetch("/api/search/visit", {
-            method: "POST",
-            headers: ctx.getRequestHeaders(),
-            cache: "no-cache",
-            body: JSON.stringify({ url: renderedUrl, html: false }),
-        });
-        if (response.ok) {
-            const body = await response.text();
-            const data = JSON.parse(body); // throws → caught below
-            if (data?.error) throw new Error(`MediaWiki: ${data.error.info || data.error.code}`);
-            const renderedHtml = data?.parse?.text?.["*"];
-            if (typeof renderedHtml === "string" && renderedHtml.trim()) {
-                const text = renderedMediaWikiToText(renderedHtml);
-                if (!text) throw new Error("Rendered text came back empty");
-                console.log(`[${extensionName}] MediaWiki rendered "${data.parse.title || title}": ` +
-                    `${renderedHtml.length} chars HTML → ${text.length} chars text. First 300:\n`, text.slice(0, 300));
-                return { text, title: data.parse.title || title, raw: text, route: "MediaWiki (rendered)", html: renderedHtml };
-            }
+        const body = await fetchMediaWikiApi(renderedUrl); // throws → caught below
+        const data = JSON.parse(body);
+        if (data?.error) throw new Error(`MediaWiki: ${data.error.info || data.error.code}`);
+        const renderedHtml = data?.parse?.text?.["*"];
+        if (typeof renderedHtml === "string" && renderedHtml.trim()) {
+            const text = renderedMediaWikiToText(renderedHtml);
+            if (!text) throw new Error("Rendered text came back empty");
+            console.log(`[${extensionName}] MediaWiki rendered "${data.parse.title || title}": ` +
+                `${renderedHtml.length} chars HTML → ${text.length} chars text. First 300:\n`, text.slice(0, 300));
+            return { text, title: data.parse.title || title, raw: text, route: "MediaWiki (rendered)", html: renderedHtml };
         }
-        // fall through to legacy route
-        console.warn(`[${extensionName}] prop=text unavailable (HTTP ${response.status}) — falling back to wikitext route`);
+        console.warn(`[${extensionName}] prop=text missing in response — falling back to wikitext route`);
     } catch (err) {
         console.warn(`[${extensionName}] Rendered route failed (${err.message}) — falling back to wikitext route`);
     }
@@ -347,15 +368,7 @@ async function fetchMediaWikiText(url) {
     const apiUrl = `${u.origin}/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&prop=wikitext`;
     console.log(`[${extensionName}] MediaWiki wikitext fallback: ${apiUrl}`);
 
-    const response = await fetch("/api/search/visit", {
-        method: "POST",
-        headers: ctx.getRequestHeaders(),
-        cache: "no-cache",
-        body: JSON.stringify({ url: apiUrl, html: false }),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const body = await response.text();
-    console.log(`[${extensionName}] MediaWiki API response (first 300 chars):`, body.slice(0, 300));
+    const body = await fetchMediaWikiApi(apiUrl);
 
     let data;
     try { data = JSON.parse(body); } catch {
