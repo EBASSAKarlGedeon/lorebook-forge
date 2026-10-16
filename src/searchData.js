@@ -214,8 +214,10 @@ const MEDIAWIKI_HOST_PATTERNS = [
 function getMediaWikiPageTitle(url) {
     try {
         const u = new URL(url);
-        const m = u.pathname.match(/^\/wiki\/([^/]+)/);
-        return m ? decodeURIComponent(m[1]) : null;
+        // Full multi-segment path — wiki subpages ("Ultimate skill/List & users")
+        // are real pages; truncating at the first / would silently read the parent.
+        const m = u.pathname.match(/^\/wiki\/(.+)$/);
+        return m ? decodeURIComponent(m[1]).replace(/_/g, " ") : null;
     } catch { return null; }
 }
 
@@ -299,7 +301,55 @@ function renderedMediaWikiToText(html) {
         aside.replaceWith(div);
     }
 
-    // 3) Headings → "== Title ==" lines so section structure survives flattening
+    // 3) Tables → pipe rows with rowspan/colspan grid-filling (Stage 19.1).
+    //    Fandom list pages ("Ultimate skill/List & users") are THE index of
+    //    skills+users; naive flattening smears rows and drops rowspan cells
+    //    (Raphael would vanish from its 2nd/3rd rows). Occupancy map first.
+    for (const table of [...doc.querySelectorAll("table")]) {
+        // Nested tables (infobox sidebars inside list tables) — process
+        // innermost first: querySelectorAll is document order, and replaceWith
+        // on an inner table leaves the outer one intact for its own pass.
+        const rows = [...table.querySelectorAll(":scope > tbody > tr, :scope > thead > tr, :scope > tfoot > tr, :scope > tr")];
+        if (!rows.length) { table.remove(); continue; }
+        const grid = []; // grid[r][c] = text
+        const span = []; // span[r][c] = true when occupied by a rowspan from above
+        for (const [ri, tr] of rows.entries()) {
+            const rowCells = [...tr.querySelectorAll(":scope > td, :scope > th")];
+            if (!rowCells.length) continue;
+            grid[ri] = grid[ri] || [];
+            span[ri] = span[ri] || [];
+            let ci = 0;
+            for (const cell of rowCells) {
+                while (span[ri][ci]) ci++; // skip columns held by rowspans above
+                const rs = Math.max(1, parseInt(cell.getAttribute("rowspan") || "1", 10) || 1);
+                const cs = Math.max(1, parseInt(cell.getAttribute("colspan") || "1", 10) || 1);
+                const text = (cell.textContent || "").replace(/\s+/g, " ").trim();
+                for (let dr = 0; dr < rs; dr++) {
+                    for (let dc = 0; dc < cs; dc++) {
+                        const r = ri + dr, c = ci + dc;
+                        grid[r] = grid[r] || [];
+                        span[r] = span[r] || [];
+                        if (dr > 0) span[r][c] = true; // held from above
+                        grid[r][c] = text;
+                    }
+                }
+                ci += cs;
+            }
+        }
+        const lines = grid
+            .filter(row => row && row.some(c => c !== undefined && c !== ""))
+            .map(row => {
+                const width = Math.max(...grid.map(r => r ? r.length : 0));
+                const cells = [];
+                for (let c = 0; c < width; c++) cells.push(row[c] ?? "");
+                return `| ${cells.join(" | ")} |`;
+            });
+        const div = doc.createElement("div");
+        div.textContent = `\n${lines.join("\n")}\n`;
+        table.replaceWith(div);
+    }
+
+    // 4) Headings → "== Title ==" lines so section structure survives flattening
     for (const h of [...doc.querySelectorAll("h2, h3, h4")]) {
         const level = h.tagName === "H2" ? "==" : "===";
         const div = doc.createElement("div");
@@ -307,12 +357,12 @@ function renderedMediaWikiToText(html) {
         h.replaceWith(div);
     }
 
-    // 4) Block elements → newline boundaries so paragraphs/list rows stay readable
+    // 5) Block elements → newline boundaries so paragraphs/list rows stay readable
     for (const p of doc.querySelectorAll("p, li, tr, dd, dt, blockquote, figure")) {
         p.appendChild(doc.createTextNode("\n"));
     }
 
-    // 5) The rendered body always ships inside .mw-parser-output — target it
+    // 6) The rendered body always ships inside .mw-parser-output — target it
     //    directly instead of content-scoring fallbacks.
     const root = doc.querySelector(".mw-parser-output") || doc.body;
     return root.textContent
