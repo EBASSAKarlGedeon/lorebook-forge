@@ -1509,3 +1509,17 @@
     padding: 2px 10px;
     font-size: 0.78rem;
 }
+
+/* Stage 19: category chips stand out from regular wiki links */
+#lf_studio_root .lf-cat-chip {
+    border-color: var(--lfs-accent);
+    color: var(--lfs-accent);
+}
+
+#lf_studio_root .lf-cat-members {
+    flex-shrink: 0;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}

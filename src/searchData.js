@@ -356,6 +356,47 @@ export function collectWikiLinks(html, originUrl) {
     return links;
 }
 
+// ---------- Stage 19: category enumeration ----------
+// Verified 2026-10 against tensura.fandom.com api.php:
+//   action=query&list=categorymembers returns {title, ns, pageid} members;
+//   ns 14 = subcategory, ns 0 = article page (the `type` field is empty on
+//   Fandom — ns is the reliable classifier). Pagination via cmcontinue:
+//   {"cmcontinue":"page|414c...","continue":"-||"} — both params on follow-up.
+//   Titles are case-sensitive past the first letter ("Category:Ultimate skills").
+
+const CATEGORY_LIMIT = 500;
+
+// Map a wiki page title to its canonical /wiki/ URL on the given origin.
+// Spaces → underscores; namespace prefixes (Category:) are kept.
+function wikiTitleToUrl(origin, title) {
+    return `${origin}/wiki/${encodeURIComponent(String(title).replace(/ /g, "_"))}`;
+}
+
+// Enumerate a category: pages + subcategories, all pagination followed.
+// Returns { pages: [{title, url}], subcats: [{title, url}] }.
+export async function enumerateCategory(origin, categoryTitle) {
+    const base = `${origin}/api.php?action=query&list=categorymembers`
+        + `&cmtitle=${encodeURIComponent(categoryTitle)}&cmlimit=${CATEGORY_LIMIT}`
+        + `&cmtype=page|subcat&format=json`;
+    let cont = null;
+    const pages = [];
+    const subcats = [];
+    do {
+        let url = base;
+        if (cont) url += `&cmcontinue=${encodeURIComponent(cont)}&continue=${encodeURIComponent("-||")}`;
+        const body = await fetchMediaWikiApi(url);
+        const data = JSON.parse(body);
+        if (data?.error) throw new Error(`MediaWiki: ${data.error.info || data.error.code}`);
+        for (const m of (data?.query?.categorymembers || [])) {
+            const item = { title: m.title, url: wikiTitleToUrl(origin, m.title) };
+            (m.ns === 14 ? subcats : pages).push(item);
+        }
+        cont = data?.continue?.cmcontinue || null;
+    } while (cont);
+    console.log(`[${extensionName}] enumerateCategory "${categoryTitle}" @ ${origin}: ${pages.length} pages, ${subcats.length} subcats`);
+    return { pages, subcats };
+}
+
 // Legacy fallback: entity-decoding patch for the wikitext cleaner, so
 // &mdash; / &#8212; / &nbsp; don't leak into drafts if this path is ever hit.
 function decodeHtmlEntities(text) {

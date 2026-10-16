@@ -2,7 +2,7 @@
 // Moved out of the drawer (settings.js) — the drawer is now just a launcher.
 import { extensionName } from "./config.js";
 import { escapeHtml, suggestKeys } from "./helpers.js";
-import { searchSearxng, fetchPageText, collectWikiLinks } from "./searchData.js";
+import { searchSearxng, fetchPageText, collectWikiLinks, enumerateCategory } from "./searchData.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
 import { getSettings } from "./settings.js";
 
@@ -113,18 +113,62 @@ async function loadIntoReader(url, resultEl = null) {
             <div class="lf-reader-links">
                 <div class="lf-reader-links-label">Wiki links on this page (${links.length})</div>
                 <div class="lf-reader-links-scroll">
-                    ${links.map(l => `<button class="menu_button lf-reader-link" type="button"
-                        data-url="${escapeHtml(l.url)}" title="${escapeHtml(l.url)}">${escapeHtml(l.label)}</button>`).join("")}
+                    ${links.map(l => {
+                        const isCat = l.title.startsWith("Category:");
+                        return `<button class="menu_button lf-reader-link${isCat ? " lf-cat-chip" : ""}" type="button"
+                        data-url="${escapeHtml(l.url)}" data-title="${escapeHtml(l.title)}"${isCat ? ' data-cat="1"' : ""}
+                        title="${isCat ? "Enumerate this category" : escapeHtml(l.url)}">${isCat ? "📁 " : ""}${escapeHtml(l.label)}</button>`;
+                    }).join("")}
                 </div>
             </div>` : ""}
+            <div class="lf-cat-members" style="display:none;"></div>
             <div class="lf-draft-form" style="display:none;"></div>
         </div>
     `);
     reader.find(".lf-draft-btn").on("click", () => showDraftForm(reader, url));
     reader.find(".lf-reader-close").on("click", closeReader);
-    reader.find(".lf-reader-link").on("click", function () {
+    // Stage 19: render enumerated category members into the holder
+    function renderCategoryMembers(holder, { pages, subcats }) {
+        if (!pages.length && !subcats.length) {
+            holder.html(`<div class="lf-search-status">Category is empty.</div>`);
+            return;
+        }
+        const chip = (item, isCat) => `<button class="menu_button lf-reader-link${isCat ? " lf-cat-chip" : ""}" type="button"
+            data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(item.title)}"${isCat ? ' data-cat="1"' : ""}
+            title="${escapeHtml(item.url)}">${isCat ? "📁 " : ""}${escapeHtml(item.title.replace(/^Category:/, ""))}</button>`;
+        holder.html(`
+            <div class="lf-reader-links-label">Category members — ${pages.length} page(s) · ${subcats.length} subcategor(y/ies)</div>
+            <div class="lf-reader-links-scroll">
+                ${subcats.map(s => chip(s, true)).join("")}
+                ${pages.map(p => chip(p, false)).join("")}
+            </div>
+        `);
+    }
+
+    // One delegated handler for ALL chips (wiki links + category members):
+    // category chips enumerate in place, page chips load into the reader.
+    reader.on("click", ".lf-reader-link", function () {
         const btn = $(this);
         const linkUrl = String(btn.data("url"));
+        if (btn.data("cat")) {
+            const title = String(btn.data("title"));
+            const origin = new URL(linkUrl).origin;
+            const holder = reader.find(".lf-cat-members");
+            setStatus(`Enumerating "${title}"…`);
+            holder.html(`<div class="lf-search-status">Enumerating…</div>`).slideDown(150);
+            enumerateCategory(origin, title)
+                .then(({ pages, subcats }) => {
+                    renderCategoryMembers(holder, { pages, subcats });
+                    setStatus(`Category "${title}": ${pages.length} pages, ${subcats.length} subcategories`);
+                })
+                .catch(err => {
+                    console.error(`[${extensionName}] Category enumeration failed:`, err);
+                    toastr.error(`Could not enumerate "${title}": ${err.message}`, "Lorebook Forge");
+                    holder.slideUp(150);
+                    setStatus(`Category failed: ${err.message}`);
+                });
+            return;
+        }
         setStatus(`Reading "${btn.text()}"…`);
         loadIntoReader(linkUrl).catch(err => {
             console.error(`[${extensionName}] Wiki-link read failed:`, err);
