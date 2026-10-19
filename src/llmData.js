@@ -119,7 +119,13 @@ Convert the source material into lorebook entries now. Strict JSON array only.`;
 
 // ---------- Wizard chat (Stage 13) ----------
 
-const WIZARD_CHAT_TOKENS = 1200;
+// 4000 (was 1200): generateRaw maps responseLength straight onto the request's
+// max_tokens (verified in ST source: st-context → TempResponseLength.save →
+// openai.js ships it raw), and thinking models like GLM spend reasoning tokens
+// out of that SAME budget before the answer starts. At 1200 the reasoning ate
+// most of it and answers clipped mid-sentence. 4000 covers reasoning + a
+// full entry draft in one reply.
+const WIZARD_CHAT_TOKENS = 4000;
 const SOURCE_MATERIAL_CAP = 160_000; // soft cap on pasted material per call
 const HISTORY_TURNS = 24;            // transcript window sent with each call
 
@@ -182,6 +188,11 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer f
 
     reply = await stripReasoning(reply);
     console.log(`[${extensionName}] Wizard replied in ${((Date.now() - t0) / 1000).toFixed(1)}s, ${reply.length} chars`);
+    // Budget-exhaustion tell: prose clipped mid-sentence ends with no terminal
+    // punctuation. Console-only signal — makes a recurrence instantly visible.
+    if (reply.trim() && !/[.!?:;"”')\]}…]/.test(reply.trim().at(-1))) {
+        console.warn(`[${extensionName}] Wizard reply looks cut off — the ${WIZARD_CHAT_TOKENS}-token budget may have been eaten by reasoning + answer`);
+    }
     return reply;
 }
 
