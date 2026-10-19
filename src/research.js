@@ -186,6 +186,7 @@ async function loadIntoReader(url, resultEl = null) {
                 <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
                 <button class="menu_button lf-reader-close" type="button" title="Reset the Reader tab">✕</button>
             </div>
+            <div class="lf-reader-body">
             <pre class="lf-reader-text">${escapeHtml(text)}</pre>
             ${wikiLinks.length ? `
             <div class="lf-reader-links">
@@ -204,6 +205,7 @@ async function loadIntoReader(url, resultEl = null) {
             </div>` : ""}
             <div class="lf-cat-members" style="display:none;"></div>
             <div class="lf-draft-form" style="display:none;"></div>
+            </div>
         </div>
     `);
     reader.find(".lf-draft-btn").on("click", () => showDraftForm(reader, url));

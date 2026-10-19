@@ -1,7 +1,8 @@
-// Lorebook Wizard (center pane): conversational lorebook builder.
-// Stage 16.5 UI rework: chat is the ONLY flexible region; Sources & Canon
-// is a full-height overlay with a single scroll (fixes the clipped-drawer
-// overflow); proposals are a bounded, collapsible carousel.
+// Lorebook Wizard (Wizard tab): conversational lorebook builder.
+// Stage 23 layout: chat + input fill the Wizard tab (chat is the one
+// flexible region); Sources & Canon stays a full-height overlay with a
+// single scroll; proposals live in their own Proposals tab — the pane is
+// owned by studio.js, renderProposals fills #lf_proposals.
 import { extensionName } from "./config.js";
 import { escapeHtml, verifyQuote } from "./helpers.js";
 import { getWizardSession, setCanonRules, addSource, deleteSource,
@@ -14,7 +15,6 @@ import { saveDraft, renderDraftsList } from "./drafts.js";
 import { listLorebooks, loadLorebookEntries, lorebookToSourceText, applyUpdateToLorebook } from "./wiData.js";
 
 let drawerOpen = null;        // tri-state: null = decide from source count on first render
-let proposalsOpen = true;     // carousel expanded?
 
 function setStatus(text) {
     $("#lf_studio_status").text(text);
@@ -69,54 +69,36 @@ function proposalCardHtml(p, verdict) {
 
 function renderProposals() {
     const w = getWizardSession();
-    const el = $("#lf_wizard_proposals");
-    if (!el.length) return;
+    const grid = $("#lf_proposals");
+    if (!grid.length) return;
 
-    const prevTrack = el.find(".lf-carousel-track")[0];
-    const prevScroll = prevTrack ? prevTrack.scrollLeft : 0;
+    // Preserve vertical scroll across in-place re-renders (accept/reject)
+    const scrollEl = document.getElementById("lf_proposals_scroll");
+    const prevScroll = scrollEl ? scrollEl.scrollTop : 0;
 
-    if (!w.proposals.length) {
-        el.addClass("lf-hidden").empty();
-        return;
-    }
-    el.removeClass("lf-hidden").toggleClass("collapsed", !proposalsOpen);
     const texts = w.sources.map(s => s.text);
-    el.html(`
-        <div class="lf-carousel-bar">
-            <span class="fa-solid fa-circle-chevron-down inline-drawer-icon ${proposalsOpen ? "" : "up"} lf-carousel-toggle"></span>
-            <b>Proposals</b>
-            <span class="lf-carousel-count"></span>
-            <button class="menu_button lf-carousel-prev" type="button" title="Previous">◀</button>
-            <button class="menu_button lf-carousel-next" type="button" title="Next">▶</button>
-        </div>
-        <div class="lf-carousel-track">
-            ${w.proposals.map(p => proposalCardHtml(p, verifyQuote(p.quote, texts))).join("")}
-        </div>
-    `);
+    if (!w.proposals.length) {
+        grid.html(`
+            <div class="lf-pane-empty">
+                <div class="lf-reader-empty-icon">⚡</div>
+                <h3>No proposals yet</h3>
+                <p>Add sources in the Wizard tab, then hit <b>⚡ Extract</b> —<br>
+                cards appear here with evidence quotes verified against your sources.</p>
+            </div>
+        `);
+    } else {
+        grid.html(w.proposals.map(p => proposalCardHtml(p, verifyQuote(p.quote, texts))).join(""));
+    }
 
-    const track = el.find(".lf-carousel-track")[0];
-    const count = el.find(".lf-carousel-count");
-    const step = () => {
-        const card = el.find(".lf-proposal").first()[0];
-        return card ? card.offsetWidth + 10 : 330;
-    };
-    const updateCount = () => {
-        const n = w.proposals.length;
-        const i = Math.min(n, Math.round(track.scrollLeft / step()) + 1);
-        count.text(`${i} / ${n}`);
-    };
-    el.find(".lf-carousel-track").on("scroll", () => requestAnimationFrame(updateCount));
-    el.find(".lf-carousel-prev").on("click", (e) => { e.stopPropagation(); track.scrollBy({ left: -step(), behavior: "smooth" }); });
-    el.find(".lf-carousel-next").on("click", (e) => { e.stopPropagation(); track.scrollBy({ left: step(), behavior: "smooth" }); });
-    el.find(".lf-carousel-bar").on("click", function () {
-        proposalsOpen = !proposalsOpen;
-        el.toggleClass("collapsed", !proposalsOpen);
-        $(this).find(".lf-carousel-toggle").toggleClass("up", !proposalsOpen);
-    });
-    updateCount();
-    track.scrollLeft = prevScroll;
+    // Pane header chip + top-tab badge (pending count only — the badge
+    // disappears when nothing awaits review)
+    const pending = w.proposals.filter(p => p.status === "pending").length;
+    $("#lf_proposals_count").text(w.proposals.length ? `${pending} to review · ${w.proposals.length} total` : "");
+    $("#lf_tab_proposals .lf-tab-badge").text(pending || "").toggleClass("lf-hidden", !pending);
 
-    el.find(".lf-proposal-accept").on("click", async function () {
+    if (scrollEl) scrollEl.scrollTop = prevScroll;
+
+    grid.find(".lf-proposal-accept").on("click", async function () {
         const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
         if (!p) return;
 
@@ -160,7 +142,7 @@ function renderProposals() {
         renderProposals();
         toastr.success(`"${p.title}" accepted — see the Drafts panel.`, "Lorebook Forge");
     });
-    el.find(".lf-proposal-reject").on("click", function () {
+    grid.find(".lf-proposal-reject").on("click", function () {
         const id = $(this).closest(".lf-proposal").data("id");
         updateWizardProposal(id, "rejected");
         renderProposals();
@@ -245,10 +227,11 @@ async function onExtract() {
         pushWizardMessage("assistant",
             `⚡ Proposed ${proposals.length} entr${proposals.length === 1 ? "y" : "ies"} — ` +
             `${counts.verified} verified ✅, ${counts.fuzzy} near-match ⚠️, ${counts.missing} unverified ❌. Review the cards below.`);
-        proposalsOpen = true; // make sure new cards are visible
         renderChat();
-        const trackEl = document.querySelector("#lf_wizard_proposals .lf-carousel-track");
-        if (trackEl) trackEl.scrollTo({ left: trackEl.scrollWidth });
+        // Jump straight to the Proposals tab so the new cards are visible
+        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-center", { detail: "proposals" }));
+        const scroller = document.getElementById("lf_proposals_scroll");
+        if (scroller) scroller.scrollTo({ top: scroller.scrollHeight }); // newest cards are appended at the end
         setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`);
     } catch (err) {
         console.error(`[${extensionName}] Extraction failed:`, err);
@@ -332,7 +315,6 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
         </div>
         <div class="lf-wizard-body">
             <div id="lf_wizard_chat" class="lf-wizard-chat"></div>
-            <div id="lf_wizard_proposals" class="lf-wizard-proposals lf-hidden"></div>
             <div class="lf-wizard-input">
                 <textarea id="lf_wizard_input" class="text_pole" rows="2"
                           placeholder="Talk to the wizard… or type an extraction focus and hit ⚡ (Enter = send, Shift+Enter = newline)"></textarea>
@@ -515,7 +497,6 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
 
 export function initWizard() {
     drawerOpen = null;
-    proposalsOpen = true;
     document.removeEventListener("lf-wizard-add-source", onDraftToWizard);
     document.addEventListener("lf-wizard-add-source", onDraftToWizard);
     document.removeEventListener("keydown", onWizardEscCapture, true);

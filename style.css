@@ -1,3 +1,8 @@
+/* Forge identity (Stage 23): Alegreya = the content voice (brand, titles,
+   reading prose), Alegreya Sans = UI chrome. Loaded from Google Fonts; the
+   host's serif/sans stack falls back in if the fonts can't load. */
+@import url('https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,500;0,600;0,700;1,400;1,500&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
 /* Stage 2: settings drawer widgets */
 .lf-settings-block {
     display: flex;
@@ -285,30 +290,53 @@
     white-space: nowrap;
 }
 
-/* ============ The Studio — landing-page theme (purple) ============
-   Tokens mirror the landing-page extension exactly:
-   60% #16181d bg · 30% #1b1e24 surfaces + white text · 10% purple accent.
-   Per user spec: every button light purple, left rail light purple,
-   white text where it matters.
+/* ============ The Studio — "night forge" design system (Stage 23) ============
+   One coherent component layer replacing the stage-by-stage override stack.
+   Identity: a night forge for world-lore — iron surfaces, lantern-warm text,
+   ONE ember accent. Alegreya serif speaks for content (titles, reading
+   prose), Alegreya Sans for chrome.
+
+   Layout law: every pane = fixed header + ONE full-height scroll region.
+   The rail toggles side docks; the center shows one workspace tab at a
+   time (Wizard / Proposals / Reader / Map). Never stack two flexible
+   regions in one pane, never cap a scroll region with max-height.
    ============ */
+
 #lf_studio_root {
-    --lfs-bg: #16181d;
-    --lfs-surface: #1b1e24;
-    --lfs-card: rgba(255, 255, 255, 0.04);
-    --lfs-text: #ffffff;
-    --lfs-text-dim: rgba(255, 255, 255, 0.55);
-    --lfs-border: rgba(255, 255, 255, 0.10);
-    --lfs-accent: #a78bfa;
-    --lfs-accent-hover: #c4b5fd;
-    --lfs-accent-dim: #7c3aed;
+    --lfs-bg: #141519;                       /* forge floor */
+    --lfs-bg-deep: #0f1013;                  /* wells: rail, inputs, canvas */
+    --lfs-surface: #1a1c22;                  /* panel iron sheet */
+    --lfs-surface-2: #21242c;                /* raised: hover, buttons */
+    --lfs-card: #232730;                     /* card stock */
+    --lfs-text: #ece7dd;                     /* lantern light */
+    --lfs-text-dim: #a09b8e;                 /* cooled ash */
+    --lfs-border: rgba(236, 231, 221, 0.09);
+    --lfs-border-strong: rgba(236, 231, 221, 0.18);
+    --lfs-accent: #e08e3c;                   /* ember */
+    --lfs-accent-bright: #f2b263;
+    --lfs-accent-soft: rgba(224, 142, 60, 0.14);
+    --lfs-accent-ink: #221607;               /* dark ink on ember fills */
+    --lfs-good: #51cf66;
+    --lfs-warn: #ffd43b;
+    --lfs-bad: #ff6b6b;
+    --lfs-font-ui: 'Alegreya Sans', var(--mainFontFamily, sans-serif);
+    --lfs-font-display: 'Alegreya', Georgia, 'Times New Roman', serif;
+    --lfs-radius: 10px;
+    --lfs-radius-lg: 14px;
 
     position: fixed;
     inset: 0;
     z-index: 10000;
-    background-color: var(--lfs-bg);
     color: var(--lfs-text);
-    font-family: var(--mainFontFamily, sans-serif);
+    font-family: var(--lfs-font-ui);
     overflow: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(236, 231, 221, 0.18) transparent;
+    /* forge atmosphere: ember bloom low-left, cool moonlight top-right */
+    background:
+        radial-gradient(1100px 700px at 12% 108%, rgba(224, 142, 60, 0.06), transparent 60%),
+        radial-gradient(900px 600px at 96% -8%, rgba(96, 116, 158, 0.05), transparent 55%),
+        var(--lfs-bg);
 }
 
 #lf_studio_root .lf-studio-page {
@@ -317,24 +345,25 @@
     height: 100%;
 }
 
-/* ---- Inputs: landing-page search-box style ---- */
+/* ---- Shared: inputs ---- */
 #lf_studio_root .text_pole {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--lfs-bg-deep);
     color: var(--lfs-text);
-    border: 1px solid var(--lfs-border);
-    border-radius: 8px;
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: 9px;
     padding: 6px 10px;
     outline: none;
+    font-family: var(--lfs-font-ui);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #lf_studio_root .text_pole::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(236, 231, 221, 0.35);
 }
 
 #lf_studio_root .text_pole:focus {
     border-color: var(--lfs-accent);
-    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+    box-shadow: 0 0 0 3px var(--lfs-accent-soft);
 }
 
 #lf_studio_root textarea.text_pole { resize: vertical; }
@@ -344,102 +373,279 @@
     color: #fff;
 }
 
-/* ---- Buttons: ALL light purple ---- */
-/* Secondary buttons: light purple tint (like landing-page hover pills) */
+/* ---- Shared: buttons (iron default, ember primary) ---- */
 #lf_studio_root .menu_button {
-    background: rgba(167, 139, 250, 0.16);
-    color: #fff;
-    border: 1px solid rgba(167, 139, 250, 0.40);
-    border-radius: 8px;
+    background: var(--lfs-surface-2);
+    color: var(--lfs-text);
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: 9px;
     padding: 5px 12px;
     cursor: pointer;
-    font-weight: 600;
-    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    font-family: var(--lfs-font-ui);
+    font-weight: 500;
+    font-size: 0.88rem;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 #lf_studio_root .menu_button:hover {
-    background: rgba(167, 139, 250, 0.28);
-    border-color: var(--lfs-accent);
-    box-shadow: 0 0 14px rgba(167, 139, 250, 0.25);
+    background: #282c36;
+    border-color: rgba(224, 142, 60, 0.55);
+    color: var(--lfs-accent-bright);
 }
 
-#lf_studio_root .menu_button:disabled { opacity: 0.55; cursor: default; }
+#lf_studio_root .menu_button:disabled { opacity: 0.5; cursor: default; }
 
-/* Primary CTAs: full purple gradient (like landing-page "Continue") */
+#lf_studio_root .menu_button:focus-visible,
+#lf_studio_root .lf-rail-btn:focus-visible,
+#lf_studio_root .lf-tab:focus-visible {
+    outline: 2px solid var(--lfs-accent);
+    outline-offset: 1px;
+}
+
+/* Primary CTAs: solid ember, dark ink text */
 #lf_studio_root #lf_search_btn,
 #lf_studio_root .lf-distill-go,
 #lf_studio_root .lf-draft-save,
 #lf_studio_root .lf-commit-go {
-    background: linear-gradient(90deg, #a78bfa, #7c3aed);
-    color: #fff;
-    border: none;
+    background: var(--lfs-accent);
+    color: var(--lfs-accent-ink);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    font-weight: 700;
 }
 
 #lf_studio_root #lf_search_btn:hover,
 #lf_studio_root .lf-distill-go:hover,
 #lf_studio_root .lf-draft-save:hover,
 #lf_studio_root .lf-commit-go:hover {
-    filter: brightness(1.1);
-    box-shadow: 0 0 14px rgba(167, 139, 250, 0.4);
+    background: var(--lfs-accent-bright);
+    color: var(--lfs-accent-ink);
 }
 
-/* ---- Header: landing-page topbar style ---- */
+/* ---- Shared: small utilities ---- */
+#lf_studio_root input[type="checkbox"] { accent-color: var(--lfs-accent); }
+
+#lf_studio_root .lf-hidden { display: none !important; }
+
+#lf_studio_root .lf-chip {
+    font-size: 0.72rem;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--lfs-border-strong);
+    background: rgba(236, 231, 221, 0.04);
+    color: var(--lfs-text-dim);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#lf_studio_root .lf-chip:empty { display: none; }
+
+#lf_studio_root .lf-target-chip {
+    color: var(--lfs-accent-bright);
+    border-color: rgba(224, 142, 60, 0.45);
+    background: var(--lfs-accent-soft);
+}
+
+#lf_studio_root .lf-search-status {
+    opacity: 1;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-settings-label {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--lfs-text);
+}
+
+/* ---- Shared: cards (search results, drafts, sources) ---- */
+#lf_studio_root .lf-result,
+#lf_studio_root .lf-draft,
+#lf_studio_root .lf-source {
+    padding: 10px 12px;
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-card);
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-result-title {
+    color: var(--lfs-accent-bright);
+    font-weight: 600;
+}
+
+#lf_studio_root .lf-result-title:hover { color: var(--lfs-text); }
+
+#lf_studio_root .lf-result.active {
+    border-color: rgba(224, 142, 60, 0.55);
+    background: var(--lfs-accent-soft);
+}
+
+#lf_studio_root .lf-result-url,
+#lf_studio_root .lf-result-snippet {
+    color: var(--lfs-text-dim);
+    opacity: 1;
+}
+
+#lf_studio_root .lf-result-actions { margin-top: 6px; }
+
+#lf_studio_root .lf-read-btn,
+#lf_studio_root .lf-draft-btn {
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    margin-left: 0;
+}
+
+#lf_studio_root .lf-result-engines span,
+#lf_studio_root .lf-draft-keys span {
+    border: 1px solid var(--lfs-border-strong);
+    background: rgba(236, 231, 221, 0.05);
+    color: var(--lfs-text);
+    opacity: 0.9;
+}
+
+#lf_studio_root .lf-ai-badge {
+    border: 1px solid rgba(224, 142, 60, 0.45);
+    background: var(--lfs-accent-soft);
+    color: var(--lfs-accent-bright);
+    opacity: 1;
+}
+
+#lf_studio_root .lf-draft-title {
+    font-family: var(--lfs-font-display);
+    font-weight: 600;
+    font-size: 1.02rem;
+}
+
+#lf_studio_root .lf-draft-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#lf_studio_root .lf-draft-actions .menu_button {
+    padding: 3px 10px;
+    font-size: 0.78rem;
+}
+
+#lf_studio_root .lf-draft-actions .lf-draft-towizard { padding: 3px 8px; }
+
+#lf_studio_root .lf-draft-meta { color: var(--lfs-text-dim); opacity: 1; }
+
+/* ---- Top bar: brand + workspace tabs + close ---- */
 #lf_studio_root .lf-studio-header {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px 24px;
+    gap: 22px;
+    padding: 8px 18px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(22, 24, 29, 0.55);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    flex-shrink: 0;
+    background: rgba(15, 16, 19, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 #lf_studio_root .lf-studio-title {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-weight: 700;
-    font-size: 1.1rem;
+    font-family: var(--lfs-font-display);
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
-#lf_studio_root .lf-studio-logo { font-size: 1.3rem; }
-
-#lf_studio_root .lf-studio-name { color: var(--lfs-text); }
+#lf_studio_root .lf-studio-logo { font-size: 1.25rem; }
 
 #lf_studio_root .lf-studio-sub {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.66rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--lfs-accent-hover);
-    padding: 2px 10px;
-    border: 1px solid rgba(167, 139, 250, 0.35);
+    letter-spacing: 0.1em;
+    color: var(--lfs-accent);
+    padding: 2px 9px;
+    border: 1px solid rgba(224, 142, 60, 0.4);
     border-radius: 999px;
-    background: rgba(167, 139, 250, 0.12);
+    background: var(--lfs-accent-soft);
 }
 
-#lf_studio_root .lf-studio-close {
+#lf_studio_root .lf-tabs {
+    display: flex;
+    align-self: stretch;
+    gap: 2px;
+}
+
+#lf_studio_root .lf-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    border: none;
+    background: transparent;
+    color: var(--lfs-text-dim);
+    cursor: pointer;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.92rem;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+#lf_studio_root .lf-tab:hover { color: var(--lfs-text); }
+
+#lf_studio_root .lf-tab.active {
+    color: var(--lfs-accent-bright);
+    font-weight: 700;
+}
+
+/* Ember underline on the live tab, hugging the header's bottom border */
+#lf_studio_root .lf-tab.active::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 2px;
+    background: var(--lfs-accent);
+    border-radius: 2px 2px 0 0;
+    box-shadow: 0 0 8px rgba(224, 142, 60, 0.5);
+}
+
+#lf_studio_root .lf-tab-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
-    border: 1px solid var(--lfs-border);
+    background: var(--lfs-accent);
+    color: var(--lfs-accent-ink);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+#lf_studio_root .lf-studio-close {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--lfs-border-strong);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--lfs-surface-2);
     color: var(--lfs-text);
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-#lf_studio_root .lf-studio-close svg { width: 18px; height: 18px; }
+#lf_studio_root .lf-studio-close svg { width: 17px; height: 17px; }
 
 #lf_studio_root .lf-studio-close:hover {
-    background: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: #282c36;
+    border-color: rgba(224, 142, 60, 0.55);
+    color: var(--lfs-accent-bright);
 }
 
 /* ---- Main row ---- */
@@ -451,7 +657,7 @@
     padding: 10px 14px 12px;
 }
 
-/* ---- Left icon rail: LIGHT PURPLE ---- */
+/* ---- Left rail: toggles the side docks ---- */
 #lf_studio_root .lf-rail {
     display: flex;
     flex-direction: column;
@@ -460,9 +666,9 @@
     padding: 10px 6px;
     width: 54px;
     flex-shrink: 0;
-    border: 1px solid rgba(167, 139, 250, 0.35);
-    border-radius: 16px;
-    background: linear-gradient(180deg, rgba(167, 139, 250, 0.20), rgba(124, 58, 237, 0.10));
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius-lg);
+    background: var(--lfs-bg-deep);
 }
 
 #lf_studio_root .lf-rail-brand {
@@ -472,10 +678,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    font-weight: 800;
-    color: #fff;
-    background: linear-gradient(135deg, #a78bfa, #7c3aed);
+    font-family: var(--lfs-font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--lfs-accent-ink);
+    background: var(--lfs-accent);
+    box-shadow: 0 0 14px rgba(224, 142, 60, 0.3);
     margin-bottom: 8px;
     user-select: none;
 }
@@ -486,69 +694,63 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(167, 139, 250, 0.30);
+    border: 1px solid transparent;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: transparent;
+    color: var(--lfs-text-dim);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 #lf_studio_root .lf-rail-btn svg { width: 19px; height: 19px; }
 
 #lf_studio_root .lf-rail-btn:hover {
-    background: rgba(167, 139, 250, 0.30);
-    border-color: var(--lfs-accent);
+    background: var(--lfs-surface-2);
+    color: var(--lfs-text);
 }
 
 #lf_studio_root .lf-rail-btn.active {
-    background: rgba(167, 139, 250, 0.32);
-    border-color: var(--lfs-accent);
-    color: #fff;
-    box-shadow: 0 0 12px rgba(167, 139, 250, 0.25);
+    background: var(--lfs-accent-soft);
+    border-color: rgba(224, 142, 60, 0.45);
+    color: var(--lfs-accent-bright);
 }
 
 #lf_studio_root .lf-rail-sep {
     width: 22px;
     height: 1px;
-    background: rgba(167, 139, 250, 0.35);
+    background: var(--lfs-border-strong);
     margin: 6px 0;
 }
 
-/* ---- Side panels: landing-page modal surface ---- */
+/* ---- Side panels: sticky header + ONE full-height scroll ---- */
 #lf_studio_root .lf-panel {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
     border: 1px solid var(--lfs-border);
-    border-radius: 16px;
+    border-radius: var(--lfs-radius-lg);
     background: var(--lfs-surface);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
     overflow: hidden;
-    transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
 }
 
-#lf_studio_root .lf-panel-search { width: 380px; min-width: 380px; }
-/* Drafts width is drag-resizable — see Stage 12 block at the end of this file */
-
-#lf_studio_root .lf-panel-hidden {
-    width: 0 !important;
-    min-width: 0 !important;
-    opacity: 0;
-    pointer-events: none;
-    border-color: transparent;
+#lf_studio_root .lf-panel-search {
+    width: 370px;
+    min-width: 330px;
+    flex-shrink: 0;
 }
+
+#lf_studio_root .lf-panel-hidden { display: none; }
 
 #lf_studio_root .lf-panel-header {
     flex-shrink: 0;
-    padding: 12px 16px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--lfs-text-dim);
+    padding: 10px 16px 8px;
+    font-family: var(--lfs-font-display);
+    font-size: 1.08rem;
+    font-weight: 600;
+    color: var(--lfs-text);
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.02);
+    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
 }
 
 #lf_studio_root .lf-panel-body {
@@ -556,6 +758,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    gap: 10px;
     padding: 12px 14px;
 }
 
@@ -565,201 +768,92 @@
     flex: 1;
     min-height: 0;
     max-height: none;
+    margin-top: 0;
 }
 
+/* Distill bar sits pinned above the scrolling drafts list */
 #lf_studio_root .lf-distill-bar {
     flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
     border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
     background: var(--lfs-card);
 }
 
-/* ---- Cards: landing-page chat-card style ---- */
-#lf_studio_root .lf-result,
-#lf_studio_root .lf-draft {
-    padding: 8px 10px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 10px;
-    background: var(--lfs-card);
+/* ---- Drafts panel: drag-to-resize ---- */
+#lf_studio_root .lf-panel-drafts {
+    position: relative;
+    width: var(--lf-drafts-w, 300px);
+    min-width: var(--lf-drafts-w, 300px);
+    flex-shrink: 0;
 }
 
-/* Links = accent (landing-page notes-link color) */
-#lf_studio_root .lf-result-title {
-    color: var(--lfs-accent-hover);
+#lf_studio_root .lf-drafts-resize {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 5;
 }
 
-#lf_studio_root .lf-result-title:hover { color: #fff; }
-
-/* Active/selected result */
-#lf_studio_root .lf-result.active {
-    border-color: var(--lfs-accent);
-    background: rgba(167, 139, 250, 0.14);
+#lf_studio_root .lf-drafts-resize:hover,
+#lf_studio_root.lf-resizing .lf-drafts-resize {
+    background: var(--lfs-accent-soft);
 }
 
-#lf_studio_root input[type="checkbox"] { accent-color: var(--lfs-accent); }
-
-/* Engine / key pills */
-#lf_studio_root .lf-result-engines span,
-#lf_studio_root .lf-draft-keys span {
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--lfs-text);
-    opacity: 0.85;
+#lf_studio_root.lf-resizing {
+    user-select: none;
+    cursor: col-resize;
 }
 
-/* AI badge */
-#lf_studio_root .lf-ai-badge {
-    border: 1px solid rgba(167, 139, 250, 0.40);
-    background: rgba(167, 139, 250, 0.14);
-    color: var(--lfs-accent-hover);
-}
-
-/* ---- Center slot: Wizard (default) or Reader ---- */
+/* ---- Center: one workspace tab visible at a time ---- */
 #lf_studio_root .lf-center {
     flex: 1 1 0%;
     min-width: 0;
     display: flex;
 }
 
-#lf_studio_root .lf-hidden { display: none !important; }
-
-/* ---- Reader pane (center, modal surface) ---- */
-#lf_studio_root .lf-reader-pane {
+#lf_studio_root .lf-pane {
     flex: 1 1 0%;
     min-width: 0;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--lfs-border);
-    border-radius: 16px;
+    border-radius: var(--lfs-radius-lg);
     background: var(--lfs-surface);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
-/* Stage 22: road-map graph pane */
-#lf_studio_root .lf-graph-pane {
-    flex: 1 1 0%;
-    min-width: 0;
+#lf_studio_root .lf-pane-header {
+    flex-shrink: 0;
     display: flex;
-    flex-direction: column;
-    border: 1px solid var(--lfs-border);
-    border-radius: 16px;
-    background: var(--lfs-surface);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    position: relative;
-}
-
-#lf_studio_root #lf_graph {
-    flex: 1;
-    min-height: 0; /* the ONE flexible scroll region in this pane */
-    position: relative;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at 30% 20%, rgba(139, 92, 246, 0.05), transparent 40%),
-        radial-gradient(circle at 75% 80%, rgba(59, 130, 246, 0.04), transparent 45%),
-        #131519; /* map-dark surface, below the chart surface band */
-}
-
-#lf_studio_root .lf-graph-svg {
-    display: block;
-    cursor: grab;
-}
-
-#lf_studio_root .lf-graph-svg:active {
-    cursor: grabbing;
-}
-
-#lf_studio_root .lf-graph-edge {
-    stroke: rgba(255, 255, 255, 0.18);
-    stroke-width: 1.5;
-    stroke-dasharray: 6 5; /* the road look */
-}
-
-#lf_studio_root .lf-graph-node circle {
-    cursor: pointer;
-}
-
-#lf_studio_root .lf-graph-node:hover circle {
-    stroke: #ffffff;
-    stroke-width: 2.5;
-}
-
-#lf_studio_root .lf-graph-label {
-    font-size: 10px;
-    fill: var(--lfs-text-dim);
-    paint-order: stroke;
-    stroke: #131519;
-    stroke-width: 3px;
-    stroke-linejoin: round;
-    user-select: none;
-    pointer-events: none;
-}
-
-#lf_studio_root .lf-graph-legend {
-    position: absolute;
-    top: 10px;
-    left: 12px;
-    display: flex;
-    gap: 12px;
-    padding: 6px 10px;
-    background: rgba(22, 24, 29, 0.85);
-    border: 1px solid var(--lfs-border);
-    border-radius: 8px;
-    font-size: 0.72rem;
-    color: var(--lfs-text-dim);
-}
-
-#lf_studio_root .lf-graph-legend-item {
-    display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
 }
 
-#lf_studio_root .lf-graph-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
+#lf_studio_root .lf-pane-title {
+    font-family: var(--lfs-font-display);
+    font-size: 1.08rem;
+    font-weight: 600;
 }
 
-#lf_studio_root .lf-graph-tip {
-    display: none;
-    position: absolute;
-    z-index: 5;
-    max-width: 280px;
-    padding: 8px 10px;
-    background: rgba(22, 24, 29, 0.95);
-    border: 1px solid var(--lfs-border);
-    border-radius: 8px;
+#lf_studio_root .lf-pane-hint {
+    margin-left: auto;
     font-size: 0.78rem;
-    color: var(--lfs-text);
-    pointer-events: none;
-}
-
-#lf_studio_root .lf-graph-tip-dim {
     color: var(--lfs-text-dim);
-    font-size: 0.72rem;
+    text-align: right;
 }
 
-#lf_studio_root .lf-graph-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    color: var(--lfs-text-dim);
-    text-align: center;
-    padding: 24px;
-}
-
-#lf_studio_root #lf_reader {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
+/* ---- Shared empty states ---- */
+#lf_studio_root .lf-pane-empty,
 #lf_studio_root .lf-reader-empty {
     flex: 1;
     display: flex;
@@ -777,171 +871,222 @@
     opacity: 0.6;
 }
 
-#lf_studio_root .lf-reader-empty h3 {
+#lf_studio_root .lf-pane-empty h3,
+#lf_studio_root .lf-reader-empty h3,
+#lf_studio_root .lf-graph-empty h3 {
     margin: 0 0 6px;
-    font-size: 1.15rem;
+    font-family: var(--lfs-font-display);
+    font-size: 1.2rem;
     color: var(--lfs-text);
 }
 
-#lf_studio_root .lf-reader-empty p {
+#lf_studio_root .lf-pane-empty p,
+#lf_studio_root .lf-reader-empty p,
+#lf_studio_root .lf-graph-empty p {
     margin: 0;
     font-size: 0.88rem;
     line-height: 1.55;
 }
 
-#lf_studio_root .lf-reader-content {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 14px 16px;
-}
-
-#lf_studio_root .lf-reader-meta {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px dashed var(--lfs-border);
-    font-size: 0.8rem;
-    color: var(--lfs-text-dim);
-}
-
-/* Reader text fills the pane and scrolls inside */
-#lf_studio_root .lf-reader-text {
-    flex: 1;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
-    font-size: 0.88rem;
-    line-height: 1.55;
-    margin: 0;
-    padding: 12px 14px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 12px;
-    background: var(--lfs-card);
-}
-
-/* Draft form lives at the bottom of the reader */
-#lf_studio_root .lf-draft-form {
-    flex-shrink: 0;
-    max-height: 42%;
-    overflow-y: auto;
-    margin-top: 10px;
-    padding: 12px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 12px;
-    background: var(--lfs-card);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-#lf_studio_root .lf-draft-form .lf-settings-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--lfs-text);
-}
-
-#lf_studio_root .lf-draft-content {
-    width: 100%;
-    font-family: inherit;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    min-height: 110px;
-}
-
-/* Commit form */
-#lf_studio_root .lf-commit-form {
-    border: 1px solid var(--lfs-border);
-    background: var(--lfs-card);
-}
-
-/* ---- Status bar: topbar style ---- */
-#lf_studio_root .lf-studio-statusbar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 18px;
-    border-top: 1px solid var(--lfs-border);
-    background: rgba(22, 24, 29, 0.55);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-size: 0.78rem;
-    color: var(--lfs-text-dim);
-}
-
-/* ---- Studio scrollbars: landing-page style ---- */
-#lf_studio_root ::-webkit-scrollbar { width: 10px; height: 10px; }
-
-#lf_studio_root ::-webkit-scrollbar-track { background: transparent; }
-
-#lf_studio_root ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 5px;
-}
-
-#lf_studio_root ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Stage 11a: Worlds/Lorebooks header entry point (before the ? docs link) */
-#lf_world_button {
-    cursor: pointer;
-    color: #a78bfa;
-    margin-left: 10px;   /* same breathing room the ? link gets */
-    transition: color 0.15s ease;
-}
-
-#lf_world_button:hover {
-    color: #c4b5fd;
-}
-
-/* ============ Stage 12: Wizard center pane + drafts resizer ============ */
-#lf_studio_root .lf-wizard {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--lfs-border);
-    border-radius: 16px;
-    background: var(--lfs-surface);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-}
-
+/* ============ Wizard tab ============ */
 #lf_studio_root .lf-wizard-header {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 8px 14px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.02);
+    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
 }
 
-#lf_studio_root .lf-wizard-name { font-weight: 700; font-size: 1rem; }
+#lf_studio_root .lf-wizard-logo { font-size: 1rem; }
+
+#lf_studio_root .lf-wizard-name {
+    font-family: var(--lfs-font-display);
+    font-weight: 600;
+    font-size: 1.02rem;
+}
 
 #lf_studio_root .lf-wizard-meta {
-    margin-left: auto;
     font-size: 0.78rem;
     color: var(--lfs-text-dim);
 }
 
+#lf_studio_root .lf-wizard-drawertoggle,
+#lf_studio_root .lf-wizard-clear {
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+/* Sessions strip */
+#lf_studio_root .lf-sessions-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: rgba(236, 231, 221, 0.015);
+}
+
+#lf_studio_root .lf-sessions-strip {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+#lf_studio_root .lf-session-chip {
+    flex-shrink: 0;
+    padding: 2px 12px;
+    font-size: 0.78rem;
+    opacity: 0.75;
+}
+
+#lf_studio_root .lf-session-chip.active {
+    opacity: 1;
+    border-color: rgba(224, 142, 60, 0.55);
+    background: var(--lfs-accent-soft);
+    color: var(--lfs-accent-bright);
+}
+
+#lf_studio_root .lf-session-new {
+    flex-shrink: 0;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+}
+
+/* Body owns chat + input + the drawer overlay */
 #lf_studio_root .lf-wizard-body {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+}
+
+/* Chat: the ONE flexible region of the Wizard tab */
+#lf_studio_root .lf-wizard-chat {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     padding: 14px 16px;
+}
+
+#lf_studio_root .lf-wizard-chat-empty {
+    margin: auto;
+    text-align: center;
+    color: var(--lfs-text-dim);
+    max-width: 420px;
+}
+
+#lf_studio_root .lf-wizard-chat-empty h3 {
+    margin: 0 0 6px;
+    font-family: var(--lfs-font-display);
+    font-size: 1.15rem;
+    color: var(--lfs-text);
+}
+
+#lf_studio_root .lf-wizard-chat-empty p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.55;
+}
+
+#lf_studio_root .lf-msg { display: flex; flex-shrink: 0; }
+
+#lf_studio_root .lf-msg.user { justify-content: flex-end; }
+
+#lf_studio_root .lf-msg-bubble {
+    max-width: 78%;
+    padding: 8px 12px;
+    border: 1px solid var(--lfs-border);
+    border-radius: 12px;
+    background: var(--lfs-card);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+#lf_studio_root .lf-msg.user .lf-msg-bubble {
+    background: var(--lfs-accent-soft);
+    border-color: rgba(224, 142, 60, 0.4);
+}
+
+/* Input bar: pinned toolbar above the pane's bottom edge */
+#lf_studio_root .lf-wizard-input {
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--lfs-border);
+    background: rgba(15, 16, 19, 0.4);
+}
+
+#lf_studio_root .lf-wizard-input textarea {
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    min-height: 44px;
+    max-height: 160px;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+#lf_studio_root .lf-wizard-send,
+#lf_studio_root .lf-wizard-extract { flex-shrink: 0; }
+
+/* ---- Sources & Canon: full-height overlay, ONE scroll ---- */
+#lf_studio_root .lf-wizard-drawer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    background: var(--lfs-surface);
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#lf_studio_root .lf-wizard-drawer.open {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+#lf_studio_root .lf-wizard-drawer-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
+}
+
+#lf_studio_root .lf-wizard-drawer-head .lf-wizard-meta { margin-left: auto; }
+
+#lf_studio_root .lf-wizard-drawer-close { padding: 3px 10px; font-size: 0.8rem; }
+
+#lf_studio_root .lf-wizard-drawer-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 #lf_studio_root .lf-wizard-section {
@@ -951,7 +1096,7 @@
     gap: 6px;
     padding: 12px;
     border: 1px solid var(--lfs-border);
-    border-radius: 12px;
+    border-radius: var(--lfs-radius);
     background: var(--lfs-card);
 }
 
@@ -959,7 +1104,7 @@
 #lf_studio_root .lf-source-text-input {
     width: 100%;
     resize: vertical;
-    font-family: inherit;
+    font-family: var(--lfs-font-ui);
     font-size: 0.85rem;
     line-height: 1.45;
 }
@@ -967,22 +1112,35 @@
 #lf_studio_root .lf-wizard-canon { min-height: 60px; }
 #lf_studio_root .lf-source-text-input { min-height: 110px; }
 
+#lf_studio_root .lf-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+}
+
+#lf_studio_root .lf-section-head .menu_button {
+    margin-left: auto;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+}
+
+#lf_studio_root .lf-addsource {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+/* Sources list: natural height — the drawer scrolls as one column */
 #lf_studio_root .lf-wizard-sources {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-top: 8px;
 }
 
-#lf_studio_root .lf-source {
-    flex-shrink: 0;
-    padding: 8px 10px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 10px;
-    background: var(--lfs-card);
-}
+#lf_studio_root .lf-source { cursor: pointer; }
 
 #lf_studio_root .lf-source-head {
     display: flex;
@@ -1020,221 +1178,54 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
+    transition: max-height 0.2s ease;
 }
 
-/* ---- Drafts panel: drag-to-resize ---- */
-#lf_studio_root .lf-panel-drafts {
-    position: relative;
-    width: var(--lf-drafts-w, 300px);
-    min-width: var(--lf-drafts-w, 300px);
+#lf_studio_root .lf-source.open .lf-source-preview {
+    max-height: 40vh;
+    overflow-y: auto;
 }
 
-#lf_studio_root .lf-drafts-resize {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 7px;
-    cursor: col-resize;
-    z-index: 5;
-}
+/* Updater: lorebook import */
+#lf_studio_root .lf-wizard-lb-select { width: 100%; }
 
-#lf_studio_root .lf-drafts-resize:hover,
-#lf_studio_root.lf-resizing .lf-drafts-resize {
-    background: rgba(167, 139, 250, 0.35);
-}
-
-/* Kill the width transition while dragging, or the panel lags behind the cursor */
-#lf_studio_root.lf-resizing .lf-panel-drafts { transition: none; }
-
-#lf_studio_root.lf-resizing {
-    user-select: none;
-    cursor: col-resize;
-}
-
-/* Stage 12.1: center-pane toggle empty hint */
-#lf_studio_root .lf-center-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: var(--lfs-text-dim);
-    padding: 24px;
-}
-
-#lf_studio_root .lf-center-empty h3 {
-    margin: 0 0 6px;
-    font-size: 1.15rem;
-    color: var(--lfs-text);
-}
-
-#lf_studio_root .lf-center-empty p {
-    margin: 0;
-    font-size: 0.88rem;
-    line-height: 1.55;
-}
-
-/* ============ Stage 13: wizard chat ============ */
-#lf_studio_root .lf-wizard-header {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.02);
-}
-
-#lf_studio_root .lf-wizard-name { font-weight: 700; font-size: 1rem; }
-
-#lf_studio_root .lf-wizard-meta {
-    margin-left: auto;
-    font-size: 0.78rem;
-    color: var(--lfs-text-dim);
-}
-
-#lf_studio_root .lf-wizard-clear {
-    padding: 3px 10px;
-    font-size: 0.78rem;
-    flex-shrink: 0;
-}
-
-#lf_studio_root .lf-wizard-chat {
+/* ============ Proposals tab ============ */
+#lf_studio_root .lf-proposals-scroll {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 14px 16px;
+    overflow-y: auto; /* the ONE scroll of this pane */
+    padding: 14px 16px 16px;
 }
 
-#lf_studio_root .lf-wizard-chat-empty {
-    margin: auto;
-    text-align: center;
-    color: var(--lfs-text-dim);
-    max-width: 420px;
-}
-
-#lf_studio_root .lf-wizard-chat-empty h3 {
-    margin: 0 0 6px;
-    font-size: 1.1rem;
-    color: var(--lfs-text);
-}
-
-#lf_studio_root .lf-wizard-chat-empty p {
-    margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.55;
-}
-
-#lf_studio_root .lf-msg { display: flex; }
-
-#lf_studio_root .lf-msg.user { justify-content: flex-end; }
-
-#lf_studio_root .lf-msg-bubble {
-    max-width: 78%;
-    padding: 8px 12px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 12px;
-    background: var(--lfs-card);
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 0.88rem;
-    line-height: 1.5;
-}
-
-#lf_studio_root .lf-msg.user .lf-msg-bubble {
-    background: rgba(167, 139, 250, 0.16);
-    border-color: rgba(167, 139, 250, 0.40);
-}
-
-#lf_studio_root .lf-wizard-input {
-    flex-shrink: 0;
-    display: flex;
-    gap: 8px;
-    align-items: flex-end;
-    padding: 10px 16px 0;
-}
-
-#lf_studio_root .lf-wizard-input textarea {
-    flex: 1;
-    min-width: 0;
-    resize: none;
-    min-height: 44px;
-    max-height: 160px;
-    font-family: inherit;
-    font-size: 0.88rem;
-    line-height: 1.45;
-}
-
-#lf_studio_root .lf-wizard-send { flex-shrink: 0; }
-
-#lf_studio_root .lf-wizard-sourcesbar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 10px 16px 0;
-    padding: 7px 12px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 10px;
-    background: var(--lfs-card);
-    cursor: pointer;
-    user-select: none;
-    font-size: 0.85rem;
-}
-
-#lf_studio_root .lf-wizard-sourcesbar .inline-drawer-icon { font-size: 0.9rem; }
-
-#lf_studio_root .lf-wizard-sourcesbody {
-    flex-shrink: 0;
-    max-height: 45%;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+/* Card grid: fills the width, cards take natural height */
+#lf_studio_root .lf-proposal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 12px;
-    padding: 12px 16px 14px;
+    align-content: start;
 }
 
-#lf_studio_root .lf-wizard-sourcesbody.closed { display: none; }
-
-/* Source cards now live inside the drawer: natural height, own scroll */
-#lf_studio_root .lf-wizard-sourcesbody .lf-wizard-sources {
-    flex: none;
-    min-height: 0;
-    max-height: 260px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Stage 13.5: send-draft-to-wizard button */
-#lf_studio_root .lf-draft-actions .lf-draft-towizard {
-    padding: 3px 8px;
-    font-size: 0.78rem;
-}
-
-/* ============ Stage 14: extraction proposals ============ */
-#lf_studio_root .lf-wizard-proposals {
-    flex-shrink: 0;
-    max-height: 40%;
-    overflow-y: auto;
-    display: none; /* shown by renderProposals when proposals exist */
-    flex-direction: column;
-    gap: 8px;
-    padding: 0 16px 10px;
+#lf_studio_root .lf-proposal-grid .lf-pane-empty {
+    grid-column: 1 / -1;
+    margin: auto;
+    max-width: 460px;
 }
 
 #lf_studio_root .lf-proposal {
-    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
     border: 1px solid var(--lfs-border);
     border-left: 3px solid var(--lfs-accent);
-    border-radius: 10px;
+    border-radius: var(--lfs-radius);
     background: var(--lfs-card);
+}
+
+#lf_studio_root .lf-proposal.lf-proposal-accepted,
+#lf_studio_root .lf-proposal.lf-proposal-rejected {
+    opacity: 0.55;
+    border-left-color: var(--lfs-border-strong);
 }
 
 #lf_studio_root .lf-proposal-head {
@@ -1246,10 +1237,65 @@
 #lf_studio_root .lf-proposal-title {
     flex: 1;
     min-width: 0;
-    font-weight: 700;
+    font-family: var(--lfs-font-display);
+    font-weight: 600;
+    font-size: 1.04rem;
     word-break: break-word;
 }
 
+#lf_studio_root .lf-proposal .lf-draft-keys { margin-top: 0; }
+
+#lf_studio_root .lf-proposal-content {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Evidence quote: bookish marginal note */
+#lf_studio_root .lf-proposal-quote {
+    padding: 7px 12px;
+    border-left: 2px solid rgba(224, 142, 60, 0.45);
+    border-radius: 0 8px 8px 0;
+    background: rgba(236, 231, 221, 0.03);
+    font-family: var(--lfs-font-display);
+    font-style: italic;
+    font-size: 0.82rem;
+    color: var(--lfs-text-dim);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-proposal-quote-label {
+    display: block;
+    font-family: var(--lfs-font-ui);
+    font-style: normal;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lfs-text-dim);
+    margin-bottom: 2px;
+}
+
+#lf_studio_root .lf-proposal-actions {
+    display: flex;
+    gap: 6px;
+}
+
+#lf_studio_root .lf-proposal-actions .menu_button { padding: 3px 10px; font-size: 0.78rem; }
+
+#lf_studio_root .lf-proposal-statusline {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-proposal-statusline.lf-proposal-accepted { color: var(--lfs-good); }
+#lf_studio_root .lf-proposal-statusline.lf-proposal-rejected { color: var(--lfs-bad); }
+
+/* Verdict pills (semantic colors — never color-alone, icon + title carry it) */
 #lf_studio_root .lf-proposal-verdict {
     flex-shrink: 0;
     font-size: 0.75rem;
@@ -1260,171 +1306,22 @@
 }
 
 #lf_studio_root .lf-proposal-verdict.verified {
-    color: #51cf66;
+    color: var(--lfs-good);
     background: rgba(81, 207, 102, 0.12);
     border: 1px solid rgba(81, 207, 102, 0.4);
 }
 
 #lf_studio_root .lf-proposal-verdict.fuzzy {
-    color: #ffd43b;
-    background: rgba(255, 212, 59, 0.10);
+    color: var(--lfs-warn);
+    background: rgba(255, 212, 59, 0.1);
     border: 1px solid rgba(255, 212, 59, 0.4);
 }
 
 #lf_studio_root .lf-proposal-verdict.missing {
-    color: #ff6b6b;
+    color: var(--lfs-bad);
     background: rgba(255, 107, 107, 0.12);
     border: 1px solid rgba(255, 107, 107, 0.4);
 }
-
-#lf_studio_root .lf-proposal-content {
-    margin-top: 6px;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-#lf_studio_root .lf-proposal-quote {
-    margin-top: 8px;
-    padding: 6px 10px;
-    border: 1px dashed rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    font-size: 0.75rem;
-    opacity: 0.75;
-    line-height: 1.45;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-#lf_studio_root .lf-proposal-quote-label {
-    display: block;
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    opacity: 0.8;
-    margin-bottom: 2px;
-}
-
-#lf_studio_root .lf-proposal-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-#lf_studio_root .lf-proposal-actions .menu_button { padding: 3px 10px; font-size: 0.78rem; }
-
-#lf_studio_root .lf-proposal-accepted,
-#lf_studio_root .lf-proposal-rejected { opacity: 0.5; }
-
-#lf_studio_root .lf-proposal-statusline {
-    margin-top: 8px;
-    font-size: 0.78rem;
-    font-weight: 600;
-}
-
-#lf_studio_root .lf-proposal-statusline { color: var(--lfs-text-dim); }
-
-#lf_studio_root .lf-wizard-extract { flex-shrink: 0; }
-
-/* ============ Stage 14.1: proposals as a horizontal carousel ============ */
-/* Overrides the Stage 14 vertical-list rules (equal specificity, later wins) */
-#lf_studio_root .lf-wizard-proposals {
-    display: flex;
-    flex-direction: column;
-    height: 46%;
-    min-height: 230px;
-    max-height: none;
-    overflow: visible;
-    padding: 0 16px 10px;
-}
-
-#lf_studio_root .lf-carousel-bar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 8px;
-    font-size: 0.85rem;
-}
-
-#lf_studio_root .lf-carousel-count {
-    margin-left: auto;
-    font-size: 0.78rem;
-    color: var(--lfs-text-dim);
-}
-
-#lf_studio_root .lf-carousel-bar .menu_button { padding: 2px 10px; font-size: 0.8rem; }
-
-#lf_studio_root .lf-carousel-track {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    padding: 2px 2px 8px;
-}
-
-#lf_studio_root .lf-carousel-track::-webkit-scrollbar { height: 8px; }
-
-/* Card: fixed width, internal vertical scrolling for long content */
-#lf_studio_root .lf-proposal {
-    flex: 0 0 340px;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    scroll-snap-align: start;
-}
-
-#lf_studio_root .lf-proposal-head,
-#lf_studio_root .lf-proposal .lf-draft-keys { flex-shrink: 0; }
-
-#lf_studio_root .lf-proposal-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-}
-
-#lf_studio_root .lf-proposal-quote {
-    flex-shrink: 0;
-    max-height: 96px;
-    overflow-y: auto;
-}
-
-#lf_studio_root .lf-proposal-actions,
-#lf_studio_root .lf-proposal-statusline { flex-shrink: 0; }
-
-/* ============ Stage 15: inline draft editing ============ */
-#lf_studio_root .lf-edit-form {
-    margin-top: 8px;
-    padding: 10px;
-    border: 1px solid var(--lfs-border);
-    border-radius: 10px;
-    background: var(--lfs-card);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-#lf_studio_root .lf-edit-form .lf-settings-label { font-size: 0.8rem; font-weight: 600; }
-
-#lf_studio_root .lf-edit-form .lf-draft-content {
-    width: 100%;
-    resize: vertical;
-    font-family: inherit;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    min-height: 110px;
-}
-
-#lf_studio_root .lf-draft-actions .lf-draft-edit { padding: 3px 10px; font-size: 0.8em; }
-
-/* ============ Stage 16a: updater mode ============ */
-#lf_studio_root .lf-wizard-lb-select { width: 100%; }
 
 #lf_studio_root .lf-proposal-updbadge {
     flex-shrink: 0;
@@ -1436,221 +1333,89 @@
     font-weight: 600;
     padding: 1px 8px;
     border-radius: 999px;
-    color: var(--lfs-accent-hover);
-    background: rgba(167, 139, 250, 0.14);
-    border: 1px solid rgba(167, 139, 250, 0.40);
+    color: var(--lfs-accent-bright);
+    background: var(--lfs-accent-soft);
+    border: 1px solid rgba(224, 142, 60, 0.4);
 }
 
-/* ============ Stage 16.5: wizard UI rework ============
-   Chat = only flexible region. Sources & Canon = overlay with ONE scroll.
-   These rules override the older wizard blocks by order. */
-#lf_studio_root .lf-wizard-header {
-    gap: 8px;
-    padding: 8px 14px;
-}
-
-#lf_studio_root .lf-wizard-name { font-size: 0.95rem; }
-
-/* Stage 21: multi-session bar — horizontal strip under the wizard header */
-#lf_studio_root .lf-sessions-bar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 16px;
-    border-bottom: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.015);
-}
-
-#lf_studio_root .lf-sessions-strip {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-}
-
-#lf_studio_root .lf-session-chip {
-    flex-shrink: 0;
-    padding: 2px 12px;
-    font-size: 0.78rem;
-    opacity: 0.75;
-}
-
-#lf_studio_root .lf-session-chip.active {
-    opacity: 1;
-    border-color: var(--lfs-accent);
-    color: var(--lfs-accent);
-}
-
-#lf_studio_root .lf-session-new {
-    flex-shrink: 0;
-    padding: 2px 10px;
-    font-size: 0.78rem;
-}
-
-#lf_studio_root .lf-chip {
-    font-size: 0.72rem;
-    padding: 2px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--lfs-border);
-    background: var(--lfs-card);
-    color: var(--lfs-text-dim);
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-#lf_studio_root .lf-chip:empty { display: none; }
-
-#lf_studio_root .lf-target-chip {
-    color: var(--lfs-accent-hover);
-    border-color: rgba(167, 139, 250, 0.40);
-    background: rgba(167, 139, 250, 0.12);
-}
-
-#lf_studio_root .lf-wizard-drawertoggle,
-#lf_studio_root .lf-wizard-clear {
-    padding: 3px 10px;
-    font-size: 0.78rem;
-}
-
-/* Body wrapper owns chat + proposals + input + the drawer overlay */
-#lf_studio_root .lf-wizard-body {
-    position: relative;
+/* ============ Reader tab ============ */
+#lf_studio_root #lf_reader {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
-/* Chat: the ONE flexible region */
-#lf_studio_root .lf-wizard-chat { flex: 1; min-height: 0; }
-
-/* Proposals: bounded, collapsible strip */
-#lf_studio_root .lf-wizard-proposals {
-    height: min(36%, 320px);
-    min-height: 170px;
-    flex: 0 0 auto;
-    padding: 0 14px 8px;
-    overflow: visible;
-}
-
-#lf_studio_root .lf-wizard-proposals.collapsed { height: auto; min-height: 0; }
-#lf_studio_root .lf-wizard-proposals.collapsed .lf-carousel-track { display: none; }
-
-#lf_studio_root .lf-carousel-bar { cursor: pointer; user-select: none; }
-#lf_studio_root .lf-carousel-toggle { margin-right: 2px; font-size: 0.85rem; }
-#lf_studio_root .lf-carousel-track { height: calc(100% - 34px); }
-#lf_studio_root .lf-proposal { height: 100%; flex: 0 0 320px; }
-
-/* Sources & Canon overlay */
-#lf_studio_root .lf-wizard-drawer {
-    position: absolute;
-    inset: 0;
-    z-index: 20;
+#lf_studio_root .lf-reader-content {
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    background: var(--lfs-surface);
-    opacity: 0;
-    transform: translateY(10px);
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-#lf_studio_root .lf-wizard-drawer.open {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-}
-
-#lf_studio_root .lf-wizard-drawer-head {
+/* Meta row doubles as the pane's sticky toolbar */
+#lf_studio_root .lf-reader-meta {
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 16px;
+    flex-wrap: wrap;
+    padding: 9px 16px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(15, 16, 19, 0.4);
+    font-size: 0.78rem;
+    color: var(--lfs-text-dim);
 }
 
-#lf_studio_root .lf-wizard-drawer-head .lf-wizard-meta { margin-left: auto; }
+#lf_studio_root .lf-reader-meta .lf-reader-close { margin-left: auto; }
 
-#lf_studio_root .lf-wizard-drawer-close { padding: 3px 10px; font-size: 0.8rem; }
-
-/* ONE scroll for the whole drawer — no nested caps, bottom always reachable */
-#lf_studio_root .lf-wizard-drawer-scroll {
+/* The ONE scroll of the Reader: text + links + forms flow as one column */
+#lf_studio_root .lf-reader-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 12px 16px 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding: 14px 18px 16px;
 }
 
-#lf_studio_root .lf-section-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-}
-
-#lf_studio_root .lf-section-head .menu_button {
-    margin-left: auto;
-    padding: 2px 10px;
-    font-size: 0.75rem;
-}
-
-#lf_studio_root .lf-addsource {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-/* Sources list: no nested scroll — the drawer scrolls as one column */
-#lf_studio_root .lf-wizard-drawer .lf-wizard-sources {
+/* Article text: the book column — serif, measured line length */
+#lf_studio_root .lf-reader-text {
+    flex: none;
     max-height: none;
     overflow: visible;
-    margin-top: 8px;
+    width: 100%;
+    max-width: 82ch;
+    align-self: center;
+    margin: 0;
+    padding: 16px 20px;
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-bg-deep);
+    font-family: var(--lfs-font-display);
+    font-size: 0.95rem;
+    line-height: 1.62;
+    color: var(--lfs-text);
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-#lf_studio_root .lf-source { cursor: pointer; }
-
-#lf_studio_root .lf-source-preview {
-    max-height: 2.9em;
-    overflow: hidden;
-    transition: max-height 0.2s ease;
-}
-
-#lf_studio_root .lf-source.open .lf-source-preview {
-    max-height: 40vh;
-    overflow-y: auto;
-}
-
-#lf_studio_root .lf-wizard-lb-select { width: 100%; }
-
-/* Reader tab reset: the title bar has flex-wrap; pin the ✕ to the far right
-   so it never drifts next to the route label on narrow panes */
-#lf_studio_root .lf-reader-meta .lf-reader-close {
-    margin-left: auto;
-}
-
-/* ============ Stage 18: wiki links strip in the Reader ============ */
+/* Wiki links strip */
 #lf_studio_root .lf-reader-links {
-    flex-shrink: 0;
-    margin-top: 10px;
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
 #lf_studio_root .lf-reader-links-label {
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     color: var(--lfs-text-dim);
 }
 
@@ -1658,7 +1423,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    max-height: 120px;
+    max-height: 140px;
     overflow-y: auto;
 }
 
@@ -1667,23 +1432,21 @@
     font-size: 0.78rem;
 }
 
-/* Stage 19: category chips stand out from regular wiki links */
+/* Category chips stand out from regular wiki links */
 #lf_studio_root .lf-cat-chip {
-    border-color: var(--lfs-accent);
-    color: var(--lfs-accent);
+    border-color: rgba(224, 142, 60, 0.55);
+    color: var(--lfs-accent-bright);
+    background: var(--lfs-accent-soft);
 }
 
 #lf_studio_root .lf-cat-members {
-    flex-shrink: 0;
-    margin-top: 8px;
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-/* Stage 20: ⚡ Read-all button — red while a batch runs (it's the stop button) */
+/* ⚡ Read-all button — red while a batch runs (it's the stop button) */
 #lf_studio_root .lf-batch-btn {
-    margin-left: 8px;
     padding: 1px 8px;
     font-size: 0.72rem;
 }
@@ -1691,4 +1454,232 @@
 #lf_studio_root .lf-batch-btn.lf-batch-running {
     border-color: #ef4444;
     color: #ef4444;
+}
+
+/* Reader draft form: natural height inside the single scroll */
+#lf_studio_root .lf-draft-form {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+    margin-top: 0;
+    padding: 12px;
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-card);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-draft-form .lf-settings-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--lfs-text);
+}
+
+#lf_studio_root .lf-draft-content {
+    width: 100%;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.85rem;
+    line-height: 1.45;
+    min-height: 110px;
+}
+
+/* Commit + edit forms (drafts list) */
+#lf_studio_root .lf-commit-form {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-bg-deep);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#lf_studio_root .lf-edit-form {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-bg-deep);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#lf_studio_root .lf-edit-form .lf-settings-label { font-size: 0.8rem; font-weight: 600; }
+
+#lf_studio_root .lf-edit-form .lf-draft-content {
+    width: 100%;
+    resize: vertical;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    min-height: 110px;
+}
+
+/* ============ Map tab (Stage 22 graph) ============ */
+#lf_studio_root .lf-graph-pane {
+    position: relative;
+}
+
+#lf_studio_root #lf_graph {
+    flex: 1;
+    min-height: 0; /* the ONE flexible region in this pane */
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(139, 92, 246, 0.05), transparent 40%),
+        radial-gradient(circle at 75% 80%, rgba(59, 130, 246, 0.04), transparent 45%),
+        var(--lfs-bg-deep);
+}
+
+#lf_studio_root .lf-graph-svg {
+    display: block;
+    cursor: grab;
+}
+
+#lf_studio_root .lf-graph-svg:active {
+    cursor: grabbing;
+}
+
+#lf_studio_root .lf-graph-edge {
+    stroke: rgba(236, 231, 221, 0.18);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 5; /* the road look */
+}
+
+#lf_studio_root .lf-graph-node circle {
+    cursor: pointer;
+}
+
+#lf_studio_root .lf-graph-node:hover circle {
+    stroke: #ffffff;
+    stroke-width: 2.5;
+}
+
+#lf_studio_root .lf-graph-label {
+    font-family: var(--lfs-font-ui);
+    font-size: 10px;
+    fill: var(--lfs-text-dim);
+    paint-order: stroke;
+    stroke: var(--lfs-bg-deep);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    user-select: none;
+    pointer-events: none;
+}
+
+#lf_studio_root .lf-graph-legend {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    display: flex;
+    gap: 12px;
+    padding: 6px 10px;
+    background: rgba(15, 16, 19, 0.88);
+    border: 1px solid var(--lfs-border);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-graph-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#lf_studio_root .lf-graph-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+#lf_studio_root .lf-graph-tip {
+    display: none;
+    position: absolute;
+    z-index: 5;
+    max-width: 280px;
+    padding: 8px 10px;
+    background: rgba(15, 16, 19, 0.95);
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--lfs-text);
+    pointer-events: none;
+}
+
+#lf_studio_root .lf-graph-tip-dim {
+    color: var(--lfs-text-dim);
+    font-size: 0.72rem;
+}
+
+#lf_studio_root .lf-graph-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--lfs-text-dim);
+    text-align: center;
+    padding: 24px;
+}
+
+/* ---- Status bar ---- */
+#lf_studio_root .lf-studio-statusbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 18px;
+    border-top: 1px solid var(--lfs-border);
+    background: rgba(15, 16, 19, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 0.78rem;
+    color: var(--lfs-text-dim);
+}
+
+/* ---- Scrollbars ---- */
+#lf_studio_root ::-webkit-scrollbar { width: 10px; height: 10px; }
+
+#lf_studio_root ::-webkit-scrollbar-track { background: transparent; }
+
+#lf_studio_root ::-webkit-scrollbar-thumb {
+    background: rgba(236, 231, 221, 0.14);
+    border-radius: 5px;
+}
+
+#lf_studio_root ::-webkit-scrollbar-thumb:hover {
+    background: rgba(224, 142, 60, 0.45);
+}
+
+/* ---- Comfort guards ---- */
+@media (max-width: 1100px) {
+    #lf_studio_root .lf-pane-hint { display: none; }
+    #lf_studio_root .lf-panel-search { width: 300px; min-width: 280px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #lf_studio_root *,
+    #lf_studio_root *::before,
+    #lf_studio_root *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+/* Stage 11a: Worlds/Lorebooks header entry point (before the ? docs link) */
+#lf_world_button {
+    cursor: pointer;
+    color: #e08e3c;
+    margin-left: 10px;   /* same breathing room the ? link gets */
+    transition: color 0.15s ease;
+}
+
+#lf_world_button:hover {
+    color: #f2b263;
 }
