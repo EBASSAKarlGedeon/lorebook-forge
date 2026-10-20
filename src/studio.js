@@ -24,7 +24,7 @@ const railState = { search: true, drafts: true };
 // Swatch = the preset's signature accent (shown in the picker)
 const THEMES = [
     { id: "obsidian-cyber",   label: "Obsidian Cyber",   swatch: "#7aa2f7" },
-    { id: "tavern-parchment", label: "Tavern Parchment", swatch: "#a4471a" },
+    { id: "tavern-parchment", label: "Tavern Parchment", swatch: "#f59e0b" },
     { id: "neon-cyberpunk",   label: "Neon Cyberpunk",   swatch: "#ff2a8a" },
     { id: "royal-velvet",     label: "Royal Velvet",     swatch: "#e2b84b" },
     { id: "emerald-codex",    label: "Emerald Codex",    swatch: "#2fd08f" },
