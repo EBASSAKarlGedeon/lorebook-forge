@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lorebook Forge Studio</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Theme Definitions via Dynamic CSS Custom Properties */
+    :root, [data-theme="obsidian-cyber"] {
+      --bg-main: #0D0E15;
+      --bg-surface: #141622;
+      --bg-card: #181A2A;
+      --bg-hover: #1E2132;
+      --border-color: #23263B;
+      --accent-gold: #E0AF68;
+      --accent-cyan: #7AA2F7;
+      --accent-purple: #BB9AF7;
+      --accent-coral: #F7768E;
+      --accent-green: #9ECE6A;
+      --text-main: #E2E8F0;
+      --text-muted: #565F89;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --card-radius: 0.75rem;
+      --glow-gold: 0 0 12px rgba(224, 175, 104, 0.2);
+      --glow-accent: 0 0 12px rgba(122, 162, 247, 0.2);
+    }
+
+    [data-theme="tavern-parchment"] {
+      --bg-main: #1C1917;
+      --bg-surface: #292524;
+      --bg-card: #322D29;
+      --bg-hover: #44403C;
+      --border-color: #57534E;
+      --accent-gold: #F59E0B;
+      --accent-cyan: #D97706;
+      --accent-purple: #B45309;
+      --accent-coral: #DC2626;
+      --accent-green: #65A30D;
+      --text-main: #F5F5F4;
+      --text-muted: #A8A29E;
+      --font-body: 'Georgia', serif;
+      --card-radius: 0.5rem;
+      --glow-gold: 0 0 12px rgba(245, 158, 11, 0.25);
+      --glow-accent: 0 0 12px rgba(217, 119, 6, 0.25);
+    }
+
+    [data-theme="neon-cyberpunk"] {
+      --bg-main: #090314;
+      --bg-surface: #120A24;
+      --bg-card: #1B0F38;
+      --bg-hover: #291652;
+      --border-color: #3D1E7B;
+      --accent-gold: #FF007F;
+      --accent-cyan: #00F0FF;
+      --accent-purple: #B026FF;
+      --accent-coral: #FF3366;
+      --accent-green: #00FF66;
+      --text-main: #F3E8FF;
+      --text-muted: #8B5CF6;
+      --font-body: 'Fira Code', monospace;
+      --card-radius: 0.25rem;
+      --glow-gold: 0 0 15px rgba(255, 0, 127, 0.4);
+      --glow-accent: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+
+    [data-theme="royal-velvet"] {
+      --bg-main: #0F0C1B;
+      --bg-surface: #18132B;
+      --bg-card: #221B3D;
+      --bg-hover: #2E2452;
+      --border-color: #3E316E;
+      --accent-gold: #FACC15;
+      --accent-cyan: #818CF8;
+      --accent-purple: #C084FC;
+      --accent-coral: #F43F5E;
+      --accent-green: #34D399;
+      --text-main: #F3E8FF;
+      --text-muted: #7E69AB;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --card-radius: 0.85rem;
+      --glow-gold: 0 0 14px rgba(250, 204, 21, 0.3);
+      --glow-accent: 0 0 14px rgba(192, 132, 252, 0.3);
+    }
+
+    [data-theme="emerald-codex"] {
+      --bg-main: #04120B;
+      --bg-surface: #0A1C12;
+      --bg-card: #0F291A;
+      --bg-hover: #163B26;
+      --border-color: #1F4D32;
+      --accent-gold: #10B981;
+      --accent-cyan: #06B6D4;
+      --accent-purple: #34D399;
+      --accent-coral: #EF4444;
+      --accent-green: #22C55E;
+      --text-main: #ECFDF5;
+      --text-muted: #059669;
+      --font-body: 'JetBrains Mono', monospace;
+      --card-radius: 0.5rem;
+      --glow-gold: 0 0 12px rgba(16, 185, 129, 0.3);
+      --glow-accent: 0 0 12px rgba(6, 182, 212, 0.3);
+    }
+
+    /* Universal Dynamic Theme Utility Styles */
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .theme-bg-main { background-color: var(--bg-main); }
+    .theme-bg-surface { background-color: var(--bg-surface); }
+    .theme-bg-card { background-color: var(--bg-card); }
+    .theme-bg-hover:hover { background-color: var(--bg-hover); }
+    .theme-border { border-color: var(--border-color); }
+    
+    .theme-text-gold { color: var(--accent-gold); }
+    .theme-text-cyan { color: var(--accent-cyan); }
+    .theme-text-purple { color: var(--accent-purple); }
+    .theme-text-coral { color: var(--accent-coral); }
+    .theme-text-green { color: var(--accent-green); }
+    .theme-text-muted { color: var(--text-muted); }
+
+    .theme-bg-gold-light { background-color: rgba(224, 175, 104, 0.12); }
+    .theme-bg-cyan-light { background-color: rgba(122, 162, 247, 0.12); }
+    .theme-bg-purple-light { background-color: rgba(187, 154, 247, 0.12); }
+    .theme-bg-green-light { background-color: rgba(158, 206, 106, 0.12); }
+
+    .theme-border-gold { border-color: var(--accent-gold); }
+    .theme-border-cyan { border-color: var(--accent-cyan); }
+    
+    .theme-btn-primary {
+      background-color: var(--accent-gold);
+      color: var(--bg-main);
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .theme-btn-primary:hover {
+      filter: brightness(1.15);
+      box-shadow: var(--glow-gold);
+    }
+
+    .glass-panel {
+      background: rgba(20, 22, 34, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+    }
+
+    .gradient-border-top {
+      position: relative;
+    }
+    .gradient-border-top::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-gold), var(--accent-purple), var(--accent-cyan));
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-main);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--bg-hover);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden select-none">
+
+  <!-- ================= TOP HEADER BAR ================= -->
+  <header class="h-14 border-b theme-border theme-bg-surface px-4 flex items-center justify-between z-20 shrink-0 transition-colors">
+    <!-- Left: App Logo & Book Info -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg theme-bg-gold-light border theme-border-gold flex items-center justify-center theme-text-gold font-bold shadow-sm">
+          <i data-lucide="anvil" class="w-4 h-4"></i>
+        </div>
+        <span class="font-bold tracking-wide text-lg text-gray-100 flex items-center gap-2">
+          Lorebook Forge
+          <span class="text-[10px] uppercase font-mono font-bold tracking-widest px-2 py-0.5 rounded theme-bg-gold-light theme-text-gold border theme-border-gold">
+            STUDIO
+          </span>
+        </span>
+      </div>
+
+      <div class="h-5 w-[1px] theme-border border-r hidden md:block"></div>
+
+      <!-- Active Book Pill -->
+      <div class="hidden md:flex items-center gap-2 text-xs theme-bg-main border theme-border px-3 py-1.5 rounded-full">
+        <i data-lucide="book-open" class="w-3.5 h-3.5 theme-text-cyan"></i>
+        <span class="theme-text-muted">Lorebook:</span>
+        <span class="font-semibold theme-text-cyan flex items-center gap-1">
+          ReVardanis_Prime
+          <i data-lucide="chevron-down" class="w-3 h-3 theme-text-muted cursor-pointer hover:text-white"></i>
+        </span>
+        <span class="ml-2 px-1.5 py-0.2 rounded theme-bg-surface text-[10px] theme-text-muted font-mono">64.9 KB</span>
+      </div>
+    </div>
+
+    <!-- Center: Main Workflow Tabs -->
+    <nav class="flex items-center theme-bg-main p-1 rounded-lg border theme-border">
+      <button onclick="switchTab('wizard')" id="tab-wizard" class="tab-btn active px-3.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all theme-bg-surface theme-text-gold shadow-sm border theme-border">
+        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+        Wizard
+      </button>
+      <button onclick="switchTab('proposals')" id="tab-proposals" class="tab-btn px-3.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 theme-text-muted hover:text-gray-200 transition-all">
+        <i data-lucide="git-pull-request" class="w-3.5 h-3.5"></i>
+        Proposals
+        <span class="px-1.5 py-0.2 text-[10px] rounded-full theme-bg-purple-light theme-text-purple font-bold">3</span>
+      </button>
+      <button onclick="switchTab('reader')" id="tab-reader" class="tab-btn px-3.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 theme-text-muted hover:text-gray-200 transition-all">
+        <i data-lucide="book-marked" class="w-3.5 h-3.5"></i>
+        Reader
+      </button>
+      <button onclick="switchTab('map')" id="tab-map" class="tab-btn px-3.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 theme-text-muted hover:text-gray-200 transition-all">
+        <i data-lucide="network" class="w-3.5 h-3.5"></i>
+        Canon Map
+      </button>
+    </nav>
+
+    <!-- Right Actions & Theme Switcher -->
+    <div class="flex items-center gap-2">
+      <!-- Comprehensive Theme Dropdown Toggle -->
+      <div class="relative">
+        <button onclick="toggleThemeDropdown()" id="theme-btn" class="px-3 py-1.5 rounded-lg theme-bg-card hover:theme-bg-hover border theme-border text-xs font-semibold theme-text-gold flex items-center gap-1.5 transition-all">
+          <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+          <span id="current-theme-label">Obsidian Cyber</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 opacity-70"></i>
+        </button>
+
+        <!-- Theme Picker Menu -->
+        <div id="theme-dropdown" class="absolute right-0 mt-2 w-56 rounded-xl theme-bg-surface border theme-border shadow-2xl p-2 hidden z-50 space-y-1">
+          <div class="text-[10px] font-bold uppercase tracking-wider theme-text-muted px-2 py-1">Preset Lorebook Themes</div>
+          
+          <button onclick="setTheme('obsidian-cyber')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between hover:theme-bg-hover transition-colors">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#7AA2F7]"></span> Obsidian Cyber</span>
+            <i data-lucide="check" class="w-3.5 h-3.5 theme-text-gold theme-check check-obsidian-cyber"></i>
+          </button>
+
+          <button onclick="setTheme('tavern-parchment')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between hover:theme-bg-hover transition-colors">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span> Tavern Parchment</span>
+            <i data-lucide="check" class="w-3.5 h-3.5 theme-text-gold theme-check check-tavern-parchment hidden"></i>
+          </button>
+
+          <button onclick="setTheme('neon-cyberpunk')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between hover:theme-bg-hover transition-colors">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#FF007F]"></span> Neon Cyberpunk</span>
+            <i data-lucide="check" class="w-3.5 h-3.5 theme-text-gold theme-check check-neon-cyberpunk hidden"></i>
+          </button>
+
+          <button onclick="setTheme('royal-velvet')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between hover:theme-bg-hover transition-colors">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#C084FC]"></span> Royal Velvet</span>
+            <i data-lucide="check" class="w-3.5 h-3.5 theme-text-gold theme-check check-royal-velvet hidden"></i>
+          </button>
+
+          <button onclick="setTheme('emerald-codex')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between hover:theme-bg-hover transition-colors">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span> Emerald Codex</span>
+            <i data-lucide="check" class="w-3.5 h-3.5 theme-text-gold theme-check check-emerald-codex hidden"></i>
+          </button>
+        </div>
+      </div>
+
+      <button onclick="exportLorebook()" class="px-3 py-1.5 rounded-lg theme-bg-card hover:theme-bg-hover border theme-border text-xs font-medium flex items-center gap-1.5 transition-colors">
+        <i data-lucide="download" class="w-3.5 h-3.5 theme-text-cyan"></i>
+        Export JSON
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN THREE-COLUMN WORKSPACE ================= -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT PANEL: Canon Context & Reference Search -->
+    <aside id="left-sidebar" class="w-80 border-r theme-border theme-bg-surface flex flex-col transition-all duration-300 relative z-10 shrink-0">
+      <!-- Sidebar Header -->
+      <div class="p-3 border-b theme-border flex items-center justify-between theme-bg-surface">
+        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
+          <i data-lucide="compass" class="w-4 h-4 theme-text-gold"></i>
+          Canon Research & Sources
+        </div>
+        <button onclick="toggleLeftSidebar()" class="theme-text-muted hover:text-white p-1 rounded">
+          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="p-3 border-b theme-border space-y-2">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 theme-text-muted"></i>
+          <input type="text" placeholder="Search web, wiki, or local docs..." class="w-full theme-bg-main border theme-border rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-accent-gold transition-colors">
+          <button class="absolute right-1.5 top-1 px-1.5 py-0.5 rounded theme-bg-card text-[10px] theme-text-muted hover:text-white">Go</button>
+        </div>
+        <!-- Quick Tag Filter Chips -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-[10px] theme-text-muted">Quick Filters:</span>
+          <button class="text-[10px] px-2 py-0.5 rounded-full theme-bg-gold-light theme-text-gold border theme-border-gold">Magic Laws</button>
+          <button class="text-[10px] px-2 py-0.5 rounded-full theme-bg-cyan-light theme-text-cyan border theme-border">Characters</button>
+          <button class="text-[10px] px-2 py-0.5 rounded-full theme-bg-card theme-text-muted hover:text-white">Relics</button>
+        </div>
+      </div>
+
+      <!-- Active Sources List -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-3">
+        <div class="text-xs font-semibold theme-text-muted uppercase tracking-wider flex items-center justify-between">
+          <span>Active Context Sources (3)</span>
+          <button class="text-[11px] theme-text-cyan hover:underline flex items-center gap-1">
+            <i data-lucide="plus" class="w-3 h-3"></i> Add Source
+          </button>
+        </div>
+
+        <!-- Source Item 1 -->
+        <div class="p-2.5 rounded-lg border theme-border theme-bg-card hover:theme-border-cyan transition-all group cursor-pointer">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="file-text" class="w-4 h-4 theme-text-cyan shrink-0"></i>
+              <span class="text-xs font-medium truncate">ReVardanis_World_Lore_v2.txt</span>
+            </div>
+            <input type="checkbox" checked class="rounded theme-border theme-bg-main theme-text-cyan focus:ring-0">
+          </div>
+          <p class="text-[11px] theme-text-muted mt-1 line-clamp-2">Contains primary definitions for Spiritrons, Infons, Holy Magic structure, and the 7 Divine Spheres.</p>
+          <div class="mt-2 flex items-center justify-between text-[10px] theme-text-muted">
+            <span>42.1 KB • 12k Tokens</span>
+            <span class="theme-text-green flex items-center gap-1"><i data-lucide="check-circle-2" class="w-2.5 h-2.5"></i> Indexed</span>
+          </div>
+        </div>
+
+        <!-- Source Item 2 -->
+        <div class="p-2.5 rounded-lg border theme-border theme-bg-card hover:theme-border-gold transition-all group cursor-pointer">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="globe" class="w-4 h-4 theme-text-purple shrink-0"></i>
+              <span class="text-xs font-medium truncate">Wiki: Dark Light & Spiritron Transference</span>
+            </div>
+            <input type="checkbox" checked class="rounded theme-border theme-bg-main focus:ring-0">
+          </div>
+          <p class="text-[11px] theme-text-muted mt-1 line-clamp-2">External wiki scrape regarding high-tier magic energy conversion and spiritron resonance laws.</p>
+          <div class="mt-2 flex items-center justify-between text-[10px] theme-text-muted">
+            <span>Web URL • 18.2 KB</span>
+            <span class="theme-text-green flex items-center gap-1"><i data-lucide="check-circle-2" class="w-2.5 h-2.5"></i> Synced</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Knowledge Summary Card -->
+      <div class="p-3 border-t theme-border theme-bg-main">
+        <div class="text-[11px] font-semibold theme-text-muted mb-1 flex items-center justify-between">
+          <span>Reconciliation Status</span>
+          <span class="theme-text-green font-mono">98% Clean</span>
+        </div>
+        <div class="w-full theme-bg-card h-1.5 rounded-full overflow-hidden">
+          <div class="bg-gradient-to-r from-yellow-500 via-purple-500 to-green-500 h-full w-[98%]"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL: AI Lore Wizard & Co-pilot Console -->
+    <section class="flex-1 flex flex-col theme-bg-main relative overflow-hidden">
+      <!-- Wizard Bar -->
+      <div class="p-3 border-b theme-border theme-bg-surface flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-7 h-7 rounded-lg theme-bg-gold-light border theme-border-gold flex items-center justify-center theme-text-gold">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h2 class="text-xs font-bold flex items-center gap-2">
+              Lorebook Wizard Co-Pilot
+              <span class="px-2 py-0.5 rounded-full theme-bg-green-light theme-text-green text-[10px] border border-green-500/20">Active Model: Claude-3.5-Sonnet</span>
+            </h2>
+            <p class="text-[11px] theme-text-muted">Generating SillyTavern macro-ready world info entries with key grounding.</p>
+          </div>
+        </div>
+
+        <button onclick="clearChat()" class="px-2.5 py-1 rounded theme-bg-card hover:theme-bg-hover border theme-border text-[11px] flex items-center gap-1 transition-colors">
+          <i data-lucide="rotate-ccw" class="w-3 h-3 theme-text-muted"></i> Clear Session
+        </button>
+      </div>
+
+      <!-- Chat / Stream Workspace Area -->
+      <div id="wizard-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+
+        <!-- User Prompt Bubble -->
+        <div class="flex justify-end">
+          <div class="max-w-xl theme-bg-card border theme-border rounded-2xl rounded-tr-none p-3 shadow-sm">
+            <div class="flex items-center gap-2 text-[11px] theme-text-gold font-mono mb-1">
+              <i data-lucide="user" class="w-3 h-3"></i>
+              <span>User Action • World Synthesis Request</span>
+            </div>
+            <p class="text-xs">
+              Let's synthesize a structured Spiritron entry for <code class="theme-bg-main px-1 py-0.5 rounded theme-text-gold font-mono">ReVardanis</code>. Detail subatomic laws, natural spiritron transference, and link to Dark Light magic.
+            </p>
+          </div>
+        </div>
+
+        <!-- AI Assistant Output Bubble -->
+        <div class="flex justify-start">
+          <div class="max-w-2xl theme-bg-surface border theme-border rounded-2xl rounded-tl-none p-4 shadow-md space-y-3">
+            <div class="flex items-center justify-between border-b theme-border pb-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="bot" class="w-4 h-4 theme-text-gold"></i>
+                <span class="text-xs font-bold theme-text-gold">Wizard Assistant</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded theme-bg-purple-light theme-text-purple font-mono">Grounded Extraction</span>
+              </div>
+              <span class="text-[10px] theme-text-muted">Just now</span>
+            </div>
+
+            <p class="text-xs leading-relaxed">
+              Here is the reconciled entry grounded in your active lore source (<code class="theme-text-cyan">ReVardanis_World_Lore_v2.txt</code>).
+            </p>
+
+            <!-- Rendered Lorebook Entry Preview Box -->
+            <div class="rounded-xl border theme-border theme-bg-main p-3.5 space-y-3 gradient-border-top">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded theme-bg-gold-light theme-text-gold border theme-border-gold">ID: CF-05</span>
+                    <h3 class="text-sm font-bold">CF-05-Spiritrons: Natural Laws & Transference</h3>
+                  </div>
+                  <p class="text-[11px] theme-text-muted mt-0.5">Category: Magical Physics / World Concepts</p>
+                </div>
+                <button onclick="stageGeneratedEntry()" class="px-2.5 py-1 rounded-lg theme-btn-primary text-xs flex items-center gap-1 shadow-sm">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                  Stage Draft
+                </button>
+              </div>
+
+              <!-- Keys Container -->
+              <div class="space-y-1">
+                <span class="text-[10px] font-semibold uppercase tracking-wider theme-text-muted">Trigger Keys:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="px-2 py-0.5 rounded theme-bg-card theme-text-gold text-[11px] font-mono border theme-border">spiritron</span>
+                  <span class="px-2 py-0.5 rounded theme-bg-card theme-text-gold text-[11px] font-mono border theme-border">spiritrons</span>
+                  <span class="px-2 py-0.5 rounded theme-bg-card theme-text-cyan text-[11px] font-mono border theme-border">reishi</span>
+                  <span class="px-2 py-0.5 rounded theme-bg-card theme-text-purple text-[11px] font-mono border theme-border">spiritual matter</span>
+                </div>
+              </div>
+
+              <!-- Content Preview -->
+              <div class="theme-bg-surface p-3 rounded-lg border theme-border font-mono text-xs space-y-2 leading-relaxed">
+                <div class="theme-text-gold font-bold"># CF-05 — Spiritrons</div>
+                <p>
+                  Fundamental subatomic units of spiritual matter — magicules, holy power, and aura are all compounded from them.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Floating Prompt Input Bar -->
+      <div class="p-3 border-t theme-border theme-bg-surface">
+        <div class="relative theme-bg-main border theme-border rounded-xl p-2">
+          <textarea id="wizard-input" rows="2" placeholder="Talk to the wizard or paste raw lore notes..." class="w-full bg-transparent text-xs placeholder-gray-500 focus:outline-none resize-none pr-24"></textarea>
+
+          <div class="flex items-center justify-between border-t theme-border pt-1.5 mt-1">
+            <span class="text-[10px] theme-text-muted">Themes persist automatically</span>
+
+            <div class="flex items-center gap-2">
+              <button onclick="simulateExtraction()" class="px-3 py-1.5 rounded-lg theme-bg-purple-light theme-text-purple border border-purple-500/30 text-xs font-semibold flex items-center gap-1">
+                <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Distill AI
+              </button>
+              <button onclick="sendMessage()" class="px-4 py-1.5 rounded-lg theme-btn-primary text-xs flex items-center gap-1 shadow-sm">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i> Send
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Drafts Deck & SillyTavern Inspector -->
+    <aside id="right-sidebar" class="w-96 border-l theme-border theme-bg-surface flex flex-col transition-all duration-300 relative z-10 shrink-0">
+      
+      <!-- Panel Header -->
+      <div class="p-3 border-b theme-border flex items-center justify-between theme-bg-surface">
+        <div class="flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 theme-text-cyan"></i>
+          <span class="text-xs font-bold uppercase tracking-wider">Staging & Draft Deck</span>
+          <span id="draft-count-badge" class="px-2 py-0.5 rounded-full theme-bg-cyan-light theme-text-cyan text-[10px] font-mono font-bold border border-cyan-500/30">2 Cards</span>
+        </div>
+      </div>
+
+      <!-- Draft Cards Scrollable Area -->
+      <div id="drafts-container" class="flex-1 overflow-y-auto p-3 space-y-3">
+
+        <!-- Draft Card 1 -->
+        <div class="draft-card p-3 rounded-xl border theme-border theme-bg-card hover:theme-border-gold transition-all space-y-2 relative group shadow-sm">
+          <div class="flex items-start justify-between">
+            <h4 class="text-xs font-bold group-hover:theme-text-gold transition-colors">CF-05-HolyPower: Miracles</h4>
+            <span class="w-2 h-2 rounded-full theme-bg-gold-light border theme-border-gold"></span>
+          </div>
+
+          <div class="flex flex-wrap gap-1">
+            <span class="text-[9px] px-1.5 py-0.5 rounded theme-bg-main theme-text-gold font-mono border theme-border">Holy Power</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded theme-bg-main theme-text-cyan font-mono border theme-border">miracles</span>
+          </div>
+
+          <p class="text-[11px] theme-text-muted line-clamp-2 theme-bg-main p-1.5 rounded border theme-border font-mono">
+            Holy power is a refined derivative of Spiritrons processed through divine affinity conduits...
+          </p>
+
+          <div class="grid grid-cols-4 gap-1 pt-1 border-t theme-border">
+            <button onclick="commitSingleDraft(this)" class="px-1.5 py-1 rounded theme-bg-green-light theme-text-green text-[10px] font-medium border border-green-500/30">
+              Commit
+            </button>
+            <button onclick="openEditModal()" class="px-1.5 py-1 rounded theme-bg-surface text-[10px] font-medium">
+              Edit
+            </button>
+            <button onclick="deleteDraft(this)" class="px-1.5 py-1 rounded theme-bg-main theme-text-coral text-[10px] font-medium border border-red-500/30">
+              Delete
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Export Bar -->
+      <div class="p-3 border-t theme-border theme-bg-surface">
+        <button onclick="exportLorebook()" class="w-full py-2 rounded-lg theme-btn-primary text-xs flex items-center justify-center gap-2 shadow-md">
+          <i data-lucide="download-cloud" class="w-4 h-4"></i> Export All Staged to JSON
+        </button>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- ================= INLINE EDIT ENTRY MODAL ================= -->
+  <div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="theme-bg-surface border theme-border rounded-2xl w-full max-w-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b theme-border pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-4 h-4 theme-text-gold"></i>
+          <h3 class="text-sm font-bold">Edit SillyTavern Lore Entry</h3>
+        </div>
+        <button onclick="closeEditModal()" class="theme-text-muted hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold uppercase tracking-wider block mb-1 theme-text-muted">Entry Title</label>
+          <input type="text" value="CF-05-Spiritrons: Natural Laws" class="w-full theme-bg-main border theme-border rounded-lg px-3 py-1.5 text-xs font-medium focus:border-accent-gold focus:outline-none">
+        </div>
+
+        <div>
+          <label class="text-[11px] font-bold uppercase tracking-wider block mb-1 theme-text-muted">Trigger Keys</label>
+          <input type="text" value="spiritron, spiritrons, reishi, spiritual matter" class="w-full theme-bg-main border theme-border rounded-lg px-3 py-1.5 text-xs theme-text-gold font-mono focus:border-accent-gold focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t theme-border pt-3">
+        <button onclick="closeEditModal()" class="px-4 py-1.5 rounded-lg theme-bg-card text-xs">Cancel</button>
+        <button onclick="saveEditModal()" class="px-4 py-1.5 rounded-lg theme-btn-primary text-xs">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // Initialize Icons
+    lucide.createIcons();
+
+    // Theme Switcher Logic
+    const themeLabels = {
+      'obsidian-cyber': 'Obsidian Cyber',
+      'tavern-parchment': 'Tavern Parchment',
+      'neon-cyberpunk': 'Neon Cyberpunk',
+      'royal-velvet': 'Royal Velvet',
+      'emerald-codex': 'Emerald Codex'
+    };
+
+    function toggleThemeDropdown() {
+      document.getElementById('theme-dropdown').classList.toggle('hidden');
+    }
+
+    function setTheme(themeKey) {
+      document.documentElement.setAttribute('data-theme', themeKey);
+      localStorage.setItem('lorebook_forge_theme', themeKey);
+
+      // Update UI label & Checkmarks
+      document.getElementById('current-theme-label').innerText = themeLabels[themeKey] || 'Obsidian Cyber';
+      
+      document.querySelectorAll('.theme-check').forEach(el => el.classList.add('hidden'));
+      const activeCheck = document.querySelector(`.check-${themeKey}`);
+      if (activeCheck) activeCheck.classList.remove('hidden');
+
+      document.getElementById('theme-dropdown').classList.add('hidden');
+      showToast(`Applied Theme: ${themeLabels[themeKey]}`);
+    }
+
+    // Load persisted theme preference
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('lorebook_forge_theme') || 'obsidian-cyber';
+      setTheme(savedTheme);
+    });
+
+    // Workflow Tab Switcher
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('theme-bg-surface', 'theme-text-gold', 'shadow-sm', 'border', 'theme-border');
+        btn.classList.add('theme-text-muted');
+      });
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.add('theme-bg-surface', 'theme-text-gold', 'shadow-sm', 'border', 'theme-border');
+        activeBtn.classList.remove('theme-text-muted');
+      }
+      showToast(`Workflow mode: ${tabName.toUpperCase()}`);
+    }
+
+    function toggleLeftSidebar() {
+      const sidebar = document.getElementById('left-sidebar');
+      sidebar.classList.toggle('w-80');
+      sidebar.classList.toggle('w-0');
+      sidebar.classList.toggle('overflow-hidden');
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('wizard-input');
+      if (!input.value.trim()) return;
+      input.value = '';
+      showToast('Wizard prompt submitted');
+    }
+
+    function stageGeneratedEntry() {
+      showToast('Entry staged to Draft Deck');
+    }
+
+    function commitSingleDraft(btn) {
+      const card = btn.closest('.draft-card');
+      card.style.opacity = '0.5';
+      showToast('Committed draft card!');
+    }
+
+    function deleteDraft(btn) {
+      btn.closest('.draft-card').remove();
+      showToast('Draft deleted', 'error');
+    }
+
+    function openEditModal() {
+      document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+    }
+
+    function saveEditModal() {
+      closeEditModal();
+      showToast('Saved lorebook changes');
+    }
+
+    function exportLorebook() {
+      showToast('Exported SillyTavern JSON to clipboard!');
+    }
+
+    function clearChat() {
+      showToast('Session cleared');
+    }
+
+    function simulateExtraction() {
+      showToast('AI Distillation executed');
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-3.5 py-2 rounded-xl text-xs font-semibold shadow-lg border flex items-center gap-2 theme-bg-surface theme-border theme-text-gold transition-all duration-300`;
+      toast.innerHTML = `<i data-lucide="sparkles" class="w-3.5 h-3.5 theme-text-gold"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => toast.remove(), 2500);
+    }
+  </script>
+</body>
+</html>
