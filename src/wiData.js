@@ -59,6 +59,31 @@ function makeDefaultEntry(overrides) {
     };
 }
 
+// WorldInfo fields a draft may carry in `draft.wi` (Stage 24 inspector).
+// Anything else on the entry comes from makeDefaultEntry.
+export const WI_FIELDS = ["keysecondary", "selectiveLogic", "order", "position", "depth", "scanDepth", "probability", "constant", "disable"];
+
+// One draft → one full ST entry. Shared by commit and JSON export.
+export function draftToEntry(draft, uid, displayIndex) {
+    const wi = draft.wi || {};
+    return makeDefaultEntry({
+        uid,
+        key: draft.keys.length ? draft.keys : [draft.title],
+        // Provenance lives in the comment — visible in the native editor
+        comment: draft.sourceUrl
+            ? `${draft.title} — LF source: ${draft.sourceUrl}`
+            : draft.title,
+        content: draft.content,
+        displayIndex,
+        ...Object.fromEntries(WI_FIELDS.filter(f => wi[f] !== undefined).map(f => [f, wi[f]])),
+    });
+}
+
+// Drafts → a standalone lorebook file, importable via ST's World Info import.
+export function draftsToWorldJson(drafts) {
+    return { entries: Object.fromEntries(drafts.map((d, i) => [i, draftToEntry(d, i, i)])) };
+}
+
 // Commit a draft as a NEW entry. Additive only — existing entries untouched.
 // Loading a non-existent lorebook returns a dummy {entries:{}} (server
 // allowDummy), so committing to a fresh name CREATES the lorebook.
@@ -77,17 +102,7 @@ export async function commitDraftToLorebook(draft, lorebookName) {
     const displayIndexes = existing.map(e => Number(e.displayIndex)).filter(Number.isFinite);
     const newDisplayIndex = displayIndexes.length ? Math.max(...displayIndexes) + 1 : 0;
 
-    const entry = makeDefaultEntry({
-        uid: newUid,
-        key: draft.keys.length ? draft.keys : [draft.title],
-        // Provenance lives in the comment — visible in the native editor
-        comment: draft.sourceUrl
-            ? `${draft.title} — LF source: ${draft.sourceUrl}`
-            : draft.title,
-        content: draft.content,
-        displayIndex: newDisplayIndex,
-    });
-    data.entries[newUid] = entry;
+    data.entries[newUid] = draftToEntry(draft, newUid, newDisplayIndex);
 
     await ctx.saveWorldInfo(lorebookName, data);
 

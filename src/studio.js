@@ -1,15 +1,19 @@
 // The Studio overlay: full-screen workspace.
-// Stage 23 layout: one top bar (brand + workspace tabs + close), a left
-// rail toggling the side docks (Research / Drafts), and ONE active center
-// tab at a time — Wizard, Proposals, Reader, Map — each pane owning a
-// single full-height scroll region (no stacked strips, no scroll-to-nirvana).
+// Stage 24 layout (v2): one header (brand + lorebook pill + workspace tabs +
+// panel toggles + theme picker + export + close) over three full-bleed
+// columns — Research & Sources | ONE active center tab (Wizard, Proposals,
+// Reader, Map) | Staging & Draft Deck. Every pane owns a single
+// full-height scroll region. Themes are CSS-variable presets switched via
+// data-theme on the root, persisted in extension settings.
 // Cross-module asks arrive as DOM events on the root (avoids circular
-// imports): research.js → "lf-show-reader", wizard.js → "lf-show-center".
+// imports): research.js → "lf-show-reader", wizard.js → "lf-show-center",
+// "lf-show-sources".
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
+import { icon } from "./helpers.js";
 import { initResearch, getPageCache } from "./research.js";
-import { renderDraftsList } from "./drafts.js";
+import { renderDraftsList, initDraftsDeck } from "./drafts.js";
 import { initDistiller } from "./distiller.js";
 import { initWizard } from "./wizard.js";
 import { renderGraph } from "./graph.js";
@@ -17,19 +21,33 @@ import { renderGraph } from "./graph.js";
 let studioRoot = null;
 const railState = { search: true, drafts: true };
 
+// Swatch = the preset's signature accent (shown in the picker)
+const THEMES = [
+    { id: "obsidian-cyber",   label: "Obsidian Cyber",   swatch: "#7aa2f7" },
+    { id: "tavern-parchment", label: "Tavern Parchment", swatch: "#a4471a" },
+    { id: "neon-cyberpunk",   label: "Neon Cyberpunk",   swatch: "#ff2a8a" },
+    { id: "royal-velvet",     label: "Royal Velvet",     swatch: "#e2b84b" },
+    { id: "emerald-codex",    label: "Emerald Codex",    swatch: "#2fd08f" },
+    { id: "night-forge",      label: "Night Forge",      swatch: "#e08e3c" },
+];
+
 export function isStudioOpen() {
     return !!studioRoot;
 }
 
+// Esc peels one layer at a time: modal → theme menu → the Studio itself
 function onStudioEsc(e) {
-    if (e.key === "Escape") {
-        e.preventDefault();
-        closeStudio();
-    }
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    const modal = studioRoot?.querySelector(".lf-modal-backdrop");
+    if (modal) return modal.remove();
+    if (studioRoot?.querySelector(".lf-theme-menu.open")) return toggleThemeMenu(false);
+    closeStudio();
 }
 
 export function closeStudio() {
     document.removeEventListener("keydown", onStudioEsc);
+    document.removeEventListener("click", onOutsideClick);
     if (studioRoot) {
         studioRoot.remove();
         studioRoot = null;
@@ -43,11 +61,50 @@ export function setStudioStatus(text) {
     }
 }
 
-function toggleSidePanel(name) {
+function toggleSidePanel(name, force) {
     if (!studioRoot) return;
-    railState[name] = !railState[name];
+    railState[name] = force ?? !railState[name];
     studioRoot.querySelector(`.lf-panel-${name}`).classList.toggle("lf-panel-hidden", !railState[name]);
-    studioRoot.querySelector(`#lf_rail_${name}`).classList.toggle("active", railState[name]);
+    const btn = studioRoot.querySelector(`#lf_toggle_${name}`);
+    btn.classList.toggle("active", railState[name]);
+    btn.setAttribute("aria-pressed", String(railState[name]));
+}
+
+// ---- Left panel sub-tabs: Web search / Sources & Canon ----
+function showLeftTab(name) {
+    if (!studioRoot) return;
+    toggleSidePanel("search", true);
+    for (const btn of studioRoot.querySelectorAll(".lf-subtab")) {
+        const on = btn.dataset.sub === name;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", String(on));
+    }
+    for (const body of studioRoot.querySelectorAll(".lf-panel-search [data-subpane]")) {
+        body.classList.toggle("lf-hidden", body.dataset.subpane !== name);
+    }
+}
+
+// ---- Theme engine ----
+function applyTheme(id) {
+    const theme = THEMES.find(t => t.id === id) || THEMES[0];
+    studioRoot.dataset.theme = theme.id;
+    studioRoot.querySelector("#lf_theme_label").textContent = theme.label;
+    for (const item of studioRoot.querySelectorAll(".lf-theme-item")) {
+        item.setAttribute("aria-checked", String(item.dataset.theme === theme.id));
+    }
+    return theme;
+}
+
+function toggleThemeMenu(open) {
+    const menu = studioRoot?.querySelector(".lf-theme-menu");
+    if (!menu) return;
+    const on = open ?? !menu.classList.contains("open");
+    menu.classList.toggle("open", on);
+    studioRoot.querySelector("#lf_theme_btn").setAttribute("aria-expanded", String(on));
+}
+
+function onOutsideClick(e) {
+    if (!e.target.closest?.(".lf-theme-picker")) toggleThemeMenu(false);
 }
 
 // ---- Center workspace tabs: radio behavior — exactly one pane visible ----
@@ -78,8 +135,8 @@ function initDraftsResizer() {
         e.preventDefault();
         studioRoot.classList.add("lf-resizing");
         const onMove = (ev) => {
-            // Panel's right edge sits ~14px from the window edge (main padding)
-            const width = Math.min(560, Math.max(240, window.innerWidth - ev.clientX - 14));
+            // Panel is flush with the window's right edge (full-bleed columns)
+            const width = Math.min(600, Math.max(260, window.innerWidth - ev.clientX));
             studioRoot.style.setProperty("--lf-drafts-w", `${Math.round(width)}px`);
         };
         const onUp = () => {
@@ -87,7 +144,7 @@ function initDraftsResizer() {
             document.removeEventListener("mouseup", onUp);
             studioRoot.classList.remove("lf-resizing");
             const s = extension_settings[extensionName];
-            s.draftsPanelWidth = Math.round(parseFloat(studioRoot.style.getPropertyValue("--lf-drafts-w")) || 300);
+            s.draftsPanelWidth = Math.round(parseFloat(studioRoot.style.getPropertyValue("--lf-drafts-w")) || 340);
             saveSettingsDebounced();
             console.log(`[${extensionName}] Drafts panel width saved: ${s.draftsPanelWidth}px`);
         };
@@ -103,49 +160,68 @@ function buildStudio() {
         <div class="lf-studio-page">
             <header class="lf-studio-header">
                 <div class="lf-studio-title">
-                    <span class="lf-studio-logo">⚒️</span>
+                    <span class="lf-studio-logo">${icon("hammer")}</span>
                     <span class="lf-studio-name">Lorebook Forge</span>
                     <span class="lf-studio-sub">Studio</span>
                 </div>
-                <nav class="lf-tabs">
-                    <button id="lf_tab_wizard" class="lf-tab active" type="button" role="tab" aria-selected="true">✨ Wizard</button>
-                    <button id="lf_tab_proposals" class="lf-tab" type="button" role="tab" aria-selected="false">⚡ Proposals<span class="lf-tab-badge lf-hidden"></span></button>
-                    <button id="lf_tab_reader" class="lf-tab" type="button" role="tab" aria-selected="false">📖 Reader</button>
-                    <button id="lf_tab_graph" class="lf-tab" type="button" role="tab" aria-selected="false">🗺️ Map</button>
-                </nav>
-                <button class="lf-studio-close" type="button" title="Close (Esc)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <button id="lf_book_pill" class="lf-book-pill" type="button" title="Update target — click to manage sources">
+                    ${icon("book")}<span class="lf-book-pill-label">Lorebook</span>
+                    <span id="lf_book_pill_name" class="lf-book-pill-name">none</span>
                 </button>
+                <nav class="lf-tabs" role="tablist">
+                    <button id="lf_tab_wizard" class="lf-tab active" type="button" role="tab" aria-selected="true">${icon("wand")}Wizard</button>
+                    <button id="lf_tab_proposals" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("pull")}Proposals<span class="lf-tab-badge lf-hidden"></span></button>
+                    <button id="lf_tab_reader" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("book")}Reader</button>
+                    <button id="lf_tab_graph" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("network")}Canon Map</button>
+                </nav>
+                <div class="lf-header-actions">
+                    <button id="lf_toggle_search" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle research panel">${icon("panelLeft")}</button>
+                    <button id="lf_toggle_drafts" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle draft deck">${icon("panelRight")}</button>
+                    <div class="lf-theme-picker">
+                        <button id="lf_theme_btn" class="lf-ghost-btn" type="button" aria-haspopup="menu" aria-expanded="false">
+                            ${icon("palette")}<span id="lf_theme_label"></span>${icon("chevron", "lf-ic-sm")}
+                        </button>
+                        <div class="lf-theme-menu" role="menu">
+                            <div class="lf-theme-menu-label">Studio themes</div>
+                            ${THEMES.map(t => `
+                                <button class="lf-theme-item" type="button" role="menuitemradio" aria-checked="false" data-theme="${t.id}">
+                                    <span class="lf-theme-swatch" style="--sw:${t.swatch}"></span>${t.label}${icon("check", "lf-theme-check")}
+                                </button>`).join("")}
+                        </div>
+                    </div>
+                    <button class="lf-ghost-btn lf-export-json" type="button" title="Download staged drafts as a SillyTavern lorebook (.json)">${icon("download")}Export JSON</button>
+                    <button class="lf-studio-close lf-icon-btn" type="button" title="Close (Esc)">${icon("x")}</button>
+                </div>
             </header>
             <div class="lf-studio-main">
-                <nav class="lf-rail">
-                    <div class="lf-rail-brand" title="Lorebook Forge">LF</div>
-                    <button id="lf_rail_search" class="lf-rail-btn active" type="button" title="Toggle research panel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </button>
-                    <button id="lf_rail_drafts" class="lf-rail-btn active" type="button" title="Toggle drafts panel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                    </button>
-                    <div class="lf-rail-sep"></div>
-                    <button id="lf_rail_distill" class="lf-rail-btn" type="button" title="Distill selected sources with AI">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z"/></svg>
-                    </button>
-                </nav>
-                <section class="lf-panel lf-panel-search">
-                    <div class="lf-panel-header">Research</div>
-                    <div class="lf-panel-body">
+                <aside class="lf-panel lf-panel-search">
+                    <div class="lf-panel-header">
+                        ${icon("compass", "lf-ic-accent")}<span>Canon Research &amp; Sources</span>
+                        <button class="lf-icon-btn lf-panel-collapse" type="button" data-panel="search" title="Collapse">${icon("panelLeft")}</button>
+                    </div>
+                    <div class="lf-subtabs" role="tablist">
+                        <button class="lf-subtab active" type="button" role="tab" aria-selected="true" data-sub="web">${icon("search")}Web</button>
+                        <button class="lf-subtab" type="button" role="tab" aria-selected="false" data-sub="sources">${icon("layers")}Sources<span id="lf_sources_count" class="lf-count"></span></button>
+                    </div>
+                    <div class="lf-panel-body" data-subpane="web">
                         <div class="lf-search-row">
-                            <input id="lf_search_query" class="text_pole lf-text-input" type="text" placeholder="Search the web…" autocomplete="off" />
+                            <span class="lf-search-field">
+                                ${icon("search")}
+                                <input id="lf_search_query" class="text_pole lf-text-input" type="text" placeholder="Search web, wikis, fandoms…" autocomplete="off" />
+                            </span>
                             <button id="lf_search_btn" class="menu_button" type="button">Go</button>
                         </div>
                         <div id="lf_search_results" class="lf-search-results"></div>
                     </div>
-                </section>
+                    <div id="lf_sources" class="lf-panel-body lf-sources-pane lf-hidden" data-subpane="sources"></div>
+                    <div id="lf_grounding" class="lf-grounding"></div>
+                </aside>
                 <section class="lf-center">
                     <div id="lf_wizard" class="lf-pane lf-wizard"></div>
                     <section id="lf_proposals_pane" class="lf-pane lf-proposals-pane lf-hidden">
                         <div class="lf-pane-header">
-                            <span class="lf-pane-title">⚡ Proposals</span>
+                            <span class="lf-tile">${icon("pull")}</span>
+                            <span class="lf-pane-title">Proposals</span>
                             <span id="lf_proposals_count" class="lf-chip"></span>
                             <span class="lf-pane-hint">Every card carries an evidence quote, verified against this session's sources.</span>
                         </div>
@@ -166,15 +242,29 @@ function buildStudio() {
                         <div id="lf_graph"></div>
                     </div>
                 </section>
-                <section class="lf-panel lf-panel-drafts">
+                <aside class="lf-panel lf-panel-drafts">
                     <div id="lf_drafts_resize" class="lf-drafts-resize" title="Drag to resize"></div>
-                    <div class="lf-panel-header">Drafts</div>
+                    <div class="lf-panel-header">
+                        ${icon("layers", "lf-ic-accent2")}<span>Staging &amp; Draft Deck</span>
+                        <span id="lf_drafts_count" class="lf-count"></span>
+                        <button class="lf-icon-btn lf-panel-collapse" type="button" data-panel="drafts" title="Collapse">${icon("panelRight")}</button>
+                    </div>
+                    <div class="lf-batchbar">
+                        <label class="lf-batch-all"><input id="lf_drafts_all" type="checkbox" /> Select all</label>
+                        <span id="lf_drafts_selected" class="lf-batch-count"></span>
+                        <button id="lf_batch_commit" class="menu_button lf-btn-good" type="button" title="Commit every ticked draft to one lorebook">${icon("checks")}Commit selected</button>
+                    </div>
+                    <div id="lf_batch_form" class="lf-commit-form lf-batch-form" style="display:none;"></div>
                     <div class="lf-panel-body">
                         <div id="lf_drafts_list" class="lf-drafts-list"></div>
                     </div>
-                </section>
+                    <div class="lf-panel-footer">
+                        <button class="menu_button lf-btn-primary lf-export-json" type="button">${icon("download")}Export staged → JSON</button>
+                    </div>
+                </aside>
             </div>
             <footer class="lf-studio-statusbar">
+                <span class="lf-status-dot"></span>
                 <span id="lf_studio_status">Ready — paste sources into the Wizard, or research the web.</span>
             </footer>
         </div>
@@ -184,18 +274,32 @@ function buildStudio() {
     for (const name of Object.keys(CENTER_TABS)) {
         el.querySelector(CENTER_TABS[name].tab).addEventListener("click", () => showCenter(name));
     }
-    el.querySelector("#lf_rail_search").addEventListener("click", () => toggleSidePanel("search"));
-    el.querySelector("#lf_rail_drafts").addEventListener("click", () => toggleSidePanel("drafts"));
-    el.querySelector("#lf_rail_distill").addEventListener("click", () => {
-        if (!railState.drafts) toggleSidePanel("drafts");
-        const topic = el.querySelector("#lf_distill_bar .lf-distill-topic");
-        if (topic) topic.focus();
-        else toastr.info("Drafts panel not ready yet.", "Lorebook Forge");
-    });
-    // research.js asks for the Reader tab, wizard.js for the Proposals tab —
-    // both via native DOM events on the root (no circular imports).
+    el.querySelector("#lf_toggle_search").addEventListener("click", () => toggleSidePanel("search"));
+    el.querySelector("#lf_toggle_drafts").addEventListener("click", () => toggleSidePanel("drafts"));
+    for (const btn of el.querySelectorAll(".lf-panel-collapse")) {
+        btn.addEventListener("click", () => toggleSidePanel(btn.dataset.panel, false));
+    }
+    for (const btn of el.querySelectorAll(".lf-subtab")) {
+        btn.addEventListener("click", () => showLeftTab(btn.dataset.sub));
+    }
+    el.querySelector("#lf_book_pill").addEventListener("click", () => showLeftTab("sources"));
+
+    el.querySelector("#lf_theme_btn").addEventListener("click", () => toggleThemeMenu());
+    for (const item of el.querySelectorAll(".lf-theme-item")) {
+        item.addEventListener("click", () => {
+            const theme = applyTheme(item.dataset.theme);
+            extension_settings[extensionName].theme = theme.id;
+            saveSettingsDebounced();
+            toggleThemeMenu(false);
+            setStudioStatus(`Theme: ${theme.label}`);
+        });
+    }
+
+    // research.js asks for the Reader tab, wizard.js for a center tab or the
+    // Sources sub-tab — native DOM events on the root (no circular imports).
     el.addEventListener("lf-show-reader", () => showCenter("reader"));
     el.addEventListener("lf-show-center", (e) => showCenter(e.detail));
+    el.addEventListener("lf-show-sources", () => showLeftTab("sources"));
 
     return el;
 }
@@ -205,16 +309,19 @@ export function openStudio() {
     studioRoot = buildStudio();
     document.body.appendChild(studioRoot);
 
-    // Restore persisted drafts panel width
+    // Restore persisted panel width + theme (older settings lack `theme`)
     const s = extension_settings[extensionName];
-    studioRoot.style.setProperty("--lf-drafts-w", `${Number(s.draftsPanelWidth) || 300}px`);
+    studioRoot.style.setProperty("--lf-drafts-w", `${Number(s.draftsPanelWidth) || 340}px`);
+    applyTheme(s.theme);
 
     initResearch();        // wires search + reader (fresh DOM each open)
+    initDraftsDeck();      // batch bar + export (fresh DOM each open)
     renderDraftsList();    // drafts into the panel
     initDistiller();       // distill bar (guarded against duplicates)
-    initWizard();          // wizard + proposals tabs (fresh DOM each open)
+    initWizard();          // wizard + sources + proposals (fresh DOM each open)
     initDraftsResizer();   // drag handle on the drafts panel
 
     document.addEventListener("keydown", onStudioEsc);
+    document.addEventListener("click", onOutsideClick);
     console.log(`[${extensionName}] Studio opened`);
 }

@@ -290,21 +290,24 @@
     white-space: nowrap;
 }
 
-/* ============ The Studio — "night forge" design system (Stage 23) ============
-   One coherent component layer replacing the stage-by-stage override stack.
-   Identity: a night forge for world-lore — iron surfaces, lantern-warm text,
-   ONE ember accent. Alegreya serif speaks for content (titles, reading
-   prose), Alegreya Sans for chrome.
-
-   Layout law: every pane = fixed header + ONE full-height scroll region.
-   The rail toggles side docks; the center shows one workspace tab at a
-   time (Wizard / Proposals / Reader / Map). Never stack two flexible
-   regions in one pane, never cap a scroll region with max-height.
+/* ============ The Studio — Stage 24 theme engine (v2) ============
+   One variable contract, six presets switched via [data-theme] on
+   #lf_studio_root. Structure (Stage 23 laws intact):
+     - header: brand + lorebook pill + workspace tabs + panel toggles +
+       theme picker + export + close
+     - three full-bleed columns: Research & Sources | ONE active center
+       tab (Wizard / Proposals / Reader / Map) | Staging & Draft Deck
+     - every pane = fixed chrome + ONE full-height scroll region
+   Identity per theme comes from three accents (accent / accent2 /
+   accent3) that cycle through keys and tiles, so pill tags stay
+   scannable in every preset. color-mix() derives the hover / soft /
+   border tints — no per-theme rule duplication beyond the tokens.
    ============ */
 
+/* ---- Theme tokens: Night Forge (default) ---- */
 #lf_studio_root {
     --lfs-bg: #141519;                       /* forge floor */
-    --lfs-bg-deep: #0f1013;                  /* wells: rail, inputs, canvas */
+    --lfs-bg-deep: #0f1013;                  /* wells: inputs, canvas, modal */
     --lfs-surface: #1a1c22;                  /* panel iron sheet */
     --lfs-surface-2: #21242c;                /* raised: hover, buttons */
     --lfs-card: #232730;                     /* card stock */
@@ -316,11 +319,19 @@
     --lfs-accent-bright: #f2b263;
     --lfs-accent-soft: rgba(224, 142, 60, 0.14);
     --lfs-accent-ink: #221607;               /* dark ink on ember fills */
+    --lfs-accent2: #8fa8c8;                  /* cold steel */
+    --lfs-accent3: #6fae8f;                  /* patina */
     --lfs-good: #51cf66;
     --lfs-warn: #ffd43b;
     --lfs-bad: #ff6b6b;
+    --lfs-glow: 0 0 12px rgba(224, 142, 60, 0.45);
+    /* forge atmosphere: ember bloom low-left, cool moonlight top-right */
+    --lfs-atmo:
+        radial-gradient(1100px 700px at 12% 108%, rgba(224, 142, 60, 0.06), transparent 60%),
+        radial-gradient(900px 600px at 96% -8%, rgba(143, 168, 200, 0.05), transparent 55%);
     --lfs-font-ui: 'Alegreya Sans', var(--mainFontFamily, sans-serif);
     --lfs-font-display: 'Alegreya', Georgia, 'Times New Roman', serif;
+    --lfs-font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'Courier New', monospace;
     --lfs-radius: 10px;
     --lfs-radius-lg: 14px;
 
@@ -332,33 +343,174 @@
     overflow: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(236, 231, 221, 0.18) transparent;
-    /* forge atmosphere: ember bloom low-left, cool moonlight top-right */
-    background:
-        radial-gradient(1100px 700px at 12% 108%, rgba(224, 142, 60, 0.06), transparent 60%),
-        radial-gradient(900px 600px at 96% -8%, rgba(96, 116, 158, 0.05), transparent 55%),
-        var(--lfs-bg);
+    background: var(--lfs-atmo), var(--lfs-bg);
 }
 
+/* ---- Theme tokens: Obsidian Cyber — Tokyo-night blues on obsidian ---- */
+#lf_studio_root[data-theme="obsidian-cyber"] {
+    --lfs-bg: #0d0e15;
+    --lfs-bg-deep: #090a10;
+    --lfs-surface: #141622;
+    --lfs-surface-2: #1c1f2e;
+    --lfs-card: #181a2a;
+    --lfs-text: #e2e8f0;
+    --lfs-text-dim: #7c86a8;
+    --lfs-border: rgba(122, 162, 247, 0.10);
+    --lfs-border-strong: rgba(122, 162, 247, 0.22);
+    --lfs-accent: #7aa2f7;
+    --lfs-accent-bright: #a8c1fb;
+    --lfs-accent-soft: rgba(122, 162, 247, 0.13);
+    --lfs-accent-ink: #0a1024;
+    --lfs-accent2: #e0af68;
+    --lfs-accent3: #bb9af7;
+    --lfs-glow: 0 0 12px rgba(122, 162, 247, 0.45);
+    --lfs-atmo:
+        radial-gradient(1000px 650px at 15% 110%, rgba(122, 162, 247, 0.07), transparent 60%),
+        radial-gradient(900px 600px at 95% -10%, rgba(187, 154, 247, 0.06), transparent 55%);
+}
+
+/* ---- Theme tokens: Tavern Parchment — lamplit oak & candle wax ---- */
+#lf_studio_root[data-theme="tavern-parchment"] {
+    --lfs-bg: #1c1917;
+    --lfs-bg-deep: #151210;
+    --lfs-surface: #292524;
+    --lfs-surface-2: #36302d;
+    --lfs-card: #322d29;
+    --lfs-text: #f5efe6;
+    --lfs-text-dim: #a89c8d;
+    --lfs-border: rgba(245, 239, 230, 0.09);
+    --lfs-border-strong: rgba(245, 239, 230, 0.2);
+    --lfs-accent: #f59e0b;
+    --lfs-accent-bright: #fbbf24;
+    --lfs-accent-soft: rgba(245, 158, 11, 0.14);
+    --lfs-accent-ink: #2c1c02;
+    --lfs-accent2: #fcd9a8;
+    --lfs-accent3: #b45309;
+    --lfs-glow: 0 0 12px rgba(245, 158, 11, 0.4);
+    --lfs-atmo:
+        radial-gradient(1000px 650px at 14% 110%, rgba(245, 158, 11, 0.08), transparent 60%),
+        radial-gradient(850px 550px at 95% -8%, rgba(180, 83, 9, 0.06), transparent 55%);
+}
+
+/* ---- Theme tokens: Neon Cyberpunk — magenta-cyan on void violet ---- */
+#lf_studio_root[data-theme="neon-cyberpunk"] {
+    --lfs-bg: #090314;
+    --lfs-bg-deep: #060110;
+    --lfs-surface: #120a24;
+    --lfs-surface-2: #1c1038;
+    --lfs-card: #1b0f38;
+    --lfs-text: #f3e8ff;
+    --lfs-text-dim: #9d7ec9;
+    --lfs-border: rgba(176, 38, 255, 0.16);
+    --lfs-border-strong: rgba(176, 38, 255, 0.3);
+    --lfs-accent: #ff2a8a;
+    --lfs-accent-bright: #ff6cb4;
+    --lfs-accent-soft: rgba(255, 42, 138, 0.15);
+    --lfs-accent-ink: #2b0214;
+    --lfs-accent2: #00f0ff;
+    --lfs-accent3: #b026ff;
+    --lfs-glow: 0 0 14px rgba(255, 42, 138, 0.55);
+    --lfs-radius: 7px;
+    --lfs-radius-lg: 10px;
+    --lfs-atmo:
+        radial-gradient(1000px 650px at 15% 110%, rgba(255, 42, 138, 0.09), transparent 60%),
+        radial-gradient(900px 600px at 95% -10%, rgba(0, 240, 255, 0.05), transparent 55%);
+}
+
+/* CRT scanlines — cyberpunk only, a whisper of the tube */
+#lf_studio_root[data-theme="neon-cyberpunk"] .lf-studio-header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, 0.14) 2px 3px);
+    opacity: 0.5;
+}
+
+/* ---- Theme tokens: Royal Velvet — gilt on wine-dark velvet ---- */
+#lf_studio_root[data-theme="royal-velvet"] {
+    --lfs-bg: #0f0c1b;
+    --lfs-bg-deep: #0a0814;
+    --lfs-surface: #18132b;
+    --lfs-surface-2: #231b3f;
+    --lfs-card: #221b3d;
+    --lfs-text: #f3e8ff;
+    --lfs-text-dim: #9a8ec2;
+    --lfs-border: rgba(243, 232, 255, 0.09);
+    --lfs-border-strong: rgba(243, 232, 255, 0.2);
+    --lfs-accent: #e2b84b;
+    --lfs-accent-bright: #f5d37a;
+    --lfs-accent-soft: rgba(226, 184, 75, 0.13);
+    --lfs-accent-ink: #241a03;
+    --lfs-accent2: #c084fc;
+    --lfs-accent3: #818cf8;
+    --lfs-glow: 0 0 12px rgba(226, 184, 75, 0.45);
+    --lfs-radius: 11px;
+    --lfs-radius-lg: 16px;
+    --lfs-atmo:
+        radial-gradient(1000px 650px at 15% 110%, rgba(226, 184, 75, 0.06), transparent 60%),
+        radial-gradient(900px 600px at 95% -10%, rgba(192, 132, 252, 0.06), transparent 55%);
+}
+
+/* ---- Theme tokens: Emerald Codex — verdigris on forest parchment ---- */
+#lf_studio_root[data-theme="emerald-codex"] {
+    --lfs-bg: #04120b;
+    --lfs-bg-deep: #020c07;
+    --lfs-surface: #0a1c12;
+    --lfs-surface-2: #102818;
+    --lfs-card: #0f291a;
+    --lfs-text: #ecfdf5;
+    --lfs-text-dim: #77a68c;
+    --lfs-border: rgba(47, 208, 143, 0.12);
+    --lfs-border-strong: rgba(47, 208, 143, 0.26);
+    --lfs-accent: #2fd08f;
+    --lfs-accent-bright: #7fe9c0;
+    --lfs-accent-soft: rgba(47, 208, 143, 0.12);
+    --lfs-accent-ink: #032114;
+    --lfs-accent2: #06b6d4;
+    --lfs-accent3: #a3e635;
+    --lfs-glow: 0 0 12px rgba(47, 208, 143, 0.45);
+    --lfs-atmo:
+        radial-gradient(1000px 650px at 15% 110%, rgba(47, 208, 143, 0.07), transparent 60%),
+        radial-gradient(900px 600px at 95% -10%, rgba(6, 182, 212, 0.05), transparent 55%);
+}
+
+/* ---- Shell ---- */
 #lf_studio_root .lf-studio-page {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
+#lf_studio_root .lf-hidden { display: none !important; }
+
+/* One orchestrated entrance: page fades up, columns stagger in behind it */
+@keyframes lf-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+#lf_studio_root .lf-studio-page { animation: lf-rise 0.28s ease both; }
+
+#lf_studio_root .lf-panel-search { animation: lf-rise 0.32s ease 0.06s both; }
+#lf_studio_root .lf-center { animation: lf-rise 0.32s ease 0.12s both; }
+#lf_studio_root .lf-panel-drafts { animation: lf-rise 0.32s ease 0.18s both; }
+
 /* ---- Shared: inputs ---- */
 #lf_studio_root .text_pole {
     background: var(--lfs-bg-deep);
     color: var(--lfs-text);
     border: 1px solid var(--lfs-border-strong);
-    border-radius: 9px;
+    border-radius: calc(var(--lfs-radius) - 2px);
     padding: 6px 10px;
     outline: none;
     font-family: var(--lfs-font-ui);
+    font-size: 0.86rem;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #lf_studio_root .text_pole::placeholder {
-    color: rgba(236, 231, 221, 0.35);
+    color: color-mix(in srgb, var(--lfs-text) 32%, transparent);
 }
 
 #lf_studio_root .text_pole:focus {
@@ -370,68 +522,206 @@
 
 #lf_studio_root select.text_pole option {
     background: var(--lfs-surface);
-    color: #fff;
+    color: var(--lfs-text);
 }
 
-/* ---- Shared: buttons (iron default, ember primary) ---- */
+#lf_studio_root input[type="checkbox"] { accent-color: var(--lfs-accent); }
+
+#lf_studio_root .lf-mono { font-family: var(--lfs-font-mono); }
+
+/* ---- Shared: buttons ---- */
 #lf_studio_root .menu_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: var(--lfs-surface-2);
     color: var(--lfs-text);
     border: 1px solid var(--lfs-border-strong);
-    border-radius: 9px;
+    border-radius: calc(var(--lfs-radius) - 2px);
     padding: 5px 12px;
     cursor: pointer;
     font-family: var(--lfs-font-ui);
     font-weight: 500;
-    font-size: 0.88rem;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    font-size: 0.86rem;
+    white-space: nowrap;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #lf_studio_root .menu_button:hover {
-    background: #282c36;
-    border-color: rgba(224, 142, 60, 0.55);
+    background: color-mix(in srgb, var(--lfs-surface-2) 84%, var(--lfs-text) 16%);
+    border-color: color-mix(in srgb, var(--lfs-accent) 55%, transparent);
     color: var(--lfs-accent-bright);
 }
 
 #lf_studio_root .menu_button:disabled { opacity: 0.5; cursor: default; }
 
-#lf_studio_root .menu_button:focus-visible,
-#lf_studio_root .lf-rail-btn:focus-visible,
-#lf_studio_root .lf-tab:focus-visible {
+#lf_studio_root button:focus-visible {
     outline: 2px solid var(--lfs-accent);
     outline-offset: 1px;
 }
 
-/* Primary CTAs: solid ember, dark ink text */
+/* Primary: solid accent fill, dark ink text, glow on hover */
+#lf_studio_root .lf-btn-primary,
 #lf_studio_root #lf_search_btn,
 #lf_studio_root .lf-distill-go,
-#lf_studio_root .lf-draft-save,
-#lf_studio_root .lf-commit-go {
+#lf_studio_root .lf-draft-save {
     background: var(--lfs-accent);
     color: var(--lfs-accent-ink);
-    border: 1px solid rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(0, 0, 0, 0.3);
     font-weight: 700;
 }
 
+#lf_studio_root .lf-btn-primary:hover,
 #lf_studio_root #lf_search_btn:hover,
 #lf_studio_root .lf-distill-go:hover,
-#lf_studio_root .lf-draft-save:hover,
-#lf_studio_root .lf-commit-go:hover {
+#lf_studio_root .lf-draft-save:hover {
     background: var(--lfs-accent-bright);
     color: var(--lfs-accent-ink);
+    box-shadow: var(--lfs-glow);
 }
 
-/* ---- Shared: small utilities ---- */
-#lf_studio_root input[type="checkbox"] { accent-color: var(--lfs-accent); }
+/* Ghost: quiet chrome until hovered */
+#lf_studio_root .lf-ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: calc(var(--lfs-radius) - 2px);
+    background: transparent;
+    color: var(--lfs-text-dim);
+    font-family: var(--lfs-font-ui);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
 
-#lf_studio_root .lf-hidden { display: none !important; }
+#lf_studio_root .lf-ghost-btn:hover {
+    color: var(--lfs-accent-bright);
+    border-color: color-mix(in srgb, var(--lfs-accent) 50%, transparent);
+    background: var(--lfs-accent-soft);
+}
 
+/* Semantic: good (commit), bad (delete), soft (extract) */
+#lf_studio_root .lf-btn-good {
+    color: var(--lfs-good);
+    border-color: color-mix(in srgb, var(--lfs-good) 45%, transparent);
+    background: color-mix(in srgb, var(--lfs-good) 10%, transparent);
+}
+
+#lf_studio_root .lf-btn-good:hover {
+    color: var(--lfs-good);
+    border-color: color-mix(in srgb, var(--lfs-good) 75%, transparent);
+    background: color-mix(in srgb, var(--lfs-good) 18%, transparent);
+}
+
+#lf_studio_root .lf-btn-bad {
+    color: var(--lfs-bad);
+    border-color: color-mix(in srgb, var(--lfs-bad) 45%, transparent);
+    background: color-mix(in srgb, var(--lfs-bad) 9%, transparent);
+}
+
+#lf_studio_root .lf-btn-bad:hover {
+    color: var(--lfs-bad);
+    border-color: color-mix(in srgb, var(--lfs-bad) 75%, transparent);
+    background: color-mix(in srgb, var(--lfs-bad) 17%, transparent);
+}
+
+#lf_studio_root .lf-btn-soft {
+    color: var(--lfs-accent2);
+    border-color: color-mix(in srgb, var(--lfs-accent2) 45%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent2) 10%, transparent);
+}
+
+#lf_studio_root .lf-btn-soft:hover {
+    color: var(--lfs-accent2);
+    border-color: color-mix(in srgb, var(--lfs-accent2) 75%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent2) 17%, transparent);
+}
+
+/* Icon button: 30px hit target, lit when active */
+#lf_studio_root .lf-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    border-radius: calc(var(--lfs-radius) - 3px);
+    background: transparent;
+    color: var(--lfs-text-dim);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+#lf_studio_root .lf-icon-btn:hover {
+    background: var(--lfs-surface-2);
+    color: var(--lfs-text);
+}
+
+#lf_studio_root .lf-icon-btn.active {
+    background: var(--lfs-accent-soft);
+    border-color: color-mix(in srgb, var(--lfs-accent) 40%, transparent);
+    color: var(--lfs-accent-bright);
+}
+
+/* Quiet inline link-button ("Add source") */
+#lf_studio_root .lf-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--lfs-accent2);
+    font-family: var(--lfs-font-ui);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#lf_studio_root .lf-link-btn:hover { color: var(--lfs-text); text-decoration: underline; }
+
+/* ---- Shared: icons ---- */
+#lf_studio_root .lf-ic {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-ic-sm { width: 12px; height: 12px; }
+
+#lf_studio_root .lf-ic-accent { color: var(--lfs-accent); }
+#lf_studio_root .lf-ic-accent2 { color: var(--lfs-accent2); }
+#lf_studio_root .lf-ic-accent3 { color: var(--lfs-accent3); }
+
+/* Icon tile: lit square that labels a pane or modal */
+#lf_studio_root .lf-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: calc(var(--lfs-radius) - 3px);
+    background: var(--lfs-accent-soft);
+    border: 1px solid color-mix(in srgb, var(--lfs-accent) 40%, transparent);
+    color: var(--lfs-accent);
+}
+
+#lf_studio_root .lf-tile .lf-ic { width: 15px; height: 15px; }
+
+/* ---- Shared: chips, counts, badges ---- */
 #lf_studio_root .lf-chip {
     font-size: 0.72rem;
     padding: 2px 10px;
     border-radius: 999px;
     border: 1px solid var(--lfs-border-strong);
-    background: rgba(236, 231, 221, 0.04);
+    background: color-mix(in srgb, var(--lfs-text) 4%, transparent);
     color: var(--lfs-text-dim);
     white-space: nowrap;
     cursor: pointer;
@@ -439,15 +729,32 @@
 
 #lf_studio_root .lf-chip:empty { display: none; }
 
-#lf_studio_root .lf-target-chip {
-    color: var(--lfs-accent-bright);
-    border-color: rgba(224, 142, 60, 0.45);
-    background: var(--lfs-accent-soft);
+#lf_studio_root .lf-chip-good {
+    color: var(--lfs-good);
+    border-color: color-mix(in srgb, var(--lfs-good) 45%, transparent);
+    background: color-mix(in srgb, var(--lfs-good) 10%, transparent);
 }
 
-#lf_studio_root .lf-search-status {
-    opacity: 1;
+#lf_studio_root .lf-count {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.64rem;
     color: var(--lfs-text-dim);
+    background: var(--lfs-bg-deep);
+    border: 1px solid var(--lfs-border);
+    padding: 1px 7px;
+    border-radius: 999px;
+}
+
+#lf_studio_root .lf-count:empty { display: none; }
+
+#lf_studio_root .lf-panel-header .lf-count { margin-left: auto; }
+
+#lf_studio_root .lf-subtab .lf-count { margin-left: 2px; padding: 0 6px; }
+
+#lf_studio_root .lf-dim {
+    color: var(--lfs-text-dim);
+    font-weight: 400;
+    font-size: 0.88em;
 }
 
 #lf_studio_root .lf-settings-label {
@@ -456,7 +763,59 @@
     color: var(--lfs-text);
 }
 
-/* ---- Shared: cards (search results, drafts, sources) ---- */
+#lf_studio_root .lf-search-status {
+    opacity: 1;
+    color: var(--lfs-text-dim);
+    font-size: 0.8rem;
+}
+
+/* ---- Shared: key pills (proposals, drafts, inspector) ---- */
+#lf_studio_root .lf-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+#lf_studio_root .lf-keys span {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.7rem;
+    padding: 1px 8px;
+    border-radius: calc(var(--lfs-radius) - 4px);
+    border: 1px solid color-mix(in srgb, var(--lfs-accent) 40%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent) 9%, transparent);
+    color: var(--lfs-accent-bright);
+    word-break: break-word;
+}
+
+/* Accent cycling: primary, steel, patina — scannability, not decoration */
+#lf_studio_root .lf-keys span:nth-child(3n+2) {
+    border-color: color-mix(in srgb, var(--lfs-accent2) 40%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent2) 9%, transparent);
+    color: var(--lfs-accent2);
+}
+
+#lf_studio_root .lf-keys span:nth-child(3n) {
+    border-color: color-mix(in srgb, var(--lfs-accent3) 40%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent3) 9%, transparent);
+    color: var(--lfs-accent3);
+}
+
+/* ---- Shared: entry meta strip (WorldInfo facts at a glance) ---- */
+#lf_studio_root .lf-entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 10px;
+    font-family: var(--lfs-font-mono);
+    font-size: 0.68rem;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-meta-on { color: var(--lfs-accent-bright); }
+#lf_studio_root .lf-meta-off { color: var(--lfs-bad); }
+#lf_studio_root .lf-meta-good { color: var(--lfs-good); }
+
+/* ---- Shared: cards ---- */
 #lf_studio_root .lf-result,
 #lf_studio_root .lf-draft,
 #lf_studio_root .lf-source {
@@ -475,7 +834,7 @@
 #lf_studio_root .lf-result-title:hover { color: var(--lfs-text); }
 
 #lf_studio_root .lf-result.active {
-    border-color: rgba(224, 142, 60, 0.55);
+    border-color: color-mix(in srgb, var(--lfs-accent) 55%, transparent);
     background: var(--lfs-accent-soft);
 }
 
@@ -494,86 +853,130 @@
     margin-left: 0;
 }
 
-#lf_studio_root .lf-result-engines span,
-#lf_studio_root .lf-draft-keys span {
+#lf_studio_root .lf-result-engines span {
     border: 1px solid var(--lfs-border-strong);
-    background: rgba(236, 231, 221, 0.05);
+    background: color-mix(in srgb, var(--lfs-text) 5%, transparent);
     color: var(--lfs-text);
     opacity: 0.9;
 }
 
 #lf_studio_root .lf-ai-badge {
-    border: 1px solid rgba(224, 142, 60, 0.45);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid color-mix(in srgb, var(--lfs-accent) 45%, transparent);
     background: var(--lfs-accent-soft);
     color: var(--lfs-accent-bright);
     opacity: 1;
+    flex-shrink: 0;
 }
 
-#lf_studio_root .lf-draft-title {
-    font-family: var(--lfs-font-display);
-    font-weight: 600;
-    font-size: 1.02rem;
-}
-
-#lf_studio_root .lf-draft-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-#lf_studio_root .lf-draft-actions .menu_button {
-    padding: 3px 10px;
-    font-size: 0.78rem;
-}
-
-#lf_studio_root .lf-draft-actions .lf-draft-towizard { padding: 3px 8px; }
-
-#lf_studio_root .lf-draft-meta { color: var(--lfs-text-dim); opacity: 1; }
-
-/* ---- Top bar: brand + workspace tabs + close ---- */
+/* ---- Header ---- */
 #lf_studio_root .lf-studio-header {
+    position: relative;
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 22px;
-    padding: 8px 18px;
+    gap: 16px;
+    padding: 8px 16px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(15, 16, 19, 0.72);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 78%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 #lf_studio_root .lf-studio-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 9px;
     font-family: var(--lfs-font-display);
-    font-size: 1.12rem;
+    font-size: 1.1rem;
     font-weight: 600;
     letter-spacing: 0.01em;
+    flex-shrink: 0;
 }
 
-#lf_studio_root .lf-studio-logo { font-size: 1.25rem; }
+#lf_studio_root .lf-studio-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: calc(var(--lfs-radius) - 3px);
+    background: var(--lfs-accent-soft);
+    border: 1px solid color-mix(in srgb, var(--lfs-accent) 40%, transparent);
+    color: var(--lfs-accent);
+    box-shadow: var(--lfs-glow);
+}
+
+#lf_studio_root .lf-studio-logo .lf-ic { width: 15px; height: 15px; }
+
+#lf_studio_root .lf-studio-name { white-space: nowrap; }
 
 #lf_studio_root .lf-studio-sub {
     font-family: var(--lfs-font-ui);
-    font-size: 0.66rem;
+    font-size: 0.64rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--lfs-accent);
     padding: 2px 9px;
-    border: 1px solid rgba(224, 142, 60, 0.4);
+    border: 1px solid color-mix(in srgb, var(--lfs-accent) 40%, transparent);
     border-radius: 999px;
     background: var(--lfs-accent-soft);
 }
 
+/* Lorebook pill: the update target, always visible in the header */
+#lf_studio_root .lf-book-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--lfs-border-strong);
+    background: var(--lfs-bg-deep);
+    color: var(--lfs-text-dim);
+    font-family: var(--lfs-font-ui);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+    max-width: 280px;
+    min-width: 0;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+#lf_studio_root .lf-book-pill .lf-ic { width: 13px; height: 13px; color: var(--lfs-accent2); }
+
+#lf_studio_root .lf-book-pill-name {
+    color: var(--lfs-text);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#lf_studio_root .lf-book-pill.is-set {
+    border-color: color-mix(in srgb, var(--lfs-accent2) 55%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent2) 10%, transparent);
+}
+
+#lf_studio_root .lf-book-pill:hover {
+    border-color: color-mix(in srgb, var(--lfs-accent2) 55%, transparent);
+    color: var(--lfs-text);
+}
+
+/* Workspace tabs: underline on the live tab, hugging the header border */
 #lf_studio_root .lf-tabs {
     display: flex;
     align-self: stretch;
     gap: 2px;
+    margin: 0 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
+
+#lf_studio_root .lf-tabs::-webkit-scrollbar { display: none; }
 
 #lf_studio_root .lf-tab {
     position: relative;
@@ -588,8 +991,11 @@
     font-family: var(--lfs-font-ui);
     font-size: 0.92rem;
     font-weight: 500;
+    white-space: nowrap;
     transition: color 0.15s ease;
 }
+
+#lf_studio_root .lf-tab .lf-ic { width: 15px; height: 15px; }
 
 #lf_studio_root .lf-tab:hover { color: var(--lfs-text); }
 
@@ -598,7 +1004,6 @@
     font-weight: 700;
 }
 
-/* Ember underline on the live tab, hugging the header's bottom border */
 #lf_studio_root .lf-tab.active::after {
     content: "";
     position: absolute;
@@ -608,7 +1013,7 @@
     height: 2px;
     background: var(--lfs-accent);
     border-radius: 2px 2px 0 0;
-    box-shadow: 0 0 8px rgba(224, 142, 60, 0.5);
+    box-shadow: var(--lfs-glow);
 }
 
 #lf_studio_root .lf-tab-badge {
@@ -621,137 +1026,144 @@
     justify-content: center;
     background: var(--lfs-accent);
     color: var(--lfs-accent-ink);
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
 }
 
-#lf_studio_root .lf-studio-close {
-    margin-left: auto;
-    display: inline-flex;
+#lf_studio_root .lf-header-actions {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ---- Theme picker ---- */
+#lf_studio_root .lf-theme-picker {
+    position: relative;
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-theme-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 60;
+    width: 232px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--lfs-surface);
     border: 1px solid var(--lfs-border-strong);
-    border-radius: 10px;
-    background: var(--lfs-surface-2);
+    border-radius: var(--lfs-radius-lg);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+#lf_studio_root .lf-theme-menu.open {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+#lf_studio_root .lf-theme-menu-label {
+    padding: 4px 10px 6px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-theme-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    border-radius: calc(var(--lfs-radius) - 3px);
+    background: transparent;
     color: var(--lfs-text);
+    font-family: var(--lfs-font-ui);
+    font-size: 0.82rem;
+    text-align: left;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background 0.12s ease;
 }
 
-#lf_studio_root .lf-studio-close svg { width: 17px; height: 17px; }
+#lf_studio_root .lf-theme-item:hover { background: var(--lfs-surface-2); }
 
-#lf_studio_root .lf-studio-close:hover {
-    background: #282c36;
-    border-color: rgba(224, 142, 60, 0.55);
+#lf_studio_root .lf-theme-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--sw);
+    box-shadow: 0 0 7px var(--sw);
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-theme-check {
+    margin-left: auto;
+    width: 14px;
+    height: 14px;
+    color: var(--lfs-accent);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+#lf_studio_root .lf-theme-item[aria-checked="true"] {
     color: var(--lfs-accent-bright);
+    font-weight: 600;
 }
 
-/* ---- Main row ---- */
+#lf_studio_root .lf-theme-item[aria-checked="true"] .lf-theme-check { opacity: 1; }
+
+/* ---- Main row: three full-bleed columns ---- */
 #lf_studio_root .lf-studio-main {
     flex: 1;
     min-height: 0;
     display: flex;
-    gap: 10px;
-    padding: 10px 14px 12px;
 }
 
-/* ---- Left rail: toggles the side docks ---- */
-#lf_studio_root .lf-rail {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 10px 6px;
-    width: 54px;
-    flex-shrink: 0;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius-lg);
-    background: var(--lfs-bg-deep);
-}
-
-#lf_studio_root .lf-rail-brand {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--lfs-font-display);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--lfs-accent-ink);
-    background: var(--lfs-accent);
-    box-shadow: 0 0 14px rgba(224, 142, 60, 0.3);
-    margin-bottom: 8px;
-    user-select: none;
-}
-
-#lf_studio_root .lf-rail-btn {
-    width: 40px;
-    height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--lfs-text-dim);
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-#lf_studio_root .lf-rail-btn svg { width: 19px; height: 19px; }
-
-#lf_studio_root .lf-rail-btn:hover {
-    background: var(--lfs-surface-2);
-    color: var(--lfs-text);
-}
-
-#lf_studio_root .lf-rail-btn.active {
-    background: var(--lfs-accent-soft);
-    border-color: rgba(224, 142, 60, 0.45);
-    color: var(--lfs-accent-bright);
-}
-
-#lf_studio_root .lf-rail-sep {
-    width: 22px;
-    height: 1px;
-    background: var(--lfs-border-strong);
-    margin: 6px 0;
-}
-
-/* ---- Side panels: sticky header + ONE full-height scroll ---- */
 #lf_studio_root .lf-panel {
     display: flex;
     flex-direction: column;
     min-height: 0;
     min-width: 0;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius-lg);
     background: var(--lfs-surface);
     overflow: hidden;
 }
 
 #lf_studio_root .lf-panel-search {
-    width: 370px;
+    width: 360px;
     min-width: 330px;
     flex-shrink: 0;
+    border-right: 1px solid var(--lfs-border);
 }
 
-#lf_studio_root .lf-panel-hidden { display: none; }
+#lf_studio_root .lf-panel-hidden { display: none !important; }
 
 #lf_studio_root .lf-panel-header {
     flex-shrink: 0;
-    padding: 10px 16px 8px;
-    font-family: var(--lfs-font-display);
-    font-size: 1.08rem;
-    font-weight: 600;
-    color: var(--lfs-text);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px 10px 14px;
     border-bottom: 1px solid var(--lfs-border);
-    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--lfs-text);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--lfs-text) 3%, transparent), transparent);
 }
+
+#lf_studio_root .lf-panel-header .lf-ic { width: 15px; height: 15px; }
 
 #lf_studio_root .lf-panel-body {
     flex: 1;
@@ -783,33 +1195,118 @@
     background: var(--lfs-card);
 }
 
-/* ---- Drafts panel: drag-to-resize ---- */
-#lf_studio_root .lf-panel-drafts {
-    position: relative;
-    width: var(--lf-drafts-w, 300px);
-    min-width: var(--lf-drafts-w, 300px);
+/* ---- Left column sub-tabs: Web / Sources ---- */
+#lf_studio_root .lf-subtabs {
     flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px 10px;
+    border-bottom: 1px solid var(--lfs-border);
 }
 
-#lf_studio_root .lf-drafts-resize {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 7px;
-    cursor: col-resize;
-    z-index: 5;
+#lf_studio_root .lf-subtab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--lfs-text-dim);
+    font-family: var(--lfs-font-ui);
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-#lf_studio_root .lf-drafts-resize:hover,
-#lf_studio_root.lf-resizing .lf-drafts-resize {
+#lf_studio_root .lf-subtab .lf-ic { width: 13px; height: 13px; }
+
+#lf_studio_root .lf-subtab:hover {
+    color: var(--lfs-text);
+    background: var(--lfs-surface-2);
+}
+
+#lf_studio_root .lf-subtab.active {
+    color: var(--lfs-accent-bright);
     background: var(--lfs-accent-soft);
+    border-color: color-mix(in srgb, var(--lfs-accent) 40%, transparent);
 }
 
-#lf_studio_root.lf-resizing {
-    user-select: none;
-    cursor: col-resize;
+/* Search field with the icon inside the well */
+#lf_studio_root .lf-search-field {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-width: 0;
 }
+
+#lf_studio_root .lf-search-field .lf-ic {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--lfs-text-dim);
+    pointer-events: none;
+    transition: color 0.15s ease;
+}
+
+#lf_studio_root .lf-search-field input { padding-left: 32px; width: 100%; }
+
+#lf_studio_root .lf-search-field:focus-within .lf-ic { color: var(--lfs-accent); }
+
+/* Sources sub-pane owns its own scroll (lf-panel-body + overflow) */
+#lf_studio_root .lf-sources-pane {
+    overflow-y: auto;
+}
+
+/* Grounding meter: pinned footer of the left column */
+#lf_studio_root .lf-grounding {
+    flex-shrink: 0;
+    padding: 9px 14px 11px;
+    border-top: 1px solid var(--lfs-border);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 85%, transparent);
+}
+
+#lf_studio_root .lf-grounding-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--lfs-text-dim);
+    margin-bottom: 6px;
+}
+
+#lf_studio_root .lf-grounding-val {
+    font-family: var(--lfs-font-mono);
+    color: var(--lfs-text);
+}
+
+#lf_studio_root .lf-grounding-bar {
+    display: flex;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--lfs-bg-deep);
+    border: 1px solid var(--lfs-border);
+}
+
+#lf_studio_root .lf-grounding-bar span {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+#lf_studio_root .lf-grounding-bar .good { background: var(--lfs-good); }
+#lf_studio_root .lf-grounding-bar .warn { background: var(--lfs-warn); }
+#lf_studio_root .lf-grounding-bar .bad { background: var(--lfs-bad); }
 
 /* ---- Center: one workspace tab visible at a time ---- */
 #lf_studio_root .lf-center {
@@ -823,10 +1320,8 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius-lg);
-    background: var(--lfs-surface);
     overflow: hidden;
+    background: transparent; /* the themed atmosphere breathes through */
 }
 
 #lf_studio_root .lf-pane-header {
@@ -834,9 +1329,11 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 9px 16px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--lfs-border);
-    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
+    background: color-mix(in srgb, var(--lfs-surface) 88%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 #lf_studio_root .lf-pane-title {
@@ -893,41 +1390,55 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
+    gap: 12px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--lfs-border);
-    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
+    background: color-mix(in srgb, var(--lfs-surface) 88%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
-#lf_studio_root .lf-wizard-logo { font-size: 1rem; }
+#lf_studio_root .lf-wizard-heading {
+    flex: 1;
+    min-width: 0;
+}
 
 #lf_studio_root .lf-wizard-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-family: var(--lfs-font-display);
     font-weight: 600;
-    font-size: 1.02rem;
+    font-size: 1.04rem;
 }
 
-#lf_studio_root .lf-wizard-meta {
-    font-size: 0.78rem;
+#lf_studio_root .lf-wizard-sub {
+    font-size: 0.76rem;
     color: var(--lfs-text-dim);
+    margin-top: 1px;
 }
 
-#lf_studio_root .lf-wizard-drawertoggle,
-#lf_studio_root .lf-wizard-clear {
-    padding: 3px 10px;
-    font-size: 0.78rem;
-    flex-shrink: 0;
-}
+#lf_studio_root .lf-wizard-sources,
+#lf_studio_root .lf-wizard-clear { flex-shrink: 0; }
 
 /* Sessions strip */
 #lf_studio_root .lf-sessions-bar {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 6px 16px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(236, 231, 221, 0.015);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 60%, transparent);
+}
+
+#lf_studio_root .lf-sessions-label {
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lfs-text-dim);
+    flex-shrink: 0;
 }
 
 #lf_studio_root .lf-sessions-strip {
@@ -948,25 +1459,12 @@
 
 #lf_studio_root .lf-session-chip.active {
     opacity: 1;
-    border-color: rgba(224, 142, 60, 0.55);
+    border-color: color-mix(in srgb, var(--lfs-accent) 55%, transparent);
     background: var(--lfs-accent-soft);
     color: var(--lfs-accent-bright);
 }
 
-#lf_studio_root .lf-session-new {
-    flex-shrink: 0;
-    padding: 2px 10px;
-    font-size: 0.78rem;
-}
-
-/* Body owns chat + input + the drawer overlay */
-#lf_studio_root .lf-wizard-body {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
+#lf_studio_root .lf-session-new { flex-shrink: 0; }
 
 /* Chat: the ONE flexible region of the Wizard tab */
 #lf_studio_root .lf-wizard-chat {
@@ -975,8 +1473,8 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 14px 16px;
+    gap: 12px;
+    padding: 16px 18px;
 }
 
 #lf_studio_root .lf-wizard-chat-empty {
@@ -1004,91 +1502,164 @@
 #lf_studio_root .lf-msg.user { justify-content: flex-end; }
 
 #lf_studio_root .lf-msg-bubble {
-    max-width: 78%;
-    padding: 8px 12px;
+    max-width: 76%;
+    padding: 8px 13px 10px;
     border: 1px solid var(--lfs-border);
-    border-radius: 12px;
+    border-radius: var(--lfs-radius-lg) var(--lfs-radius-lg) var(--lfs-radius-lg) 4px;
     background: var(--lfs-card);
-    white-space: pre-wrap;
     word-break: break-word;
-    font-size: 0.88rem;
-    line-height: 1.5;
 }
 
 #lf_studio_root .lf-msg.user .lf-msg-bubble {
     background: var(--lfs-accent-soft);
-    border-color: rgba(224, 142, 60, 0.4);
+    border-color: color-mix(in srgb, var(--lfs-accent) 42%, transparent);
+    border-radius: var(--lfs-radius-lg) var(--lfs-radius-lg) 4px var(--lfs-radius-lg);
 }
 
-/* Input bar: pinned toolbar above the pane's bottom edge */
-#lf_studio_root .lf-wizard-input {
+#lf_studio_root .lf-msg-by {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--lfs-font-mono);
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--lfs-accent);
+    margin-bottom: 4px;
+}
+
+#lf_studio_root .lf-msg.user .lf-msg-by { color: var(--lfs-accent2); }
+
+#lf_studio_root .lf-msg-time {
+    color: var(--lfs-text-dim);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+#lf_studio_root .lf-msg-text {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Composer: quick-forge chips + input well + action row */
+#lf_studio_root .lf-composer {
     flex-shrink: 0;
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    align-items: flex-end;
-    padding: 10px 16px 12px;
+    padding: 10px 14px 12px;
     border-top: 1px solid var(--lfs-border);
-    background: rgba(15, 16, 19, 0.4);
+    background: color-mix(in srgb, var(--lfs-surface) 88%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
-#lf_studio_root .lf-wizard-input textarea {
-    flex: 1;
-    min-width: 0;
+#lf_studio_root .lf-quick {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+#lf_studio_root .lf-quick-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lfs-text-dim);
+    margin-right: 3px;
+}
+
+#lf_studio_root .lf-quick-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--lfs-border-strong);
+    background: transparent;
+    color: var(--lfs-text-dim);
+    font-family: var(--lfs-font-ui);
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+#lf_studio_root .lf-quick-chip:hover {
+    color: var(--lfs-accent-bright);
+    border-color: color-mix(in srgb, var(--lfs-accent) 50%, transparent);
+    background: var(--lfs-accent-soft);
+}
+
+#lf_studio_root .lf-composer-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: var(--lfs-radius-lg);
+    background: var(--lfs-bg-deep);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#lf_studio_root .lf-composer-box:focus-within {
+    border-color: color-mix(in srgb, var(--lfs-accent) 60%, transparent);
+    box-shadow: 0 0 0 3px var(--lfs-accent-soft);
+}
+
+#lf_studio_root .lf-composer-box textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
     resize: none;
     min-height: 44px;
-    max-height: 160px;
+    max-height: 180px;
+    color: var(--lfs-text);
     font-family: var(--lfs-font-ui);
     font-size: 0.88rem;
     line-height: 1.45;
 }
 
+#lf_studio_root .lf-composer-box textarea::placeholder {
+    color: color-mix(in srgb, var(--lfs-text) 32%, transparent);
+}
+
+#lf_studio_root .lf-composer-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-kbd-hints {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-kbd-hints kbd {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.62rem;
+    padding: 0 5px;
+    border: 1px solid var(--lfs-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--lfs-surface-2);
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-wizard-extract { margin-left: auto; }
+
 #lf_studio_root .lf-wizard-send,
 #lf_studio_root .lf-wizard-extract { flex-shrink: 0; }
 
-/* ---- Sources & Canon: full-height overlay, ONE scroll ---- */
-#lf_studio_root .lf-wizard-drawer {
-    position: absolute;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    background: var(--lfs-surface);
-    opacity: 0;
-    transform: translateY(10px);
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
-}
-
-#lf_studio_root .lf-wizard-drawer.open {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-}
-
-#lf_studio_root .lf-wizard-drawer-head {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--lfs-border);
-    background: linear-gradient(180deg, rgba(236, 231, 221, 0.03), transparent);
-}
-
-#lf_studio_root .lf-wizard-drawer-head .lf-wizard-meta { margin-left: auto; }
-
-#lf_studio_root .lf-wizard-drawer-close { padding: 3px 10px; font-size: 0.8rem; }
-
-#lf_studio_root .lf-wizard-drawer-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 12px 16px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
+/* ============ Sources sub-tab (left column) ============ */
 #lf_studio_root .lf-wizard-section {
     flex-shrink: 0;
     display: flex;
@@ -1116,14 +1687,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
+    font-weight: 600;
 }
 
-#lf_studio_root .lf-section-head .menu_button {
-    margin-left: auto;
-    padding: 2px 10px;
-    font-size: 0.75rem;
-}
+#lf_studio_root .lf-section-head .lf-link-btn { margin-left: auto; }
 
 #lf_studio_root .lf-addsource {
     display: flex;
@@ -1132,7 +1700,7 @@
     margin-top: 8px;
 }
 
-/* Sources list: natural height — the drawer scrolls as one column */
+/* Sources list: natural height — the pane scrolls as one column */
 #lf_studio_root .lf-wizard-sources {
     display: flex;
     flex-direction: column;
@@ -1152,38 +1720,37 @@
     flex: 1;
     min-width: 0;
     font-weight: 600;
+    font-size: 0.85rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-#lf_studio_root .lf-source-chars {
-    font-size: 0.72rem;
-    color: var(--lfs-text-dim);
-    flex-shrink: 0;
-}
-
-#lf_studio_root .lf-source-delete {
-    padding: 2px 8px;
-    font-size: 0.75rem;
-    flex-shrink: 0;
-}
+#lf_studio_root .lf-source-delete { width: 24px; height: 24px; }
 
 #lf_studio_root .lf-source-preview {
-    margin-top: 4px;
+    margin-top: 5px;
     font-size: 0.78rem;
+    line-height: 1.45;
     color: var(--lfs-text-dim);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
-    transition: max-height 0.2s ease;
 }
 
 #lf_studio_root .lf-source.open .lf-source-preview {
+    -webkit-line-clamp: unset;
     max-height: 40vh;
     overflow-y: auto;
+}
+
+#lf_studio_root .lf-source-foot {
+    margin-top: 6px;
+    font-family: var(--lfs-font-mono);
+    font-size: 0.66rem;
+    color: var(--lfs-text-dim);
 }
 
 /* Updater: lorebook import */
@@ -1200,7 +1767,7 @@
 /* Card grid: fills the width, cards take natural height */
 #lf_studio_root .lf-proposal-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
     gap: 12px;
     align-content: start;
 }
@@ -1230,24 +1797,38 @@
 
 #lf_studio_root .lf-proposal-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
 }
 
-#lf_studio_root .lf-proposal-title {
+#lf_studio_root .lf-proposal-titles {
     flex: 1;
     min-width: 0;
+}
+
+#lf_studio_root .lf-proposal-title {
     font-family: var(--lfs-font-display);
     font-weight: 600;
-    font-size: 1.04rem;
+    font-size: 1.02rem;
     word-break: break-word;
 }
 
-#lf_studio_root .lf-proposal .lf-draft-keys { margin-top: 0; }
+#lf_studio_root .lf-proposal-sub {
+    font-size: 0.7rem;
+    color: var(--lfs-text-dim);
+    margin-top: 2px;
+}
 
-#lf_studio_root .lf-proposal-content {
-    font-size: 0.88rem;
-    line-height: 1.55;
+#lf_studio_root .lf-proposal .lf-keys { margin-top: 0; }
+
+/* Entry content: the deep well the proposal pours into */
+#lf_studio_root .lf-entry-box {
+    padding: 9px 11px;
+    border: 1px solid var(--lfs-border);
+    border-radius: calc(var(--lfs-radius) - 3px);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 85%, transparent);
+    font-size: 0.85rem;
+    line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -1255,9 +1836,9 @@
 /* Evidence quote: bookish marginal note */
 #lf_studio_root .lf-proposal-quote {
     padding: 7px 12px;
-    border-left: 2px solid rgba(224, 142, 60, 0.45);
+    border-left: 2px solid color-mix(in srgb, var(--lfs-accent) 45%, transparent);
     border-radius: 0 8px 8px 0;
-    background: rgba(236, 231, 221, 0.03);
+    background: color-mix(in srgb, var(--lfs-text) 3%, transparent);
     font-family: var(--lfs-font-display);
     font-style: italic;
     font-size: 0.82rem;
@@ -1271,7 +1852,7 @@
     display: block;
     font-family: var(--lfs-font-ui);
     font-style: normal;
-    font-size: 0.66rem;
+    font-size: 0.64rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -1298,44 +1879,43 @@
 /* Verdict pills (semantic colors — never color-alone, icon + title carry it) */
 #lf_studio_root .lf-proposal-verdict {
     flex-shrink: 0;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    padding: 1px 8px;
+    padding: 2px 9px;
     border-radius: 999px;
     white-space: nowrap;
 }
 
 #lf_studio_root .lf-proposal-verdict.verified {
     color: var(--lfs-good);
-    background: rgba(81, 207, 102, 0.12);
-    border: 1px solid rgba(81, 207, 102, 0.4);
+    background: color-mix(in srgb, var(--lfs-good) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--lfs-good) 40%, transparent);
 }
 
 #lf_studio_root .lf-proposal-verdict.fuzzy {
     color: var(--lfs-warn);
-    background: rgba(255, 212, 59, 0.1);
-    border: 1px solid rgba(255, 212, 59, 0.4);
+    background: color-mix(in srgb, var(--lfs-warn) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--lfs-warn) 40%, transparent);
 }
 
 #lf_studio_root .lf-proposal-verdict.missing {
     color: var(--lfs-bad);
-    background: rgba(255, 107, 107, 0.12);
-    border: 1px solid rgba(255, 107, 107, 0.4);
+    background: color-mix(in srgb, var(--lfs-bad) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--lfs-bad) 40%, transparent);
 }
 
 #lf_studio_root .lf-proposal-updbadge {
-    flex-shrink: 0;
-    max-width: 40%;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 600;
     padding: 1px 8px;
     border-radius: 999px;
     color: var(--lfs-accent-bright);
     background: var(--lfs-accent-soft);
-    border: 1px solid rgba(224, 142, 60, 0.4);
+    border: 1px solid color-mix(in srgb, var(--lfs-accent) 40%, transparent);
 }
 
 /* ============ Reader tab ============ */
@@ -1362,7 +1942,7 @@
     flex-wrap: wrap;
     padding: 9px 16px;
     border-bottom: 1px solid var(--lfs-border);
-    background: rgba(15, 16, 19, 0.4);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 55%, transparent);
     font-size: 0.78rem;
     color: var(--lfs-text-dim);
 }
@@ -1434,7 +2014,7 @@
 
 /* Category chips stand out from regular wiki links */
 #lf_studio_root .lf-cat-chip {
-    border-color: rgba(224, 142, 60, 0.55);
+    border-color: color-mix(in srgb, var(--lfs-accent) 55%, transparent);
     color: var(--lfs-accent-bright);
     background: var(--lfs-accent-soft);
 }
@@ -1452,8 +2032,8 @@
 }
 
 #lf_studio_root .lf-batch-btn.lf-batch-running {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: var(--lfs-bad);
+    color: var(--lfs-bad);
 }
 
 /* Reader draft form: natural height inside the single scroll */
@@ -1485,7 +2065,7 @@
     min-height: 110px;
 }
 
-/* Commit + edit forms (drafts list) */
+/* Commit form (per-draft and batch) */
 #lf_studio_root .lf-commit-form {
     margin-top: 8px;
     padding: 10px;
@@ -1497,25 +2077,329 @@
     gap: 6px;
 }
 
-#lf_studio_root .lf-edit-form {
-    margin-top: 8px;
-    padding: 10px;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius);
-    background: var(--lfs-bg-deep);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+#lf_studio_root .lf-batch-form { margin: 10px 12px 0; }
+
+#lf_studio_root .lf-commit-target { width: 100%; }
+
+/* ============ Draft deck (right column) ============ */
+#lf_studio_root .lf-panel-drafts {
+    position: relative;
+    width: var(--lf-drafts-w, 340px);
+    min-width: var(--lf-drafts-w, 340px);
+    flex-shrink: 0;
+    border-left: 1px solid var(--lfs-border);
 }
 
-#lf_studio_root .lf-edit-form .lf-settings-label { font-size: 0.8rem; font-weight: 600; }
+#lf_studio_root .lf-drafts-resize {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 5;
+}
 
-#lf_studio_root .lf-edit-form .lf-draft-content {
-    width: 100%;
-    resize: vertical;
-    font-size: 0.85rem;
+#lf_studio_root .lf-drafts-resize:hover,
+#lf_studio_root.lf-resizing .lf-drafts-resize {
+    background: var(--lfs-accent-soft);
+}
+
+#lf_studio_root.lf-resizing {
+    user-select: none;
+    cursor: col-resize;
+}
+
+/* Batch bar: select-all + commit selected */
+#lf_studio_root .lf-batchbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 50%, transparent);
+}
+
+#lf_studio_root .lf-batch-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    color: var(--lfs-text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+#lf_studio_root .lf-batch-count {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.68rem;
+    color: var(--lfs-accent-bright);
+    white-space: nowrap;
+}
+
+#lf_studio_root #lf_batch_commit { margin-left: auto; }
+
+/* Deck footer: the export CTA */
+#lf_studio_root .lf-panel-footer {
+    flex-shrink: 0;
+    padding: 10px 12px;
+    border-top: 1px solid var(--lfs-border);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 50%, transparent);
+}
+
+#lf_studio_root .lf-panel-footer .menu_button { width: 100%; }
+
+/* Draft cards */
+#lf_studio_root .lf-drafts-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-draft {
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+#lf_studio_root .lf-draft:hover { border-color: var(--lfs-border-strong); }
+
+#lf_studio_root .lf-draft.selected {
+    border-color: color-mix(in srgb, var(--lfs-accent) 60%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent) 7%, var(--lfs-card));
+    box-shadow: var(--lfs-glow);
+}
+
+#lf_studio_root .lf-draft-title {
+    font-family: var(--lfs-font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-draft-preview {
+    margin-top: 6px;
+    font-size: 0.78rem;
     line-height: 1.45;
-    min-height: 110px;
+    color: var(--lfs-text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-draft-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+#lf_studio_root .lf-draft-actions .menu_button {
+    padding: 3px 10px;
+    font-size: 0.78rem;
+}
+
+#lf_studio_root .lf-draft-actions .lf-draft-towizard { padding: 3px 8px; }
+
+#lf_studio_root .lf-draft-meta {
+    color: var(--lfs-text-dim);
+    opacity: 1;
+    font-size: 0.72rem;
+    margin-top: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============ Inspector modal (WorldInfo fields) ============ */
+#lf_studio_root .lf-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: color-mix(in srgb, var(--lfs-bg-deep) 70%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: lf-fade 0.15s ease both;
+}
+
+@keyframes lf-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes lf-modal-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+
+#lf_studio_root .lf-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(860px, 100%);
+    max-height: min(82vh, 760px);
+    background: var(--lfs-surface);
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: var(--lfs-radius-lg);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55), var(--lfs-glow);
+    overflow: hidden;
+    animation: lf-modal-in 0.18s ease both;
+}
+
+#lf_studio_root .lf-modal-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--lfs-text) 3%, transparent), transparent);
+}
+
+#lf_studio_root .lf-modal-head h3 {
+    margin: 0;
+    font-family: var(--lfs-font-display);
+    font-size: 1.06rem;
+    font-weight: 600;
+}
+
+#lf_studio_root .lf-modal-sub {
+    font-size: 0.72rem;
+    color: var(--lfs-text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 52ch;
+}
+
+#lf_studio_root .lf-modal-head > div { flex: 1; min-width: 0; }
+
+#lf_studio_root .lf-modal-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    gap: 16px;
+    padding: 14px 16px;
+    overflow-y: auto; /* the ONE scroll of the modal */
+}
+
+/* Left: title, keys, content */
+#lf_studio_root .lf-modal-main {
+    flex: 1.6;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Right: activation + insertion controls */
+#lf_studio_root .lf-modal-side {
+    flex: 1;
+    min-width: 220px;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 1px solid var(--lfs-border);
+    padding-left: 16px;
+}
+
+#lf_studio_root .lf-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+#lf_studio_root .lf-field > span {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-field > span i {
+    font-weight: 400;
+    opacity: 0.75;
+}
+
+#lf_studio_root .lf-field-grow { flex: 1; min-height: 0; }
+
+#lf_studio_root .lf-field-grow textarea { min-height: 160px; }
+
+#lf_studio_root .lf-field-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-check {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+#lf_studio_root .lf-check i {
+    color: var(--lfs-text-dim);
+    font-size: 0.72rem;
+}
+
+#lf_studio_root .lf-side-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--lfs-accent);
+    margin: 10px 0 2px;
+}
+
+#lf_studio_root .lf-side-label:first-child { margin-top: 0; }
+
+#lf_studio_root .lf-in-keys-preview { min-height: 22px; }
+
+/* Live JSON preview — the exact object SillyTavern will import */
+#lf_studio_root .lf-json-preview {
+    margin-top: 10px;
+    border: 1px solid var(--lfs-border);
+    border-radius: calc(var(--lfs-radius) - 3px);
+    background: var(--lfs-bg-deep);
+}
+
+#lf_studio_root .lf-json-preview summary {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--lfs-text-dim);
+    cursor: pointer;
+    user-select: none;
+}
+
+#lf_studio_root .lf-json-preview pre {
+    margin: 0;
+    padding: 8px 10px;
+    max-height: 200px;
+    overflow: auto;
+    border-top: 1px solid var(--lfs-border);
+    font-family: var(--lfs-font-mono);
+    font-size: 0.66rem;
+    line-height: 1.5;
+    color: var(--lfs-accent2);
+}
+
+#lf_studio_root .lf-modal-foot {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--lfs-border);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 50%, transparent);
 }
 
 /* ============ Map tab (Stage 22 graph) ============ */
@@ -1544,17 +2428,19 @@
 }
 
 #lf_studio_root .lf-graph-edge {
-    stroke: rgba(236, 231, 221, 0.18);
+    stroke: color-mix(in srgb, var(--lfs-text) 18%, transparent);
     stroke-width: 1.5;
     stroke-dasharray: 6 5; /* the road look */
 }
 
 #lf_studio_root .lf-graph-node circle {
     cursor: pointer;
+    stroke: var(--lfs-bg-deep);
+    transition: stroke 0.15s ease;
 }
 
 #lf_studio_root .lf-graph-node:hover circle {
-    stroke: #ffffff;
+    stroke: var(--lfs-text);
     stroke-width: 2.5;
 }
 
@@ -1577,7 +2463,7 @@
     display: flex;
     gap: 12px;
     padding: 6px 10px;
-    background: rgba(15, 16, 19, 0.88);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 88%, transparent);
     border: 1px solid var(--lfs-border);
     border-radius: 8px;
     font-size: 0.72rem;
@@ -1603,7 +2489,7 @@
     z-index: 5;
     max-width: 280px;
     padding: 8px 10px;
-    background: rgba(15, 16, 19, 0.95);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 95%, transparent);
     border: 1px solid var(--lfs-border-strong);
     border-radius: 8px;
     font-size: 0.78rem;
@@ -1633,14 +2519,29 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 7px 18px;
+    gap: 9px;
+    padding: 7px 16px;
     border-top: 1px solid var(--lfs-border);
-    background: rgba(15, 16, 19, 0.72);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 78%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     font-size: 0.78rem;
     color: var(--lfs-text-dim);
+}
+
+/* Heartbeat: the forge is alive while the Studio is open */
+@keyframes lf-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--lfs-accent) 45%, transparent); }
+    50%      { opacity: 0.55; box-shadow: 0 0 0 4px transparent; }
+}
+
+#lf_studio_root .lf-status-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lfs-accent);
+    animation: lf-pulse 2.6s ease-in-out infinite;
 }
 
 /* ---- Scrollbars ---- */
@@ -1649,18 +2550,23 @@
 #lf_studio_root ::-webkit-scrollbar-track { background: transparent; }
 
 #lf_studio_root ::-webkit-scrollbar-thumb {
-    background: rgba(236, 231, 221, 0.14);
+    background: color-mix(in srgb, var(--lfs-text) 14%, transparent);
     border-radius: 5px;
 }
 
 #lf_studio_root ::-webkit-scrollbar-thumb:hover {
-    background: rgba(224, 142, 60, 0.45);
+    background: color-mix(in srgb, var(--lfs-accent) 45%, transparent);
 }
 
 /* ---- Comfort guards ---- */
 @media (max-width: 1100px) {
     #lf_studio_root .lf-pane-hint { display: none; }
     #lf_studio_root .lf-panel-search { width: 300px; min-width: 280px; }
+    #lf_studio_root .lf-book-pill-label { display: none; }
+}
+
+@media (max-width: 900px) {
+    #lf_studio_root .lf-book-pill { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

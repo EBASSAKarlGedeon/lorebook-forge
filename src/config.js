@@ -10,4 +10,5 @@ export const defaultSettings = {
         messages: [],   // [{role: "user"|"assistant", text, ts}] chat history
     },
     draftsPanelWidth: 300, // persisted drag-resize width (px)
+    theme: "obsidian-cyber", // Studio theme preset (data-theme on the root)
 };

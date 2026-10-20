@@ -187,7 +187,7 @@ export function renderGraph(pageCache) {
         const r = nodeRadius(n);
         g.append(svgEl("circle", {
             r, fill: DOMAIN_COLORS[n.domain], "data-url": n.url,
-            stroke: "#16181d", "stroke-width": 2, // surface ring: 2px gap rule
+            "stroke-width": 2, // surface ring (color from the theme, in CSS): 2px gap rule
         }));
         const label = svgEl("text", {
             class: "lf-graph-label", y: r + 12,
