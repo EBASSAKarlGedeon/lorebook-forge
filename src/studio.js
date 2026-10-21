@@ -1,13 +1,15 @@
 // The Studio overlay: full-screen workspace.
-// Stage 24 layout (v2): one header (brand + lorebook pill + workspace tabs +
-// panel toggles + theme picker + export + close) over three full-bleed
-// columns — Research & Sources | ONE active center tab (Wizard, Proposals,
-// Reader, Map) | Staging & Draft Deck. Every pane owns a single
-// full-height scroll region. Themes are CSS-variable presets switched via
-// data-theme on the root, persisted in extension settings.
+// Stage 25 layout (v1/v2 convergence): one header (brand + lorebook pill +
+// workspace tabs + deck toggle + theme picker + export + close) over TWO
+// full-bleed columns — ONE active center tab (Wizard, Proposals, Reader,
+// Map) | the Lorebook Deck (sources with their staged entries nested
+// inside, batch commit, export). Web search lives in the Reader tab header.
+// Every pane owns a single full-height scroll region. Themes are
+// CSS-variable presets switched via data-theme on the root, persisted in
+// extension settings.
 // Cross-module asks arrive as DOM events on the root (avoids circular
 // imports): research.js → "lf-show-reader", wizard.js → "lf-show-center",
-// "lf-show-sources".
+// "lf-show-sources" (focus the deck).
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
@@ -19,7 +21,7 @@ import { initWizard } from "./wizard.js";
 import { renderGraph } from "./graph.js";
 
 let studioRoot = null;
-const railState = { search: true, drafts: true };
+const railState = { drafts: true };
 
 // Swatch = the preset's signature accent (shown in the picker)
 const THEMES = [
@@ -70,18 +72,12 @@ function toggleSidePanel(name, force) {
     btn.setAttribute("aria-pressed", String(railState[name]));
 }
 
-// ---- Left panel sub-tabs: Web search / Sources & Canon ----
-function showLeftTab(name) {
+// ---- Deck focus: the wizard (and drafts) ask the deck to come forward ----
+function focusDeck() {
     if (!studioRoot) return;
-    toggleSidePanel("search", true);
-    for (const btn of studioRoot.querySelectorAll(".lf-subtab")) {
-        const on = btn.dataset.sub === name;
-        btn.classList.toggle("active", on);
-        btn.setAttribute("aria-selected", String(on));
-    }
-    for (const body of studioRoot.querySelectorAll(".lf-panel-search [data-subpane]")) {
-        body.classList.toggle("lf-hidden", body.dataset.subpane !== name);
-    }
+    toggleSidePanel("drafts", true);
+    const body = studioRoot.querySelector(".lf-panel-drafts .lf-panel-body");
+    if (body) body.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ---- Theme engine ----
@@ -171,12 +167,11 @@ function buildStudio() {
                 <nav class="lf-tabs" role="tablist">
                     <button id="lf_tab_wizard" class="lf-tab active" type="button" role="tab" aria-selected="true">${icon("wand")}Wizard</button>
                     <button id="lf_tab_proposals" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("pull")}Proposals<span class="lf-tab-badge lf-hidden"></span></button>
-                    <button id="lf_tab_reader" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("book")}Reader</button>
+                    <button id="lf_tab_reader" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("search")}Reader</button>
                     <button id="lf_tab_graph" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("network")}Canon Map</button>
                 </nav>
                 <div class="lf-header-actions">
-                    <button id="lf_toggle_search" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle research panel">${icon("panelLeft")}</button>
-                    <button id="lf_toggle_drafts" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle draft deck">${icon("panelRight")}</button>
+                    <button id="lf_toggle_drafts" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle Lorebook Deck">${icon("panelRight")}</button>
                     <div class="lf-theme-picker">
                         <button id="lf_theme_btn" class="lf-ghost-btn" type="button" aria-haspopup="menu" aria-expanded="false">
                             ${icon("palette")}<span id="lf_theme_label"></span>${icon("chevron", "lf-ic-sm")}
@@ -194,28 +189,6 @@ function buildStudio() {
                 </div>
             </header>
             <div class="lf-studio-main">
-                <aside class="lf-panel lf-panel-search">
-                    <div class="lf-panel-header">
-                        ${icon("compass", "lf-ic-accent")}<span>Canon Research &amp; Sources</span>
-                        <button class="lf-icon-btn lf-panel-collapse" type="button" data-panel="search" title="Collapse">${icon("panelLeft")}</button>
-                    </div>
-                    <div class="lf-subtabs" role="tablist">
-                        <button class="lf-subtab active" type="button" role="tab" aria-selected="true" data-sub="web">${icon("search")}Web</button>
-                        <button class="lf-subtab" type="button" role="tab" aria-selected="false" data-sub="sources">${icon("layers")}Sources<span id="lf_sources_count" class="lf-count"></span></button>
-                    </div>
-                    <div class="lf-panel-body" data-subpane="web">
-                        <div class="lf-search-row">
-                            <span class="lf-search-field">
-                                ${icon("search")}
-                                <input id="lf_search_query" class="text_pole lf-text-input" type="text" placeholder="Search web, wikis, fandoms…" autocomplete="off" />
-                            </span>
-                            <button id="lf_search_btn" class="menu_button" type="button">Go</button>
-                        </div>
-                        <div id="lf_search_results" class="lf-search-results"></div>
-                    </div>
-                    <div id="lf_sources" class="lf-panel-body lf-sources-pane lf-hidden" data-subpane="sources"></div>
-                    <div id="lf_grounding" class="lf-grounding"></div>
-                </aside>
                 <section class="lf-center">
                     <div id="lf_wizard" class="lf-pane lf-wizard"></div>
                     <section id="lf_proposals_pane" class="lf-pane lf-proposals-pane lf-hidden">
@@ -225,19 +198,34 @@ function buildStudio() {
                             <span id="lf_proposals_count" class="lf-chip"></span>
                             <span class="lf-pane-hint">Every card carries an evidence quote, verified against this session's sources.</span>
                         </div>
+                        <div id="lf_grounding" class="lf-grounding lf-grounding-pane"></div>
                         <div id="lf_proposals_scroll" class="lf-proposals-scroll">
                             <div id="lf_proposals" class="lf-proposal-grid"></div>
                         </div>
                     </section>
-                    <div class="lf-pane lf-reader-pane lf-hidden" id="lf_reader_pane">
-                        <div id="lf_reader">
-                            <div class="lf-reader-empty">
-                                <div class="lf-reader-empty-icon">📖</div>
-                                <h3>Reader</h3>
-                                <p>Search in the Research panel, then click "Read" on a result.<br>Page content appears here, ready to become a draft.</p>
+                    <section class="lf-pane lf-reader-pane lf-hidden" id="lf_reader_pane">
+                        <div class="lf-pane-header">
+                            <span class="lf-tile">${icon("search")}</span>
+                            <span class="lf-pane-title">Reader</span>
+                            <div class="lf-search-row lf-reader-search">
+                                <span class="lf-search-field">
+                                    ${icon("search")}
+                                    <input id="lf_search_query" class="text_pole lf-text-input" type="text" placeholder="Search web, wikis, fandoms…" autocomplete="off" />
+                                </span>
+                                <button id="lf_search_btn" class="menu_button" type="button">Go</button>
                             </div>
                         </div>
-                    </div>
+                        <div class="lf-reader-col">
+                            <div id="lf_search_results" class="lf-search-results"></div>
+                            <div id="lf_reader" class="lf-reader-host">
+                                <div class="lf-reader-empty">
+                                    <div class="lf-reader-empty-icon">📖</div>
+                                    <h3>Reader</h3>
+                                    <p>Search the web above, then click "Read" on a result.<br>Pages load here, ready to become entries inside their source.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                     <div class="lf-pane lf-graph-pane lf-hidden" id="lf_graph_pane">
                         <div id="lf_graph"></div>
                     </div>
@@ -245,10 +233,18 @@ function buildStudio() {
                 <aside class="lf-panel lf-panel-drafts">
                     <div id="lf_drafts_resize" class="lf-drafts-resize" title="Drag to resize"></div>
                     <div class="lf-panel-header">
-                        ${icon("layers", "lf-ic-accent2")}<span>Staging &amp; Draft Deck</span>
+                        ${icon("layers", "lf-ic-accent2")}<span>Lorebook Deck</span>
                         <span id="lf_drafts_count" class="lf-count"></span>
                         <button class="lf-icon-btn lf-panel-collapse" type="button" data-panel="drafts" title="Collapse">${icon("panelRight")}</button>
                     </div>
+                    <div class="lf-deck-toolbar">
+                        <button class="lf-ghost-btn lf-deck-addsource" type="button">${icon("plus", "lf-ic-sm")}Add source</button>
+                        <button class="lf-ghost-btn lf-deck-import" type="button">${icon("download", "lf-ic-sm")}Import lorebook</button>
+                        <button class="lf-ghost-btn lf-deck-canon" type="button">${icon("compare", "lf-ic-sm")}Canon rules</button>
+                    </div>
+                    <div id="lf_deck_addsource" class="lf-deck-form" style="display:none;"></div>
+                    <div id="lf_deck_import" class="lf-deck-form" style="display:none;"></div>
+                    <div id="lf_deck_canon" class="lf-deck-form" style="display:none;"></div>
                     <div class="lf-batchbar">
                         <label class="lf-batch-all"><input id="lf_drafts_all" type="checkbox" /> Select all</label>
                         <span id="lf_drafts_selected" class="lf-batch-count"></span>
@@ -265,7 +261,7 @@ function buildStudio() {
             </div>
             <footer class="lf-studio-statusbar">
                 <span class="lf-status-dot"></span>
-                <span id="lf_studio_status">Ready — paste sources into the Wizard, or research the web.</span>
+                <span id="lf_studio_status">Ready — scrape the web in the Reader; the Wizard stages entries into the Lorebook Deck.</span>
             </footer>
         </div>
     `;
@@ -274,15 +270,11 @@ function buildStudio() {
     for (const name of Object.keys(CENTER_TABS)) {
         el.querySelector(CENTER_TABS[name].tab).addEventListener("click", () => showCenter(name));
     }
-    el.querySelector("#lf_toggle_search").addEventListener("click", () => toggleSidePanel("search"));
     el.querySelector("#lf_toggle_drafts").addEventListener("click", () => toggleSidePanel("drafts"));
     for (const btn of el.querySelectorAll(".lf-panel-collapse")) {
         btn.addEventListener("click", () => toggleSidePanel(btn.dataset.panel, false));
     }
-    for (const btn of el.querySelectorAll(".lf-subtab")) {
-        btn.addEventListener("click", () => showLeftTab(btn.dataset.sub));
-    }
-    el.querySelector("#lf_book_pill").addEventListener("click", () => showLeftTab("sources"));
+    el.querySelector("#lf_book_pill").addEventListener("click", focusDeck);
 
     el.querySelector("#lf_theme_btn").addEventListener("click", () => toggleThemeMenu());
     for (const item of el.querySelectorAll(".lf-theme-item")) {
@@ -295,11 +287,11 @@ function buildStudio() {
         });
     }
 
-    // research.js asks for the Reader tab, wizard.js for a center tab or the
-    // Sources sub-tab — native DOM events on the root (no circular imports).
+    // research.js asks for the Reader tab; wizard.js and drafts.js ask for
+    // the deck — native DOM events on the root (no circular imports).
     el.addEventListener("lf-show-reader", () => showCenter("reader"));
     el.addEventListener("lf-show-center", (e) => showCenter(e.detail));
-    el.addEventListener("lf-show-sources", () => showLeftTab("sources"));
+    el.addEventListener("lf-show-sources", focusDeck);
 
     return el;
 }

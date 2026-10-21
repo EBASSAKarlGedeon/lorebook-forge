@@ -1,9 +1,11 @@
 // Research workspace (Studio): search panel + central reader + draft form.
 // Moved out of the drawer (settings.js) — the drawer is now just a launcher.
 import { extensionName } from "./config.js";
-import { escapeHtml, suggestKeys } from "./helpers.js";
+import { escapeHtml } from "./helpers.js";
 import { searchSearxng, fetchPageText, collectWikiLinks, enumerateCategory } from "./searchData.js";
-import { saveDraft, renderDraftsList } from "./drafts.js";
+import { addSource } from "./wizardData.js";
+import { renderWizard } from "./wizard.js";
+import { renderDraftsList } from "./drafts.js";
 import { getSettings } from "./settings.js";
 
 // Full extracted text per URL. Deliberately survives Studio close/reopen,
@@ -21,7 +23,7 @@ function closeReader() {
         <div class="lf-reader-empty">
             <div class="lf-reader-empty-icon">📖</div>
             <h3>Reader</h3>
-            <p>Search in the Research panel, then click "Read" on a result.<br>Page content appears here, ready to become a draft.</p>
+            <p>Search the web above, then click "Read" on a result.<br>Pages load here, ready to become entries inside their source.</p>
         </div>
     `);
     $("#lf_search_results .lf-result").removeClass("active");
@@ -120,38 +122,27 @@ function showDraftForm(readerEl, url) {
     const cached = pageCache.get(url);
     if (!cached) return;
     const form = readerEl.find(".lf-draft-form");
-    const keys = suggestKeys(cached.title);
     form.html(`
-        <label class="lf-settings-label">Title</label>
+        <label class="lf-settings-label">Source title</label>
         <input class="text_pole lf-text-input lf-draft-title" value="${escapeHtml(cached.title)}" />
-        <label class="lf-settings-label">Keys (comma-separated — what triggers this entry in chat)</label>
-        <input class="text_pole lf-text-input lf-draft-keys" value="${escapeHtml(keys.join(", "))}" />
-        <label class="lf-settings-label">Content</label>
+        <label class="lf-settings-label">Text <span class="lf-dim">(staged as a source in the Lorebook Deck — the Wizard extracts its entries)</span></label>
         <textarea class="text_pole lf-draft-content" rows="8">${escapeHtml(cached.text)}</textarea>
         <div class="lf-draft-form-actions">
-            <button class="menu_button lf-draft-save" type="button">Save Draft</button>
+            <button class="menu_button lf-draft-save" type="button">Stage Source</button>
             <button class="menu_button lf-draft-close" type="button">✕ Close</button>
         </div>
     `);
     form.slideDown(150);
     form.find(".lf-draft-close").on("click", () => form.slideUp(150));
     form.find(".lf-draft-save").on("click", () => {
-        const draft = {
+        const src = addSource({
             title: form.find(".lf-draft-title").val(),
-            keys: String(form.find(".lf-draft-keys").val()).split(",").map(k => k.trim()).filter(Boolean),
-            content: form.find(".lf-draft-content").val(),
-            sourceUrl: url,
-            sourceTitle: cached.title,
-            sourceRaw: cached.raw || cached.text,
-        };
-        if (!String(draft.content).trim()) {
-            toastr.warning("Draft content is empty.", "Lorebook Forge");
-            return;
-        }
-        saveDraft(draft);
-        renderDraftsList();
-        toastr.success(`Draft saved: "${draft.title}" — see the Drafts panel.`, "Lorebook Forge");
-        setStatus(`Draft saved: "${draft.title}"`);
+            text: form.find(".lf-draft-content").val(),
+        });
+        renderDraftsList(); // the deck shows the new source card (+ meta refresh)
+        renderWizard();     // wizard header chip counts active sources
+        toastr.success(`Source staged: "${src.title}" — see the Lorebook Deck.`, "Lorebook Forge");
+        setStatus(`Source staged: "${src.title}"`);
         form.slideUp(150);
     });
 }
@@ -183,7 +174,7 @@ async function loadIntoReader(url, resultEl = null) {
     reader.html(`
         <div class="lf-reader-content">
             <div class="lf-reader-meta">${kb} KB · ${escapeHtml(route)}
-                <button class="menu_button lf-draft-btn" type="button">Make Entry Draft</button>
+                <button class="menu_button lf-draft-btn" type="button">Stage as source</button>
                 <button class="menu_button lf-reader-close" type="button" title="Reset the Reader tab">✕</button>
             </div>
             <div class="lf-reader-body">

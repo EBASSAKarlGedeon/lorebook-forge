@@ -1,13 +1,17 @@
-// Entry drafts: research basket awaiting commit to a lorebook.
+// The Lorebook Deck (right rail): Rulebook-style source cards with their
+// staged entries NESTED inside, batch commit, export JSON.
+// Stage 25 (v1/v2 convergence): sources, canon rules and lorebook import
+// moved here from the Wizard tab (scraping stages SOURCES now, and Wizard
+// proposals stage into them via saveDraft's sourceId + pickSource).
 // Storage lives in extension_settings — survives refresh.
-// Stage 24 (v2 Draft Deck): batch select + commit, a modal inspector with
-// the WorldInfo fields (secondary keys, logic, position, depth, order,
-// scan depth, probability), and SillyTavern JSON export.
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
 import { escapeHtml, icon, keysHtml } from "./helpers.js";
-import { listLorebooks, commitDraftToLorebook, draftToEntry, draftsToWorldJson } from "./wiData.js";
+import { getWizardSession, setCanonRules, setLorebookTarget,
+         addSource, deleteSource, toggleSourceActive } from "./wizardData.js";
+import { listLorebooks, loadLorebookEntries, lorebookToSourceText,
+         commitDraftToLorebook, draftToEntry, draftsToWorldJson } from "./wiData.js";
 
 // Ticked draft ids — kept across re-renders (cleared on delete)
 const selected = new Set();
@@ -18,13 +22,14 @@ export function getDrafts() {
     return s.drafts;
 }
 
-export function saveDraft({ title, keys, content, sourceUrl, sourceTitle, sourceRaw, origin }){
+export function saveDraft({ title, keys, content, sourceId, sourceUrl, sourceTitle, sourceRaw, origin }){
     const drafts = getDrafts();
     const draft = {
         id: crypto.randomUUID(),
         title: String(title || "Untitled").trim(),
         keys: Array.isArray(keys) ? keys.map(k => String(k).trim()).filter(Boolean) : [],
         content: String(content || "").trim(),
+        sourceId: String(sourceId || ""), // deck source this entry nests in
         sourceUrl: String(sourceUrl || ""),
         sourceTitle: String(sourceTitle || ""),
         sourceRaw: String(sourceRaw || ""),
@@ -282,6 +287,87 @@ function openInspector(draftId) {
     modal.find(".lf-in-title").trigger("focus");
 }
 
+// ---------- Source cards (v1-style) ----------
+
+function sourceIcon(s) {
+    if (s.title.startsWith("Lorebook: ")) return icon("book", "lf-ic-accent3");
+    if (s.title.startsWith("Draft: ")) return icon("pencil", "lf-ic-accent");
+    return icon("globe", "lf-ic-accent2");
+}
+
+function sourceCardHtml(s, drafts) {
+    const nested = drafts.filter(d => d.sourceId === s.id);
+    const preview = String(s.text).replace(/\s+/g, " ").trim().slice(0, 400);
+    const kb = (s.text.length / 1024).toFixed(1);
+    return `
+        <div class="lf-source" data-id="${escapeHtml(s.id)}">
+            <div class="lf-source-head">
+                <input type="checkbox" class="lf-source-check" title="Include this source in AI context (extraction + chat)"${s.active !== false ? " checked" : ""} />
+                ${sourceIcon(s)}
+                <div class="lf-source-title" title="Click to expand/collapse the source preview">${escapeHtml(s.title)}</div>
+                <span class="lf-chip${nested.length ? "" : " lf-chip-dim"}" title="Entries staged against this source">${nested.length || ""}</span>
+                <button class="lf-icon-btn lf-source-delete" type="button" title="Remove source">${icon("x")}</button>
+            </div>
+            <div class="lf-source-preview">${escapeHtml(preview)}…</div>
+            <div class="lf-source-foot">
+                <span>${kb} KB · ~${Math.ceil(s.text.length / 4).toLocaleString()} tok</span>
+                <span class="lf-source-state${s.active !== false ? "" : " off"}">${s.active !== false ? "In context" : "Excluded"}</span>
+            </div>
+            ${nested.length ? `
+            <div class="lf-source-entries">
+                ${nested.map(draftCardHtml).join("")}
+            </div>` : ""}
+        </div>
+    `;
+}
+
+function draftCardHtml(d) {
+    const wi = wiOf(d);
+    const pos = POSITIONS.find(p => p[0] === wi.position)?.[1] ?? "?";
+    return `
+    <div class="lf-draft${selected.has(d.id) ? " selected" : ""}${d.committedTo ? " committed" : ""}" data-id="${escapeHtml(d.id)}">
+        <div class="lf-draft-head">
+            <input type="checkbox" class="lf-draft-check" title="Select for distill, batch commit or export"${selected.has(d.id) ? " checked" : ""} />
+            <div class="lf-draft-title">${escapeHtml(d.title)}</div>
+            ${d.origin === "ai" ? `<span class="lf-ai-badge">${icon("sparkles", "lf-ic-sm")}AI</span>` : ""}
+        </div>
+        ${keysHtml(d.keys)}
+        <div class="lf-draft-preview">${escapeHtml(d.content)}</div>
+        <div class="lf-entry-meta">
+            <span title="Insertion order">#${wi.order}</span>
+            <span title="Position">${pos}${wi.position === 4 ? ` d${wi.depth}` : ""}</span>
+            ${wi.probability < 100 ? `<span>${wi.probability}%</span>` : ""}
+            ${wi.constant ? `<span class="lf-meta-on">constant</span>` : ""}
+            ${wi.disable ? `<span class="lf-meta-off">disabled</span>` : ""}
+            ${d.committedTo ? `<span class="lf-meta-good" title="Committed">✓ ${escapeHtml(d.committedTo)}</span>` : ""}
+        </div>
+        <div class="lf-draft-actions">
+            <button class="menu_button lf-btn-good lf-draft-commit" type="button" title="Commit to a lorebook">Commit</button>
+            <button class="menu_button lf-draft-edit" type="button" title="Inspect &amp; edit WorldInfo fields">Edit</button>
+            <button class="menu_button lf-btn-bad lf-draft-delete" type="button">${icon("trash", "lf-ic-sm")}</button>
+        </div>
+        <div class="lf-commit-form" data-id="${escapeHtml(d.id)}" style="display:none;"></div>
+    </div>`;
+}
+
+// Loose entries (no live source) — Wizard extractions without attribution,
+// or entries whose source was deleted: they keep their content and commit fine.
+function looseSectionHtml(drafts) {
+    return `
+        <div class="lf-source lf-source-loose">
+            <div class="lf-source-head">
+                ${icon("sparkles", "lf-ic-accent")}
+                <div class="lf-source-title">Loose entries</div>
+                <span class="lf-chip" title="Entries not tied to a staged source">${drafts.length || ""}</span>
+            </div>
+            <div class="lf-source-preview">Staged without a live source — Wizard extractions with unattributed evidence, or entries whose source was removed.</div>
+            <div class="lf-source-entries">
+                ${drafts.map(draftCardHtml).join("")}
+            </div>
+        </div>
+    `;
+}
+
 // ---------- Deck ----------
 
 function updateBatchBar() {
@@ -292,7 +378,14 @@ function updateBatchBar() {
     $("#lf_batch_commit").prop("disabled", !n);
 }
 
-function exportJson() {
+// Header lorebook pill mirrors the wizard session's update target
+function renderBookPill() {
+    const target = getWizardSession().lorebookTarget;
+    $("#lf_book_pill_name").text(target || "none");
+    $("#lf_book_pill").toggleClass("is-set", !!target);
+}
+
+export function exportJson() {
     const drafts = getDrafts();
     const chosen = drafts.filter(d => selected.has(d.id));
     const list = chosen.length ? chosen : drafts;
@@ -309,8 +402,87 @@ function exportJson() {
     toastr.success(`Exported ${list.length} entr${list.length === 1 ? "y" : "ies"} — import via World Info → Import.`, "Lorebook Forge");
 }
 
-// Static deck chrome (batch bar, export buttons) — wired once per Studio open
+// Static deck chrome (toolbar forms, batch bar, export) — wired once per Studio open
 export function initDraftsDeck() {
+    // ---- Toolbar: three slide-open forms (content kept across toggles) ----
+    const toggleForm = (btnSel, formSel, focusSel) => {
+        $(btnSel).on("click", () => {
+            const form = $(formSel);
+            const shown = form.is(":visible");
+            $("#lf_deck_addsource, #lf_deck_import, #lf_deck_canon").not(form).slideUp(120);
+            form.stop(true, true).slideToggle(120, () => {
+                if (!shown) form.find(focusSel).first().trigger("focus");
+            });
+        });
+    };
+    toggleForm(".lf-deck-addsource", "#lf_deck_addsource", ".lf-deck-src-title");
+    toggleForm(".lf-deck-import", "#lf_deck_import", ".lf-deck-lb-select");
+    toggleForm(".lf-deck-canon", "#lf_deck_canon", ".lf-deck-canon-rules");
+
+    // ---- Add source (paste) ----
+    $("#lf_deck_addsource").html(`
+        <label class="lf-settings-label">Source title</label>
+        <input class="text_pole lf-text-input lf-deck-src-title" type="text"
+               placeholder="Source title (e.g. 'Eldoria wiki — Geography section')" />
+        <label class="lf-settings-label">Text</label>
+        <textarea class="text_pole lf-deck-src-text" rows="6" placeholder="Paste the source text here…"></textarea>
+        <div class="lf-draft-form-actions">
+            <button class="menu_button lf-btn-primary lf-deck-src-add" type="button">${icon("plus", "lf-ic-sm")}Stage source</button>
+        </div>
+    `);
+    $("#lf_deck_addsource .lf-deck-src-add").on("click", () => {
+        const wrap = $("#lf_deck_addsource");
+        const title = String(wrap.find(".lf-deck-src-title").val()).trim();
+        const text = String(wrap.find(".lf-deck-src-text").val());
+        if (!text.trim()) {
+            toastr.warning("Paste some source text first.", "Lorebook Forge");
+            return;
+        }
+        const src = addSource({ title, text });
+        console.log(`[${extensionName}] Deck source added: "${src.title}" (${src.text.length} chars)`);
+        toastr.success(`Source staged: "${src.title}"`, "Lorebook Forge");
+        // Form content persists (toggle re-opens it) — just reset the fields
+        wrap.slideUp(120).find(".lf-deck-src-title, .lf-deck-src-text").val("");
+        renderDraftsList();
+    });
+
+    // ---- Canon rules ----
+    $("#lf_deck_canon").html(`
+        <label class="lf-settings-label">Canon rules <span class="lf-dim">— sent with every AI call</span></label>
+        <textarea class="text_pole lf-deck-canon-rules" rows="3"
+            placeholder="e.g. Manga canon only. Ignore anime-original arcs, filler and movies. If sources conflict, the manga wins."></textarea>
+    `);
+    $("#lf_deck_canon .lf-deck-canon-rules").on("input", function () {
+        setCanonRules($(this).val());
+    });
+    // ---- Import lorebook: entries become one source + the update target ----
+    $("#lf_deck_import").html(`
+        <label class="lf-settings-label">Lorebook</label>
+        <select class="text_pole lf-deck-lb-select"><option value="">Loading lorebooks…</option></select>
+        <div class="lf-draft-form-actions">
+            <button class="menu_button lf-deck-lb-import" type="button">${icon("download", "lf-ic-sm")}Import entries as source</button>
+        </div>
+        <div class="lf-search-status lf-deck-lb-target"></div>
+    `);
+    // Select options load once per Studio open; target note + binding refresh
+    // on every renderDraftsList (renderImportForm).
+    listLorebooks().then(books => {
+        $("#lf_deck_import .lf-deck-lb-select").html(
+            `<option value="">— pick a lorebook —</option>` +
+            books.map(b => `<option value="${escapeHtml(b.file_id)}">${escapeHtml(b.name)}</option>`).join(""));
+    }).catch(err => {
+        console.error(`[${extensionName}] Lorebook list failed:`, err);
+        $("#lf_deck_import .lf-deck-lb-select").html(`<option value="">(failed to list lorebooks)</option>`);
+    });
+
+    $("#lf_batch_commit").on("click", () => {
+        const form = $("#lf_batch_form");
+        if (form.is(":visible") && form.children().length) return form.slideUp(100).html("");
+        mountCommitForm(form, getDrafts().filter(d => selected.has(d.id)));
+    });
+    $("#lf_studio_root .lf-export-json").on("click", exportJson);
+
+    // Batch "select all" ticks every .lf-draft-check (nested cards included)
     $("#lf_drafts_all").on("change", function () {
         const on = $(this).prop("checked");
         for (const d of getDrafts()) on ? selected.add(d.id) : selected.delete(d.id);
@@ -325,80 +497,111 @@ export function initDraftsDeck() {
         card.toggleClass("selected", on);
         updateBatchBar();
     });
-    $("#lf_batch_commit").on("click", () => {
-        const form = $("#lf_batch_form");
-        if (form.is(":visible") && form.children().length) return form.slideUp(100).html("");
-        mountCommitForm(form, getDrafts().filter(d => selected.has(d.id)));
+    // Source context checkbox (v1 "include in prompt" toggle)
+    $("#lf_drafts_list").on("change", ".lf-source-check", function () {
+        const srcEl = $(this).closest(".lf-source");
+        if (!srcEl.data("id")) return; // loose section has none
+        const active = toggleSourceActive(String(srcEl.data("id")));
+        srcEl.toggleClass("off", !active);
+        srcEl.find(".lf-source-state").toggleClass("off", !active).text(active ? "In context" : "Excluded");
     });
-    $("#lf_studio_root .lf-export-json").on("click", exportJson);
-}
-
-export function renderDraftsList() {
-    const container = $("#lf_drafts_list");
-    if (!container.length) return;
-    const drafts = getDrafts();
-    $("#lf_drafts_count").text(drafts.length ? `${drafts.length} card${drafts.length === 1 ? "" : "s"}` : "");
-    if (drafts.length === 0) {
-        container.html(`<div class="lf-search-status">No drafts yet — read a page, then "Make Entry Draft", or stage a Wizard proposal.</div>`);
-        updateBatchBar();
-        return;
-    }
-    container.html(drafts.map(d => {
-        const wi = wiOf(d);
-        const pos = POSITIONS.find(p => p[0] === wi.position)?.[1] ?? "?";
-        const logic = LOGICS.find(l => l[0] === wi.selectiveLogic)?.[1] ?? "?";
-        return `
-        <div class="lf-draft${selected.has(d.id) ? " selected" : ""}${d.committedTo ? " committed" : ""}" data-id="${escapeHtml(d.id)}">
-            <div class="lf-draft-head">
-                <input type="checkbox" class="lf-draft-check" title="Select for distill, batch commit or export"${selected.has(d.id) ? " checked" : ""} />
-                <div class="lf-draft-title">${escapeHtml(d.title)}</div>
-                ${d.origin === "ai" ? `<span class="lf-ai-badge">${icon("sparkles", "lf-ic-sm")}AI</span>` : ""}
-            </div>
-            ${keysHtml(d.keys)}
-            <div class="lf-draft-preview">${escapeHtml(d.content)}</div>
-            <div class="lf-entry-meta">
-                <span title="Insertion order">#${wi.order}</span>
-                <span title="Position">${pos}${wi.position === 4 ? ` d${wi.depth}` : ""}</span>
-                ${wi.keysecondary.length ? `<span title="Selective logic">${logic} +${wi.keysecondary.length}</span>` : ""}
-                ${wi.probability < 100 ? `<span>${wi.probability}%</span>` : ""}
-                ${wi.constant ? `<span class="lf-meta-on">constant</span>` : ""}
-                ${wi.disable ? `<span class="lf-meta-off">disabled</span>` : ""}
-                ${d.committedTo ? `<span class="lf-meta-good" title="Committed">✓ ${escapeHtml(d.committedTo)}</span>` : ""}
-            </div>
-            <div class="lf-draft-meta" title="${escapeHtml(d.sourceUrl)}">${escapeHtml(d.sourceTitle || d.sourceUrl)} · ${new Date(d.createdAt).toLocaleString()}</div>
-            <div class="lf-draft-actions">
-                <button class="menu_button lf-btn-good lf-draft-commit" type="button" title="Commit to a lorebook">Commit</button>
-                <button class="menu_button lf-draft-edit" type="button" title="Inspect & edit WorldInfo fields">Edit</button>
-                <button class="menu_button lf-draft-towizard" type="button" title="Send this draft to the Wizard as a source">→ Wizard</button>
-                <button class="menu_button lf-btn-bad lf-draft-delete" type="button">Delete</button>
-            </div>
-            <div class="lf-commit-form" data-id="${escapeHtml(d.id)}" style="display:none;"></div>
-        </div>`;
-    }).join(""));
-    updateBatchBar();
-
-    container.find(".lf-draft-delete").on("click", function () {
+    // Card header click expands/collapses the source preview
+    $("#lf_drafts_list").on("click", ".lf-source-head", function (e) {
+        if ($(e.target).closest(".lf-source-check, .lf-source-delete, .lf-chip").length) return;
+        $(this).closest(".lf-source").toggleClass("open");
+    });
+    $("#lf_drafts_list").on("click", ".lf-source-delete", function () {
+        const srcEl = $(this).closest(".lf-source");
+        const src = getWizardSession().sources.find(s => s.id === String(srcEl.data("id")));
+        if (!src) return;
+        if (!window.confirm(`Remove source "${src.title}"? Entries staged against it stay, but become Loose.`)) return;
+        deleteSource(String(srcEl.data("id")));
+        renderDraftsList();
+        console.log(`[${extensionName}] Source removed: "${src.title}"`);
+    });
+    $("#lf_drafts_list").on("click", ".lf-draft-delete", function () {
         deleteDraft($(this).closest(".lf-draft").data("id"));
         renderDraftsList();
     });
-    // Decoupled from wizard.js via a DOM event (avoids drafts↔wizard cycle)
-    container.find(".lf-draft-towizard").on("click", function () {
-        const id = $(this).closest(".lf-draft").data("id");
-        const draft = getDrafts().find(d => d.id === id);
-        if (!draft) return;
-        document.dispatchEvent(new CustomEvent("lf-wizard-add-source", {
-            detail: { title: `Draft: ${draft.title}`, text: draft.content },
-        }));
-        console.log(`[${extensionName}] Draft "${draft.title}" sent to Wizard`);
-    });
-    container.find(".lf-draft-commit").on("click", function () {
+    $("#lf_drafts_list").on("click", ".lf-draft-commit", function () {
         const id = $(this).closest(".lf-draft").data("id");
         hideAllDraftForms(id);
         const form = $(`#lf_drafts_list .lf-commit-form[data-id="${CSS.escape(id)}"]`);
         if (form.is(":visible") && form.children().length) form.slideUp(100).html("");
         else mountCommitForm(form, getDrafts().filter(d => d.id === id));
     });
-    container.find(".lf-draft-edit").on("click", function () {
+    $("#lf_drafts_list").on("click", ".lf-draft-edit", function () {
         openInspector($(this).closest(".lf-draft").data("id"));
+    });
+}
+
+export function renderDraftsList() {
+    const container = $("#lf_drafts_list");
+    if (!container.length) return;
+    const w = getWizardSession();
+    const drafts = getDrafts();
+    const totalEntryText = drafts.reduce((n, d) => n + d.content.length, 0);
+    $("#lf_drafts_count").text(w.sources.length
+        ? `${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "0 entries"}`
+        : "");
+
+    if (!w.sources.length && !drafts.length) {
+        container.html(`
+            <div class="lf-pane-empty">
+                <div class="lf-reader-empty-icon">🗂</div>
+                <h3>The deck is empty</h3>
+                <p>Add a source, import a lorebook,<br>or scrape a page in the Reader —<br>staged entries nest inside their source here.</p>
+            </div>
+        `);
+    } else {
+        const loose = drafts.filter(d => !d.sourceId || !w.sources.some(s => s.id === d.sourceId));
+        container.html(`
+            ${w.sources.map(s => sourceCardHtml(s, drafts)).join("")}
+            ${loose.length ? looseSectionHtml(loose) : ""}
+        `);
+    }
+    renderBookPill();
+    updateBatchBar();
+    renderCanonRules();
+    renderImportForm();
+}
+
+// Canon-rules + import forms: forms persist across renders, so only their
+// STATE (canon value, target note, import binding) is refreshed per render.
+function renderCanonRules() {
+    $("#lf_deck_canon .lf-deck-canon-rules").val(getWizardSession().canonRules);
+}
+
+function renderImportForm() {
+    const targetNote = $("#lf_deck_import .lf-deck-lb-target");
+    const select = $("#lf_deck_import .lf-deck-lb-select");
+    const target = getWizardSession().lorebookTarget;
+    targetNote.text(target ? `Update target set: ${target} — Wizard updates land in this book.` : "No update target — importing sets it.");
+    $("#lf_deck_import .lf-deck-lb-import").off("click.lflb").on("click.lflb", async function () {
+        const btn = $(this).prop("disabled", true);
+        const name = String(select.val() || "").trim();
+        try {
+            if (!name) {
+                toastr.warning("Pick a lorebook first.", "Lorebook Forge");
+                return;
+            }
+            const sourceTitle = `Lorebook: ${name}`;
+            if (getWizardSession().sources.some(s => s.title === sourceTitle)) {
+                toastr.warning(`"${name}" is already imported as a source.`, "Lorebook Forge");
+                return;
+            }
+            const entries = await loadLorebookEntries(name);
+            const text = lorebookToSourceText(name, entries);
+            addSource({ title: sourceTitle, text });
+            setLorebookTarget(name);
+            console.log(`[${extensionName}] Lorebook imported: "${name}" (${Object.keys(entries).length} entries, ${text.length} chars)`);
+            toastr.success(`"${name}" imported — ${Object.keys(entries).length} entries became a source. Update target set.`, "Lorebook Forge");
+            renderDraftsList();
+        } catch (err) {
+            console.error(`[${extensionName}] Lorebook import failed:`, err);
+            toastr.error(`Import failed: ${err.message}`, "Lorebook Forge");
+        } finally {
+            btn.prop("disabled", false);
+        }
     });
 }

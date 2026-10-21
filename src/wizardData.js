@@ -139,6 +139,7 @@ export function addSource({ title, text }) {
         id: crypto.randomUUID(),
         title: String(title || "Untitled source").trim(),
         text: String(text ?? ""),
+        active: true, // included in AI context (deck checkbox)
         addedAt: Date.now(),
     };
     w.sources.unshift(source);
@@ -155,11 +156,26 @@ export function deleteSource(id) {
     }
 }
 
+// Flip a source in/out of the AI context (deck checkbox). Returns the new state.
+export function toggleSourceActive(id) {
+    const w = getWizardSession();
+    const s = w.sources.find(s => s.id === id);
+    if (!s) return null;
+    s.active = s.active === false; // undefined counts as active
+    saveSettingsDebounced();
+    return s.active;
+}
+
+export function activeSources() {
+    return getWizardSession().sources.filter(s => s.active !== false);
+}
+
 // ---------- Chat history (Stage 13) ----------
 
 export function pushWizardMessage(role, text) {
     const w = getWizardSession();
     const msg = {
+        id: crypto.randomUUID(),
         role: role === "assistant" ? "assistant" : "user",
         text: String(text ?? ""),
         ts: Date.now(),
@@ -184,12 +200,13 @@ export function setLorebookTarget(name) {
 
 // ---------- Entry proposals (Stage 14) ----------
 
-export function addWizardProposals(items) {
+export function addWizardProposals(items, msgId) {
     const w = getWizardSession();
     const proposals = (items || [])
         .filter(e => String(e?.content ?? "").trim())
         .map(e => ({
             id: crypto.randomUUID(),
+            msgId: String(msgId || ""), // assistant message that carries the carousel
             action: e?.action === "update" ? "update" : "new",
             target: String(e?.target ?? "").trim(),
             title: String(e?.title || "Untitled").trim(),

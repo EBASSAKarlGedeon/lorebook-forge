@@ -290,14 +290,17 @@
     white-space: nowrap;
 }
 
-/* ============ The Studio — Stage 24 theme engine (v2) ============
+/* ============ The Studio — Stage 25 (v1/v2 convergence) ============
    One variable contract, six presets switched via [data-theme] on
-   #lf_studio_root. Structure (Stage 23 laws intact):
-     - header: brand + lorebook pill + workspace tabs + panel toggles +
+   #lf_studio_root. Structure:
+     - header: brand + lorebook pill + workspace tabs + deck toggle +
        theme picker + export + close
-     - three full-bleed columns: Research & Sources | ONE active center
-       tab (Wizard / Proposals / Reader / Map) | Staging & Draft Deck
+     - two full-bleed columns: ONE active center tab (Wizard / Proposals /
+       Reader / Map) | the Lorebook Deck (sources with their staged
+       entries nested inside, batch commit, export)
      - every pane = fixed chrome + ONE full-height scroll region
+     - proposals ride INSIDE their assistant message as a horizontal
+       scroll-snap carousel (the deck carries the accepted ones)
    Identity per theme comes from three accents (accent / accent2 /
    accent3) that cycle through keys and tiles, so pill tags stay
    scannable in every preset. color-mix() derives the hover / soft /
@@ -750,6 +753,16 @@
     background: color-mix(in srgb, var(--lfs-good) 10%, transparent);
 }
 
+/* Interactive chip (the wizard's active-source count opens the deck) */
+#lf_studio_root #lf_wizard_meta { cursor: pointer; }
+
+/* Non-interactive chips (nested-entry count on source cards) */
+#lf_studio_root .lf-chip { cursor: default; }
+#lf_studio_root .lf-chip-dim {
+    border-style: dashed;
+    opacity: 0.7;
+}
+
 #lf_studio_root .lf-count {
     font-family: var(--lfs-font-mono);
     font-size: 0.64rem;
@@ -763,8 +776,6 @@
 #lf_studio_root .lf-count:empty { display: none; }
 
 #lf_studio_root .lf-panel-header .lf-count { margin-left: auto; }
-
-#lf_studio_root .lf-subtab .lf-count { margin-left: 2px; padding: 0 6px; }
 
 #lf_studio_root .lf-dim {
     color: var(--lfs-text-dim);
@@ -1165,13 +1176,6 @@
     overflow: hidden;
 }
 
-#lf_studio_root .lf-panel-search {
-    width: 360px;
-    min-width: 330px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--lfs-border);
-}
-
 #lf_studio_root .lf-panel-hidden { display: none !important; }
 
 #lf_studio_root .lf-panel-header {
@@ -1221,56 +1225,13 @@
     background: var(--lfs-card);
 }
 
-/* ---- Left column sub-tabs: Web / Sources ---- */
-#lf_studio_root .lf-subtabs {
-    flex-shrink: 0;
-    display: flex;
-    gap: 4px;
-    padding: 8px 12px 10px;
-    border-bottom: 1px solid var(--lfs-border);
-}
-
-#lf_studio_root .lf-subtab {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 5px 8px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--lfs-text-dim);
-    font-family: var(--lfs-font-ui);
-    font-size: 0.78rem;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-#lf_studio_root .lf-subtab .lf-ic { width: 13px; height: 13px; }
-
-#lf_studio_root .lf-subtab:hover {
-    color: var(--lfs-text);
-    background: var(--lfs-surface-2);
-}
-
-#lf_studio_root .lf-subtab.active {
-    color: var(--lfs-accent-bright);
-    background: var(--lfs-accent-soft);
-    border-color: color-mix(in srgb, var(--lfs-accent) 40%, transparent);
-}
-
 /* Search field with the icon inside the well */
 #lf_studio_root .lf-search-field {
     position: relative;
     display: flex;
     flex: 1;
     min-width: 0;
-}
-
-#lf_studio_root .lf-search-field .lf-ic {
+}#lf_studio_root .lf-search-field .lf-ic {
     position: absolute;
     left: 10px;
     top: 50%;
@@ -1286,17 +1247,12 @@
 
 #lf_studio_root .lf-search-field:focus-within .lf-ic { color: var(--lfs-accent); }
 
-/* Sources sub-pane owns its own scroll (lf-panel-body + overflow) */
-#lf_studio_root .lf-sources-pane {
-    overflow-y: auto;
-}
-
-/* Grounding meter: pinned footer of the left column */
+/* Grounding meter: proposals-pane strip under the header */
 #lf_studio_root .lf-grounding {
     flex-shrink: 0;
-    padding: 9px 14px 11px;
-    border-top: 1px solid var(--lfs-border);
-    background: color-mix(in srgb, var(--lfs-bg-deep) 85%, transparent);
+    padding: 9px 16px 11px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: var(--lfs-bg-deep);
 }
 
 #lf_studio_root .lf-grounding-row {
@@ -1440,7 +1396,7 @@
     margin-top: 1px;
 }
 
-#lf_studio_root .lf-wizard-sources,
+#lf_studio_root .lf-wizard-deck,
 #lf_studio_root .lf-wizard-clear { flex-shrink: 0; }
 
 /* Sessions strip */
@@ -1567,6 +1523,73 @@
     word-break: break-word;
 }
 
+/* --- Proposal carousel (Stage 25 signature) ---
+   Rides INSIDE the assistant bubble that proposed the entries — never a
+   separate tab jump. v1's entry-preview box becomes a scroll-snap track. */
+#lf_studio_root .lf-msg-wide { max-width: 92%; }
+
+#lf_studio_root .lf-carousel {
+    margin-top: 10px;
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-bg-deep);
+    overflow: hidden;
+}
+
+#lf_studio_root .lf-carousel-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: var(--lfs-surface);
+}
+
+#lf_studio_root .lf-carousel-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-carousel-count {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.66rem;
+    color: var(--lfs-accent-bright);
+}
+
+#lf_studio_root .lf-carousel-nav {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 3px;
+}
+
+#lf_studio_root .lf-carousel-nav .lf-icon-btn {
+    width: 22px;
+    height: 22px;
+}
+
+#lf_studio_root .lf-carousel-track {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+}
+
+/* Cards are fixed-width snap stops — the message scrolls them, not the chat */
+#lf_studio_root .lf-carousel-track .lf-proposal {
+    flex: 0 0 min(300px, 82%);
+    scroll-snap-align: start;
+    margin: 0;
+}
+
 /* Composer: quick-forge chips + input well + action row */
 #lf_studio_root .lf-composer {
     flex-shrink: 0;
@@ -1679,20 +1702,41 @@
 #lf_studio_root .lf-wizard-send,
 #lf_studio_root .lf-wizard-extract { flex-shrink: 0; }
 
-/* ============ Sources sub-tab (left column) ============ */
-#lf_studio_root .lf-wizard-section {
+/* ============ Lorebook Deck (right rail, Stage 25) ============ */
+
+/* Toolbar: the three ghost buttons above the batch bar */
+#lf_studio_root .lf-deck-toolbar {
     flex-shrink: 0;
     display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--lfs-border);
+    flex-wrap: wrap;
+}
+
+#lf_studio_root .lf-deck-toolbar .lf-ghost-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+/* Slide-open forms (add source / import / canon) under the toolbar */
+#lf_studio_root .lf-deck-form {
+    flex-shrink: 0;
+    display: none; /* jQuery slideToggles this */
     flex-direction: column;
     gap: 6px;
-    padding: 12px;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--lfs-border);
     background: var(--lfs-card);
 }
 
-#lf_studio_root .lf-wizard-canon,
-#lf_studio_root .lf-source-text-input {
+#lf_studio_root .lf-deck-form .lf-settings-label { font-size: 0.78rem; }
+
+#lf_studio_root .lf-deck-src-text,
+#lf_studio_root .lf-deck-canon-rules {
     width: 100%;
     resize: vertical;
     font-family: var(--lfs-font-ui);
@@ -1700,40 +1744,29 @@
     line-height: 1.45;
 }
 
-#lf_studio_root .lf-wizard-canon { min-height: 60px; }
-#lf_studio_root .lf-source-text-input { min-height: 110px; }
+#lf_studio_root .lf-deck-src-text { min-height: 110px; }
+#lf_studio_root .lf-deck-canon-rules { min-height: 60px; }
+#lf_studio_root .lf-deck-lb-select { width: 100%; }
 
-#lf_studio_root .lf-section-head {
+#lf_studio_root .lf-deck-form .lf-draft-form-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.84rem;
-    font-weight: 600;
-}
-
-#lf_studio_root .lf-section-head .lf-link-btn { margin-left: auto; }
-
-#lf_studio_root .lf-addsource {
-    display: flex;
-    flex-direction: column;
     gap: 6px;
-    margin-top: 8px;
 }
 
-/* Sources list: natural height — the pane scrolls as one column */
-#lf_studio_root .lf-wizard-sources {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-}
-
+/* Source cards: v1's evidence containers — context checkbox, size/status
+   footer, nested entry drafts inside */
 #lf_studio_root .lf-source { cursor: pointer; }
 
 #lf_studio_root .lf-source-head {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+#lf_studio_root .lf-source-check {
+    flex-shrink: 0;
+    accent-color: var(--lfs-accent);
+    cursor: pointer;
 }
 
 #lf_studio_root .lf-source-title {
@@ -1767,11 +1800,38 @@
 }
 
 #lf_studio_root .lf-source-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-top: 6px;
     font-family: var(--lfs-font-mono);
     font-size: 0.66rem;
     color: var(--lfs-text-dim);
 }
+
+#lf_studio_root .lf-source-state { margin-left: auto; }
+
+#lf_studio_root .lf-source-state { color: var(--lfs-good); }
+
+#lf_studio_root .lf-source-state.off { color: var(--lfs-warn); }
+
+/* Excluded sources visually recede but keep their entries committable */
+#lf_studio_root .lf-source.off {
+    opacity: 0.62;
+}
+
+/* Nested entry drafts inside a source card */
+#lf_studio_root .lf-source-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-left: 10px;
+    border-left: 2px solid color-mix(in srgb, var(--lfs-accent) 30%, transparent);
+}
+
+/* Loose section: entries without a live source */
+#lf_studio_root .lf-source-loose .lf-source-title { color: var(--lfs-text-dim); }
 
 /* Updater: lorebook import */
 #lf_studio_root .lf-wizard-lb-select { width: 100%; }
@@ -1953,6 +2013,37 @@
 }
 
 /* ============ Reader tab ============ */
+
+/* Results stack above the reader host — both flow in one flexible column */
+#lf_studio_root .lf-reader-col {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#lf_studio_root .lf-reader-col .lf-search-results {
+    flex: none;
+    max-height: 32%;
+    overflow-y: auto;
+    margin: 0;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--lfs-border);
+    background: var(--lfs-bg-deep);
+}
+
+#lf_studio_root .lf-reader-col .lf-search-results:empty { display: none; }
+
+/* Reader host: empty state fills it; loaded content scrolls its own body */
+#lf_studio_root .lf-reader-host {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#lf_studio_root .lf-reader-search { max-width: 560px; }
+
 #lf_studio_root #lf_reader {
     flex: 1;
     min-height: 0;
@@ -2233,18 +2324,6 @@
 #lf_studio_root .lf-draft-actions .menu_button {
     padding: 3px 10px;
     font-size: 0.78rem;
-}
-
-#lf_studio_root .lf-draft-actions .lf-draft-towizard { padding: 3px 8px; }
-
-#lf_studio_root .lf-draft-meta {
-    color: var(--lfs-text-dim);
-    opacity: 1;
-    font-size: 0.72rem;
-    margin-top: 6px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 /* ============ Inspector modal (WorldInfo fields) ============ */
@@ -2593,7 +2672,6 @@
 /* ---- Comfort guards ---- */
 @media (max-width: 1100px) {
     #lf_studio_root .lf-pane-hint { display: none; }
-    #lf_studio_root .lf-panel-search { width: 300px; min-width: 280px; }
     #lf_studio_root .lf-book-pill-label { display: none; }
 }
 

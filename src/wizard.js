@@ -1,20 +1,22 @@
 // Lorebook Wizard (Wizard tab): conversational lorebook builder.
-// Stage 24 layout (v2): the Wizard tab is a console — header, sessions
-// strip, ONE flexible chat region, composer with quick-forge chips.
-// Sources & Canon moved out of the overlay drawer into the left panel's
-// "Sources" sub-tab (#lf_sources, owned by studio.js). Proposals live in
-// their own tab — renderProposals fills #lf_proposals and the grounding
-// meter under the left panel (#lf_grounding).
+// Stage 25 layout (v1/v2 convergence): the Wizard tab is a pure console —
+// header, sessions strip, ONE flexible chat region, composer with
+// quick-forge chips. The big addition: proposal cards render as a
+// HORIZONTAL CAROUSEL INSIDE the assistant's message bubble (scroll-snap
+// track + prev/next + counter), with Stage/Reject per card. The Lorebook
+// Deck (sources, canon rules, lorebook import, staged entries) moved to
+// drafts.js. Source management lives there too — the wizard reads sources
+// via activeSources().
 import { extensionName } from "./config.js";
 import { escapeHtml, verifyQuote, icon, keysHtml } from "./helpers.js";
-import { getWizardSession, setCanonRules, addSource, deleteSource,
-         pushWizardMessage, clearWizardMessages, setLorebookTarget,
+import { getWizardSession, activeSources,
+         pushWizardMessage, clearWizardMessages,
          addWizardProposals, updateWizardProposal,
          listWizardSessions, createWizardSession, switchWizardSession,
          deleteWizardSession, renameWizardSession } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
 import { saveDraft, renderDraftsList } from "./drafts.js";
-import { listLorebooks, loadLorebookEntries, lorebookToSourceText, applyUpdateToLorebook } from "./wiData.js";
+import { applyUpdateToLorebook } from "./wiData.js";
 
 const SEND_LABEL = `${icon("send")}Send`;
 const EXTRACT_LABEL = `${icon("zap")}Extract`;
@@ -36,15 +38,39 @@ function showSources() {
 
 // ---------- Chat ----------
 
-function messageHtml(m) {
+function messageHtml(m, byId) {
     const who = m.role === "user" ? `${icon("arrow", "lf-ic-sm")}You` : `${icon("sparkles", "lf-ic-sm")}Wizard`;
     const time = m.ts ? ` · ${new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
+    const props = m.role === "assistant" ? (byId.get(m.id) || []) : [];
+    const carousel = props.length ? carouselHtml(props) : "";
     return `
         <div class="lf-msg ${m.role}">
-            <div class="lf-msg-bubble">
+            <div class="lf-msg-bubble${carousel ? " lf-msg-wide" : ""}">
                 <div class="lf-msg-by">${who}<span class="lf-msg-time">${time}</span></div>
                 <div class="lf-msg-text">${escapeHtml(m.text)}</div>
+                ${carousel}
             </div>
+        </div>`;
+}
+
+// The signature addition (v1 entry-preview → horizontal carousel):
+// proposal cards ride INSIDE the message that proposed them — never as a
+// separate full-chat surface. Cards are staged in DOM order; the track
+// scroll-snaps card by card, with prev/next + counter in a slim header.
+function carouselHtml(props) {
+    // Verdicts are computed per render so accepted/rejected states stay live
+    const texts = getWizardSession().sources.map(s => s.text);
+    return `
+        <div class="lf-carousel" role="group" aria-label="Proposed entries">
+            <div class="lf-carousel-head">
+                <span class="lf-carousel-title">${icon("pull", "lf-ic-sm")}Proposed entries</span>
+                <span class="lf-carousel-count"></span>
+                <span class="lf-carousel-nav">
+                    <button class="lf-icon-btn lf-car-prev" type="button" title="Previous entry">${icon("chevLeft", "lf-ic-sm")}</button>
+                    <button class="lf-icon-btn lf-car-next" type="button" title="Next entry">${icon("chevRight", "lf-ic-sm")}</button>
+                </span>
+            </div>
+            <div class="lf-carousel-track">${props.map(p => proposalCardHtml(p, verifyQuote(p.quote, texts))).join("")}</div>
         </div>`;
 }
 
@@ -65,7 +91,7 @@ function proposalCardHtml(p, verdict) {
             <button class="lf-ghost-btn lf-proposal-copy" type="button" title="Copy entry content">${icon("copy")}Copy</button>
         </div>`
         : `<div class="lf-proposal-statusline lf-proposal-${p.status}">${p.status === "accepted"
-            ? (isUpdate ? `✓ Applied → ${escapeHtml(p.target || "lorebook")}` : "✓ Staged — in the Draft Deck")
+            ? (isUpdate ? `✓ Applied → ${escapeHtml(p.target || "lorebook")}` : "✓ Staged — in the Lorebook Deck")
             : "✕ Rejected"}</div>`;
     return `
         <article class="lf-proposal lf-proposal-${p.status}" data-id="${escapeHtml(p.id)}">
@@ -130,7 +156,7 @@ function renderProposals() {
             <div class="lf-pane-empty">
                 <div class="lf-reader-empty-icon">⚡</div>
                 <h3>No proposals yet</h3>
-                <p>Add sources in the left panel, then hit <b>⚡ Extract</b> in the Wizard —<br>
+                <p>Stage sources in the <b>Lorebook Deck</b>, then hit <b>⚡ Extract</b> in the Wizard —<br>
                 cards appear here with evidence quotes verified against your sources.</p>
             </div>
         `);
@@ -149,67 +175,89 @@ function renderProposals() {
     $("#lf_tab_proposals .lf-tab-badge").text(pending || "").toggleClass("lf-hidden", !pending);
 
     if (scrollEl) scrollEl.scrollTop = prevScroll;
+}
 
-    grid.find(".lf-proposal-copy").on("click", async function () {
-        const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
-        if (!p) return;
-        try {
-            await navigator.clipboard.writeText(p.content);
-            toastr.success(`Copied "${p.title}"`, "Lorebook Forge");
-        } catch (err) {
-            toastr.error(`Copy failed: ${err.message}`, "Lorebook Forge");
-        }
-    });
+// Attribute a proposal to the session source its evidence quote came from
+// (verified beats fuzzy beats unattributed) — accepted drafts nest inside
+// that source card in the Lorebook Deck.
+function pickSource(quote) {
+    const sources = getWizardSession().sources;
+    if (!quote) return null;
+    let fuzzy = null;
+    for (const s of sources) {
+        const v = verifyQuote(quote, [s.text]);
+        if (v === "verified") return s;
+        if (v === "fuzzy" && !fuzzy) fuzzy = s;
+    }
+    return fuzzy;
+}
 
-    grid.find(".lf-proposal-accept").on("click", async function () {
-        const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
-        if (!p) return;
+// One delegated handler set for proposal cards wherever they render —
+// the Proposals grid AND the in-message carousel.
+function bindProposalActions() {
+    $(document).off("click.lfprop")
+        .on("click.lfprop", ".lf-proposal-copy", async function () {
+            const w = getWizardSession();
+            const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
+            if (!p) return;
+            try {
+                await navigator.clipboard.writeText(p.content);
+                toastr.success(`Copied "${p.title}"`, "Lorebook Forge");
+            } catch (err) {
+                toastr.error(`Copy failed: ${err.message}`, "Lorebook Forge");
+            }
+        })
+        .on("click.lfprop", ".lf-proposal-reject", function () {
+            const id = $(this).closest(".lf-proposal").data("id");
+            updateWizardProposal(id, "rejected");
+            renderChat();
+            setStatus("Proposal rejected");
+        })
+        .on("click.lfprop", ".lf-proposal-accept", async function () {
+            const w = getWizardSession();
+            const p = w.proposals.find(p => p.id === $(this).closest(".lf-proposal").data("id"));
+            if (!p) return;
 
-        // Update proposal → write into the target lorebook directly (Stage 16b)
-        if (p.action === "update" && p.target) {
-            const target = w.lorebookTarget;
-            if (!target) {
-                toastr.warning("No update target in this session. Import the lorebook (Sources panel) or reject this card.", "Lorebook Forge");
+            // Update proposal → write into the target lorebook directly (Stage 16b)
+            if (p.action === "update" && p.target) {
+                const target = w.lorebookTarget;
+                if (!target) {
+                    toastr.warning("No update target in this session. Import the lorebook (Lorebook Deck) or reject this card.", "Lorebook Forge");
+                    return;
+                }
+                if (!window.confirm(`Apply this update to the entry "${p.target}" in lorebook "${target}"?\nThis REPLACES that entry's content in place.`)) return;
+                const btn = $(this).prop("disabled", true).text("Applying…");
+                try {
+                    const res = await applyUpdateToLorebook(target, p.target, { content: p.content, keys: p.keys });
+                    updateWizardProposal(p.id, "accepted");
+                    renderChat();
+                    toastr.success(`"${p.target}" updated in "${res.lorebook}" — verify in the World Info editor.`, "Lorebook Forge");
+                    setStatus(`Update applied: "${p.target}" → ${res.lorebook}`);
+                } catch (err) {
+                    console.error(`[${extensionName}] Update apply failed:`, err);
+                    toastr.error(`Update failed: ${err.message}`, "Lorebook Forge");
+                    btn.prop("disabled", false).html(`${icon("reset")}Apply update`);
+                }
                 return;
             }
-            if (!window.confirm(`Apply this update to the entry "${p.target}" in lorebook "${target}"?\nThis REPLACES that entry's content in place.`)) return;
-            const btn = $(this).prop("disabled", true).text("Applying…");
-            try {
-                const res = await applyUpdateToLorebook(target, p.target, { content: p.content, keys: p.keys });
-                updateWizardProposal(p.id, "accepted");
-                renderProposals();
-                toastr.success(`"${p.target}" updated in "${res.lorebook}" — verify in the World Info editor.`, "Lorebook Forge");
-                setStatus(`Update applied: "${p.target}" → ${res.lorebook}`);
-            } catch (err) {
-                console.error(`[${extensionName}] Update apply failed:`, err);
-                toastr.error(`Update failed: ${err.message}`, "Lorebook Forge");
-                btn.prop("disabled", false).html(`${icon("reset")}Apply update`);
-            }
-            return;
-        }
 
-        // New proposal → drafts pipeline (unchanged)
-        saveDraft({
-            title: p.title,
-            keys: p.keys.length ? p.keys : [p.title],
-            content: p.content,
-            sourceUrl: "",
-            sourceTitle: p.action === "update"
-                ? `Wizard update → ${p.target || "(target missing)"}${p.quote ? " · quote verified check card" : ""}`
-                : "Wizard extraction · " + (p.quote ? "quote verified check card" : "no quote"),
-            sourceRaw: p.quote,
-            origin: "ai",
+            // New proposal → staged as a draft nested in its evidence source
+            const src = pickSource(p.quote);
+            saveDraft({
+                title: p.title,
+                keys: p.keys.length ? p.keys : [p.title],
+                content: p.content,
+                sourceId: src?.id || "",
+                sourceUrl: "",
+                sourceTitle: src ? src.title : "Wizard extraction",
+                sourceRaw: p.quote,
+                origin: "ai",
+            });
+            updateWizardProposal(p.id, "accepted");
+            renderDraftsList();
+            renderChat();
+            toastr.success(`"${p.title}" staged — inside its source in the Lorebook Deck.`, "Lorebook Forge");
         });
-        updateWizardProposal(p.id, "accepted");
-        renderDraftsList();
-        renderProposals();
-        toastr.success(`"${p.title}" staged — see the Draft Deck.`, "Lorebook Forge");
-    });
-    grid.find(".lf-proposal-reject").on("click", function () {
-        const id = $(this).closest(".lf-proposal").data("id");
-        updateWizardProposal(id, "rejected");
-        renderProposals();
-    });
 }
 
 function renderChat() {
@@ -220,14 +268,36 @@ function renderChat() {
             <div class="lf-wizard-chat-empty">
                 <div class="lf-reader-empty-icon">✨</div>
                 <h3>Lorebook Wizard</h3>
-                <p>Paste sources and set canon rules in the left panel, then talk to me —<br>
-                or hit <b>⚡ Extract</b> to propose entries with verified evidence quotes.</p>
+                <p>Stage sources in the Lorebook Deck, then talk to me —<br>
+                or hit <b>⚡ Extract</b> to propose entries with verified evidence quotes.<br>
+                Proposals ride the reply as a horizontal carousel.</p>
             </div>
         `);
     } else {
-        chatEl.html(w.messages.map(messageHtml).join(""));
+        const byId = new Map();
+        for (const p of w.proposals) {
+            if (!p.msgId) continue;
+            if (!byId.has(p.msgId)) byId.set(p.msgId, []);
+            byId.get(p.msgId).push(p);
+        }
+        chatEl.html(w.messages.map(m => messageHtml(m, byId)).join(""));
     }
     chatEl.scrollTop(chatEl[0].scrollHeight);
+
+    // Carousel chrome: nav buttons + live counter per track (re-bound every
+    // render — chatEl itself persists, only its contents are replaced).
+    chatEl.find(".lf-carousel").each(function () {
+        const track = $(this).find(".lf-carousel-track");
+        const count = $(this).find(".lf-carousel-count");
+        const update = () => {
+            const n = track.children().length;
+            const i = Math.min(n, Math.round(track.scrollLeft() / (track.children(":first").outerWidth() + 10 || 1)) + 1);
+            count.text(`${i} / ${n}`);
+        };
+        track.on("scroll", update);
+        update();
+    });
+
     renderProposals();
 }
 
@@ -249,7 +319,7 @@ async function onSend() {
     try {
         const reply = await wizardChat({
             canonRules: w.canonRules,
-            sources: w.sources,
+            sources: activeSources(),
             history,
             message: text,
         });
@@ -271,31 +341,30 @@ async function onExtract() {
     const input = $("#lf_wizard_input");
     const btn = $("#lf_wizard_extract");
     const w = getWizardSession();
-    if (!w.sources.length) {
-        toastr.warning("Paste at least one source first — extraction works from sources only.", "Lorebook Forge");
+    const actives = activeSources();
+    if (!actives.length) {
+        toastr.warning("No active sources. Stage one in the Lorebook Deck first — extraction works from sources only.", "Lorebook Forge");
         showSources();
         return;
     }
     const focus = String(input.val()).trim();
     input.val("");
     btn.prop("disabled", true).text("…");
-    setStatus(`Extracting entries from ${w.sources.length} source(s)${focus ? ` — focus: "${focus}"` : ""}…`);
+    setStatus(`Extracting entries from ${actives.length} source(s)${focus ? ` — focus: "${focus}"` : ""}…`);
 
     try {
-        const items = await wizardExtract({ canonRules: w.canonRules, sources: w.sources, focus, lorebookTarget: w.lorebookTarget });
-        const proposals = addWizardProposals(items);
+        const items = await wizardExtract({ canonRules: w.canonRules, sources: actives, focus, lorebookTarget: w.lorebookTarget });
         if (focus) pushWizardMessage("user", focus);
-        const texts = w.sources.map(s => s.text);
+        // The proposal carousel rides INSIDE this assistant message — push it
+        // first so addWizardProposals can link every card to it via msgId.
+        const msg = pushWizardMessage("assistant",
+            `⚡ Proposed ${items.length} entr${items.length === 1 ? "y" : "ies"}${focus ? ` — focus: "${focus}"` : ""}. Review the carousel below — stage what you like, reject the rest.`);
+        const proposals = addWizardProposals(items, msg.id);
+        const texts = actives.map(s => s.text);
         const counts = { verified: 0, fuzzy: 0, missing: 0 };
         for (const p of proposals) counts[verifyQuote(p.quote, texts)]++;
-        pushWizardMessage("assistant",
-            `⚡ Proposed ${proposals.length} entr${proposals.length === 1 ? "y" : "ies"} — ` +
-            `${counts.verified} verified ✅, ${counts.fuzzy} near-match ⚠️, ${counts.missing} unverified ❌. Review them in the Proposals tab.`);
         renderChat();
-        // Jump straight to the Proposals tab so the new cards are visible
-        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-center", { detail: "proposals" }));
-        const scroller = document.getElementById("lf_proposals_scroll");
-        if (scroller) scroller.scrollTo({ top: scroller.scrollHeight }); // newest cards are appended at the end
+        renderGrounding(counts, proposals.length);
         setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`);
     } catch (err) {
         console.error(`[${extensionName}] Extraction failed:`, err);
@@ -307,150 +376,15 @@ async function onExtract() {
     }
 }
 
-// ---------- Sources (left panel sub-tab) ----------
-
-function sourceCardHtml(s) {
-    const preview = String(s.text).replace(/\s+/g, " ").trim().slice(0, 400);
-    const isBook = s.title.startsWith("Lorebook: ");
-    return `
-        <div class="lf-source" data-id="${escapeHtml(s.id)}" title="Click to expand/collapse the preview">
-            <div class="lf-source-head">
-                ${icon(isBook ? "book" : "layers", isBook ? "lf-ic-accent3" : "lf-ic-accent2")}
-                <div class="lf-source-title">${escapeHtml(s.title)}</div>
-                <button class="lf-icon-btn lf-source-delete" type="button" title="Remove source">${icon("x")}</button>
-            </div>
-            <div class="lf-source-preview">${escapeHtml(preview)}…</div>
-            <div class="lf-source-foot">
-                <span>${(s.text.length / 1024).toFixed(1)} KB · ~${Math.ceil(s.text.length / 4).toLocaleString()} tok</span>
-            </div>
-        </div>
-    `;
-}
+// ---------- Header meta ----------
 
 function renderHeaderMeta() {
     const w = getWizardSession();
-    const totalChars = w.sources.reduce((n, s) => n + s.text.length, 0);
-    $("#lf_wizard_meta").text(`${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${(totalChars / 1024).toFixed(1)} KB`);
-    $("#lf_sources_count").text(w.sources.length || "");
+    const actives = activeSources();
+    const totalChars = actives.reduce((n, s) => n + s.text.length, 0);
+    $("#lf_wizard_meta").text(`${actives.length} active source${actives.length === 1 ? "" : "s"} · ${(totalChars / 1024).toFixed(1)} KB`);
     $("#lf_book_pill_name").text(w.lorebookTarget || "none");
     $("#lf_book_pill").toggleClass("is-set", !!w.lorebookTarget);
-}
-
-// drafts.js asks us to add a source via this event (avoids drafts↔wizard cycle)
-function onDraftToWizard(e) {
-    const src = addSource(e.originalEvent?.detail ?? e.detail);
-    console.log(`[${extensionName}] Source added from draft: "${src.title}" (${src.text.length} chars)`);
-    toastr.success(`"${src.title}" is now a Wizard source.`, "Lorebook Forge");
-    renderWizard();
-}
-
-function renderSources() {
-    const pane = $("#lf_sources");
-    if (!pane.length) return;
-    const w = getWizardSession();
-
-    pane.html(`
-        <div class="lf-wizard-section">
-            <label class="lf-settings-label">Canon rules <span class="lf-dim">— sent with every AI call</span></label>
-            <textarea class="text_pole lf-wizard-canon" rows="3"
-                placeholder="e.g. Manga canon only. Ignore anime-original arcs, filler and movies. If sources conflict, the manga wins.">${escapeHtml(w.canonRules)}</textarea>
-        </div>
-        <div class="lf-section-head">
-            <span>Active context sources (${w.sources.length})</span>
-            <button class="lf-link-btn lf-addsource-toggle" type="button">${icon("plus", "lf-ic-sm")}Add source</button>
-        </div>
-        <div class="lf-addsource lf-wizard-section" style="display:none;">
-            <input class="text_pole lf-text-input lf-source-title-input" type="text"
-                   placeholder="Source title (e.g. 'Eldoria wiki — Geography section')" />
-            <textarea class="text_pole lf-source-text-input" rows="5"
-                      placeholder="Paste the source text here…"></textarea>
-            <div class="lf-draft-form-actions">
-                <button class="menu_button lf-btn-primary lf-source-add" type="button">Add source</button>
-            </div>
-        </div>
-        <div class="lf-wizard-sources">
-            ${w.sources.length
-                ? w.sources.map(sourceCardHtml).join("")
-                : `<div class="lf-search-status">No sources yet — "Add source" above, or send a draft here with → Wizard.</div>`}
-        </div>
-        <div class="lf-wizard-section">
-            <div class="lf-section-head"><span>Updater — load existing lorebook</span></div>
-            <select class="text_pole lf-wizard-lb-select"><option value="">Loading lorebooks…</option></select>
-            <button class="menu_button lf-wizard-lb-import" type="button">${icon("download", "lf-ic-sm")}Import entries as source</button>
-            <div class="lf-search-status lf-wizard-lb-target">${w.lorebookTarget ? `Update target set: ${escapeHtml(w.lorebookTarget)}` : "No update target — imports set it."}</div>
-        </div>
-    `);
-
-    // Canon rules
-    pane.find(".lf-wizard-canon").on("input", function () {
-        setCanonRules($(this).val());
-    });
-
-    // Add-source form (collapsed by default)
-    pane.find(".lf-addsource-toggle").on("click", function () {
-        const form = pane.find(".lf-addsource");
-        form.slideToggle(120, () => { if (form.is(":visible")) form.find(".lf-source-title-input").trigger("focus"); });
-    });
-    pane.find(".lf-source-add").on("click", function () {
-        const title = String(pane.find(".lf-source-title-input").val()).trim();
-        const text = String(pane.find(".lf-source-text-input").val());
-        if (!text.trim()) {
-            toastr.warning("Paste some source text first.", "Lorebook Forge");
-            return;
-        }
-        const src = addSource({ title, text });
-        console.log(`[${extensionName}] Wizard source added: "${src.title}" (${src.text.length} chars)`);
-        toastr.success(`Source added: "${src.title}"`, "Lorebook Forge");
-        renderWizard();
-    });
-
-    // Source cards: expand/collapse preview on click; ✕ deletes
-    pane.find(".lf-source").on("click", function (e) {
-        if ($(e.target).closest(".lf-source-delete").length) return;
-        $(this).toggleClass("open");
-    });
-    pane.find(".lf-source-delete").on("click", function () {
-        deleteSource($(this).closest(".lf-source").data("id"));
-        renderWizard();
-    });
-
-    // ---- Updater: lorebook import ----
-    const lbSelect = pane.find(".lf-wizard-lb-select");
-    listLorebooks().then(books => {
-        lbSelect.html(`<option value="">— pick a lorebook —</option>` +
-            books.map(b => `<option value="${escapeHtml(b.file_id)}">${escapeHtml(b.name)}</option>`).join(""));
-    }).catch(err => {
-        console.error(`[${extensionName}] Lorebook list failed:`, err);
-        lbSelect.html(`<option value="">(failed to list lorebooks)</option>`);
-    });
-
-    pane.find(".lf-wizard-lb-import").on("click", async function () {
-        const btn = $(this).prop("disabled", true);
-        const name = String(lbSelect.val() || "").trim();
-        try {
-            if (!name) {
-                toastr.warning("Pick a lorebook first.", "Lorebook Forge");
-                return;
-            }
-            const sourceTitle = `Lorebook: ${name}`;
-            if (getWizardSession().sources.some(s => s.title === sourceTitle)) {
-                toastr.warning(`"${name}" is already imported as a source.`, "Lorebook Forge");
-                return;
-            }
-            const entries = await loadLorebookEntries(name);
-            const text = lorebookToSourceText(name, entries);
-            addSource({ title: sourceTitle, text });
-            setLorebookTarget(name);
-            console.log(`[${extensionName}] Lorebook imported: "${name}" (${Object.keys(entries).length} entries, ${text.length} chars)`);
-            toastr.success(`"${name}" imported — ${Object.keys(entries).length} entries are now wizard sources.`, "Lorebook Forge");
-            renderWizard();
-        } catch (err) {
-            console.error(`[${extensionName}] Lorebook import failed:`, err);
-            toastr.error(`Import failed: ${err.message}`, "Lorebook Forge");
-        } finally {
-            btn.prop("disabled", false);
-        }
-    });
 }
 
 // ---------- Root render ----------
@@ -468,7 +402,7 @@ export function renderWizard() {
                 </div>
                 <div class="lf-wizard-sub">Grounded WorldInfo extraction — every proposal cites your sources.</div>
             </div>
-            <button class="lf-ghost-btn lf-wizard-sources" type="button">${icon("layers")}Sources &amp; Canon</button>
+            <button class="lf-ghost-btn lf-wizard-deck" type="button" title="Sources, canon rules and imported lorebooks live in the deck">${icon("layers")}Lorebook Deck</button>
             <button class="lf-ghost-btn lf-wizard-clear" type="button" title="Delete the conversation AND proposals">${icon("reset")}Clear session</button>
         </div>
         <div class="lf-sessions-bar">
@@ -500,10 +434,10 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
     `);
 
     renderChat();
-    renderSources();
     renderHeaderMeta();
 
-    root.find(".lf-wizard-sources, #lf_wizard_meta").on("click", showSources);
+    // The deck (drafts.js) owns sources/canon/import — this just focuses it
+    root.find(".lf-wizard-deck, #lf_wizard_meta").on("click", showSources);
 
     // ---- Sessions bar (Stage 21) ----
     root.find(".lf-session-chip").on("click", function () {
@@ -563,8 +497,9 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
 }
 
 export function initWizard() {
-    document.removeEventListener("lf-wizard-add-source", onDraftToWizard);
-    document.addEventListener("lf-wizard-add-source", onDraftToWizard);
+    // Delegated proposal actions cover BOTH the proposals grid and the
+    // in-message carousels (one document-level set, .lfprop namespaced).
+    bindProposalActions();
     renderWizard();
     console.log(`[${extensionName}] Wizard initialized (${getWizardSession().sources.length} sources, ${getWizardSession().messages.length} messages, ${getWizardSession().proposals.length} proposals)`);
 }
