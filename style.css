@@ -1,7 +1,7 @@
 /* Forge identity (Stage 23): Alegreya = the content voice (brand, titles,
    reading prose), Alegreya Sans = UI chrome. Loaded from Google Fonts; the
    host's serif/sans stack falls back in if the fonts can't load. */
-@import url('https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,500;0,600;0,700;1,400;1,500&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,500;0,600;0,700;1,400;1,500&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Stage 2: settings drawer widgets */
 .lf-settings-block {
@@ -307,36 +307,34 @@
    border tints — no per-theme rule duplication beyond the tokens.
    ============ */
 
-/* ---- Theme tokens: Night Forge (default) ---- */
+/* ---- Theme tokens: Obsidian Cyber (default) — v1/v2 palette ---- */
 #lf_studio_root {
-    --lfs-bg: #141519;                       /* forge floor */
-    --lfs-bg-deep: #0f1013;                  /* wells: inputs, canvas, modal */
-    --lfs-surface: #1a1c22;                  /* panel iron sheet */
-    --lfs-surface-2: #21242c;                /* raised: hover, buttons */
-    --lfs-card: #232730;                     /* card stock */
-    --lfs-text: #ece7dd;                     /* lantern light */
-    --lfs-text-dim: #a09b8e;                 /* cooled ash */
-    --lfs-border: rgba(236, 231, 221, 0.09);
-    --lfs-border-strong: rgba(236, 231, 221, 0.18);
-    --lfs-accent: #e08e3c;                   /* ember */
-    --lfs-accent-bright: #f2b263;
-    --lfs-accent-soft: rgba(224, 142, 60, 0.14);
-    --lfs-accent-ink: #221607;               /* dark ink on ember fills */
-    --lfs-accent2: #8fa8c8;                  /* cold steel */
-    --lfs-accent3: #6fae8f;                  /* patina */
-    --lfs-good: #51cf66;
-    --lfs-warn: #ffd43b;
-    --lfs-bad: #ff6b6b;
-    --lfs-glow: 0 0 12px rgba(224, 142, 60, 0.45);
-    /* forge atmosphere: ember bloom low-left, cool moonlight top-right */
-    --lfs-atmo:
-        radial-gradient(1100px 700px at 12% 108%, rgba(224, 142, 60, 0.06), transparent 60%),
-        radial-gradient(900px 600px at 96% -8%, rgba(143, 168, 200, 0.05), transparent 55%);
-    --lfs-font-ui: 'Alegreya Sans', var(--mainFontFamily, sans-serif);
-    --lfs-font-display: 'Alegreya', Georgia, 'Times New Roman', serif;
-    --lfs-font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'Courier New', monospace;
-    --lfs-radius: 10px;
-    --lfs-radius-lg: 14px;
+    --lfs-bg: #0d0e15;
+    --lfs-bg-deep: #0d0e15;
+    --lfs-surface: #141622;
+    --lfs-surface-2: #1e2132;
+    --lfs-card: #181a2a;
+    --lfs-text: #e2e8f0;
+    --lfs-text-dim: #9aa3c2;      /* card body text (v1 gray-300/400 zone) */
+    --lfs-text-faint: #565f89;    /* v2 text-muted — meta, kbd, timestamps */
+    --lfs-border: rgba(35, 38, 59, 0.75);
+    --lfs-border-strong: #23263b;
+    --lfs-accent: #e0af68;        /* v2 accent-gold — primary (Send, Stage) */
+    --lfs-accent-bright: #eec98a;
+    --lfs-accent-soft: rgba(224, 175, 104, 0.12);
+    --lfs-accent-ink: #0d0e15;
+    --lfs-accent2: #7aa2f7;       /* v2 accent-cyan */
+    --lfs-accent3: #bb9af7;       /* v2 accent-purple */
+    --lfs-good: #9ece6a;          /* v2 accent-green */
+    --lfs-warn: #e0af68;
+    --lfs-bad: #f7768e;           /* v2 accent-coral */
+    --lfs-glow: 0 0 12px rgba(224, 175, 104, 0.2);
+    --lfs-atmo: none;
+    --lfs-font-ui: 'Inter', 'Alegreya Sans', system-ui, sans-serif;
+    --lfs-font-display: 'Inter', 'Alegreya', system-ui, sans-serif;
+    --lfs-font-mono: 'Fira Code', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+    --lfs-radius: 12px;
+    --lfs-radius-lg: 16px;
 
     position: fixed;
     inset: 0;
@@ -345,137 +343,189 @@
     font-family: var(--lfs-font-ui);
     overflow: hidden;
     scrollbar-width: thin;
-    scrollbar-color: rgba(236, 231, 221, 0.18) transparent;
+    scrollbar-color: var(--lfs-border-strong) transparent;
     background: var(--lfs-atmo), var(--lfs-bg);
 }
 
-/* ---- Theme tokens: Obsidian Cyber — Tokyo-night blues on obsidian ---- */
 #lf_studio_root[data-theme="obsidian-cyber"] {
     --lfs-bg: #0d0e15;
-    --lfs-bg-deep: #090a10;
+    --lfs-bg-deep: #0d0e15;
     --lfs-surface: #141622;
-    --lfs-surface-2: #1c1f2e;
+    --lfs-surface-2: #1e2132;
     --lfs-card: #181a2a;
     --lfs-text: #e2e8f0;
-    --lfs-text-dim: #7c86a8;
-    --lfs-border: rgba(122, 162, 247, 0.10);
-    --lfs-border-strong: rgba(122, 162, 247, 0.22);
-    --lfs-accent: #7aa2f7;
-    --lfs-accent-bright: #a8c1fb;
-    --lfs-accent-soft: rgba(122, 162, 247, 0.13);
-    --lfs-accent-ink: #0a1024;
-    --lfs-accent2: #e0af68;
+    --lfs-text-dim: #9aa3c2;
+    --lfs-text-faint: #565f89;
+    --lfs-border: rgba(35, 38, 59, 0.75);
+    --lfs-border-strong: #23263b;
+    --lfs-accent: #e0af68;
+    --lfs-accent-bright: #eec98a;
+    --lfs-accent-soft: rgba(224, 175, 104, 0.12);
+    --lfs-accent-ink: #0d0e15;
+    --lfs-accent2: #7aa2f7;
     --lfs-accent3: #bb9af7;
-    --lfs-glow: 0 0 12px rgba(122, 162, 247, 0.45);
-    --lfs-atmo:
-        radial-gradient(1000px 650px at 15% 110%, rgba(122, 162, 247, 0.07), transparent 60%),
-        radial-gradient(900px 600px at 95% -10%, rgba(187, 154, 247, 0.06), transparent 55%);
+    --lfs-good: #9ece6a;
+    --lfs-warn: #e0af68;
+    --lfs-bad: #f7768e;
+    --lfs-glow: 0 0 12px rgba(224, 175, 104, 0.2);
+    --lfs-atmo: none;
+    --lfs-font-ui: 'Inter', 'Alegreya Sans', system-ui, sans-serif;
+    --lfs-font-display: 'Inter', 'Alegreya', system-ui, sans-serif;
+    --lfs-font-mono: 'Fira Code', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+    --lfs-radius: 12px;
+    --lfs-radius-lg: 16px;
 }
 
-/* ---- Theme tokens: Tavern Parchment — lamplit oak & candle wax ---- */
+/* ---- Tavern Parchment — v2 exact ---- */
 #lf_studio_root[data-theme="tavern-parchment"] {
     --lfs-bg: #1c1917;
-    --lfs-bg-deep: #151210;
+    --lfs-bg-deep: #1c1917;
     --lfs-surface: #292524;
-    --lfs-surface-2: #36302d;
+    --lfs-surface-2: #44403c;
     --lfs-card: #322d29;
-    --lfs-text: #f5efe6;
-    --lfs-text-dim: #a89c8d;
-    --lfs-border: rgba(245, 239, 230, 0.09);
-    --lfs-border-strong: rgba(245, 239, 230, 0.2);
+    --lfs-text: #f5f5f4;
+    --lfs-text-dim: #a8a29e;
+    --lfs-text-faint: #a8a29e;
+    --lfs-border: rgba(87, 83, 78, 0.55);
+    --lfs-border-strong: #57534e;
     --lfs-accent: #f59e0b;
     --lfs-accent-bright: #fbbf24;
     --lfs-accent-soft: rgba(245, 158, 11, 0.14);
     --lfs-accent-ink: #2c1c02;
-    --lfs-accent2: #fcd9a8;
+    --lfs-accent2: #d97706;
     --lfs-accent3: #b45309;
-    --lfs-glow: 0 0 12px rgba(245, 158, 11, 0.4);
-    --lfs-atmo:
-        radial-gradient(1000px 650px at 14% 110%, rgba(245, 158, 11, 0.08), transparent 60%),
-        radial-gradient(850px 550px at 95% -8%, rgba(180, 83, 9, 0.06), transparent 55%);
+    --lfs-good: #65a30d;
+    --lfs-warn: #f59e0b;
+    --lfs-bad: #dc2626;
+    --lfs-glow: 0 0 12px rgba(245, 158, 11, 0.25);
+    --lfs-atmo: none;
+    --lfs-font-ui: 'Georgia', 'Alegreya', serif;
+    --lfs-font-display: 'Georgia', 'Alegreya', serif;
+    --lfs-font-mono: ui-monospace, 'Consolas', monospace;
+    --lfs-radius: 8px;
+    --lfs-radius-lg: 12px;
 }
 
-/* ---- Theme tokens: Neon Cyberpunk — magenta-cyan on void violet ---- */
+/* ---- Neon Cyberpunk — v2 exact ---- */
 #lf_studio_root[data-theme="neon-cyberpunk"] {
     --lfs-bg: #090314;
-    --lfs-bg-deep: #060110;
+    --lfs-bg-deep: #090314;
     --lfs-surface: #120a24;
-    --lfs-surface-2: #1c1038;
+    --lfs-surface-2: #291652;
     --lfs-card: #1b0f38;
     --lfs-text: #f3e8ff;
-    --lfs-text-dim: #9d7ec9;
-    --lfs-border: rgba(176, 38, 255, 0.16);
-    --lfs-border-strong: rgba(176, 38, 255, 0.3);
-    --lfs-accent: #ff2a8a;
-    --lfs-accent-bright: #ff6cb4;
-    --lfs-accent-soft: rgba(255, 42, 138, 0.15);
+    --lfs-text-dim: #c4a8f5;
+    --lfs-text-faint: #8b5cf6;
+    --lfs-border: rgba(61, 30, 123, 0.75);
+    --lfs-border-strong: #3d1e7b;
+    --lfs-accent: #ff007f;
+    --lfs-accent-bright: #ff5ca8;
+    --lfs-accent-soft: rgba(255, 0, 127, 0.15);
     --lfs-accent-ink: #2b0214;
     --lfs-accent2: #00f0ff;
     --lfs-accent3: #b026ff;
-    --lfs-glow: 0 0 14px rgba(255, 42, 138, 0.55);
-    --lfs-radius: 7px;
-    --lfs-radius-lg: 10px;
-    --lfs-atmo:
-        radial-gradient(1000px 650px at 15% 110%, rgba(255, 42, 138, 0.09), transparent 60%),
-        radial-gradient(900px 600px at 95% -10%, rgba(0, 240, 255, 0.05), transparent 55%);
+    --lfs-good: #00ff66;
+    --lfs-warn: #ff007f;
+    --lfs-bad: #ff3366;
+    --lfs-glow: 0 0 15px rgba(255, 0, 127, 0.4);
+    --lfs-atmo: none;
+    --lfs-font-ui: 'Fira Code', ui-monospace, monospace;
+    --lfs-font-display: 'Fira Code', ui-monospace, monospace;
+    --lfs-font-mono: 'Fira Code', ui-monospace, monospace;
+    --lfs-radius: 4px;
+    --lfs-radius-lg: 8px;
 }
 
-/* CRT scanlines — cyberpunk only, a whisper of the tube */
-#lf_studio_root[data-theme="neon-cyberpunk"] .lf-studio-header::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, 0.14) 2px 3px);
-    opacity: 0.5;
-}
-
-/* ---- Theme tokens: Royal Velvet — gilt on wine-dark velvet ---- */
+/* ---- Royal Velvet — v2 exact ---- */
 #lf_studio_root[data-theme="royal-velvet"] {
     --lfs-bg: #0f0c1b;
-    --lfs-bg-deep: #0a0814;
+    --lfs-bg-deep: #0f0c1b;
     --lfs-surface: #18132b;
-    --lfs-surface-2: #231b3f;
+    --lfs-surface-2: #2e2452;
     --lfs-card: #221b3d;
     --lfs-text: #f3e8ff;
-    --lfs-text-dim: #9a8ec2;
-    --lfs-border: rgba(243, 232, 255, 0.09);
-    --lfs-border-strong: rgba(243, 232, 255, 0.2);
-    --lfs-accent: #e2b84b;
-    --lfs-accent-bright: #f5d37a;
-    --lfs-accent-soft: rgba(226, 184, 75, 0.13);
+    --lfs-text-dim: #b7abd9;
+    --lfs-text-faint: #7e69ab;
+    --lfs-border: rgba(62, 49, 110, 0.75);
+    --lfs-border-strong: #3e316e;
+    --lfs-accent: #facc15;
+    --lfs-accent-bright: #fde047;
+    --lfs-accent-soft: rgba(250, 204, 21, 0.13);
     --lfs-accent-ink: #241a03;
-    --lfs-accent2: #c084fc;
-    --lfs-accent3: #818cf8;
-    --lfs-glow: 0 0 12px rgba(226, 184, 75, 0.45);
-    --lfs-radius: 11px;
-    --lfs-radius-lg: 16px;
-    --lfs-atmo:
-        radial-gradient(1000px 650px at 15% 110%, rgba(226, 184, 75, 0.06), transparent 60%),
-        radial-gradient(900px 600px at 95% -10%, rgba(192, 132, 252, 0.06), transparent 55%);
+    --lfs-accent2: #818cf8;
+    --lfs-accent3: #c084fc;
+    --lfs-good: #34d399;
+    --lfs-warn: #facc15;
+    --lfs-bad: #f43f5e;
+    --lfs-glow: 0 0 14px rgba(250, 204, 21, 0.3);
+    --lfs-atmo: none;
+    --lfs-font-ui: 'Inter', 'Alegreya Sans', system-ui, sans-serif;
+    --lfs-font-display: 'Inter', 'Alegreya', system-ui, sans-serif;
+    --lfs-font-mono: 'Fira Code', ui-monospace, monospace;
+    --lfs-radius: 14px;
+    --lfs-radius-lg: 18px;
 }
 
-/* ---- Theme tokens: Emerald Codex — verdigris on forest parchment ---- */
+/* ---- Emerald Codex — v2 exact ---- */
 #lf_studio_root[data-theme="emerald-codex"] {
     --lfs-bg: #04120b;
-    --lfs-bg-deep: #020c07;
+    --lfs-bg-deep: #04120b;
     --lfs-surface: #0a1c12;
-    --lfs-surface-2: #102818;
+    --lfs-surface-2: #163b26;
     --lfs-card: #0f291a;
     --lfs-text: #ecfdf5;
-    --lfs-text-dim: #77a68c;
-    --lfs-border: rgba(47, 208, 143, 0.12);
-    --lfs-border-strong: rgba(47, 208, 143, 0.26);
-    --lfs-accent: #2fd08f;
-    --lfs-accent-bright: #7fe9c0;
-    --lfs-accent-soft: rgba(47, 208, 143, 0.12);
+    --lfs-text-dim: #9fd8bd;
+    --lfs-text-faint: #059669;
+    --lfs-border: rgba(31, 77, 50, 0.75);
+    --lfs-border-strong: #1f4d32;
+    --lfs-accent: #10b981;
+    --lfs-accent-bright: #34d399;
+    --lfs-accent-soft: rgba(16, 185, 129, 0.12);
     --lfs-accent-ink: #032114;
     --lfs-accent2: #06b6d4;
-    --lfs-accent3: #a3e635;
-    --lfs-glow: 0 0 12px rgba(47, 208, 143, 0.45);
+    --lfs-accent3: #34d399;
+    --lfs-good: #22c55e;
+    --lfs-warn: #10b981;
+    --lfs-bad: #ef4444;
+    --lfs-glow: 0 0 12px rgba(16, 185, 129, 0.3);
+    --lfs-atmo: none;
+    --lfs-font-ui: 'JetBrains Mono', ui-monospace, monospace;
+    --lfs-font-display: 'JetBrains Mono', ui-monospace, monospace;
+    --lfs-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --lfs-radius: 8px;
+    --lfs-radius-lg: 12px;
+}
+
+/* ---- Night Forge (extension original, kept) ---- */
+#lf_studio_root[data-theme="night-forge"] {
+    --lfs-bg: #141519;
+    --lfs-bg-deep: #0f1013;
+    --lfs-surface: #1a1c22;
+    --lfs-surface-2: #21242c;
+    --lfs-card: #232730;
+    --lfs-text: #ece7dd;
+    --lfs-text-dim: #a09b8e;
+    --lfs-text-faint: #7d786c;
+    --lfs-border: rgba(236, 231, 221, 0.09);
+    --lfs-border-strong: rgba(236, 231, 221, 0.18);
+    --lfs-accent: #e08e3c;
+    --lfs-accent-bright: #f2b263;
+    --lfs-accent-soft: rgba(224, 142, 60, 0.14);
+    --lfs-accent-ink: #221607;
+    --lfs-accent2: #8fa8c8;
+    --lfs-accent3: #6fae8f;
+    --lfs-good: #51cf66;
+    --lfs-warn: #ffd43b;
+    --lfs-bad: #ff6b6b;
+    --lfs-glow: 0 0 12px rgba(224, 142, 60, 0.45);
     --lfs-atmo:
-        radial-gradient(1000px 650px at 15% 110%, rgba(47, 208, 143, 0.07), transparent 60%),
-        radial-gradient(900px 600px at 95% -10%, rgba(6, 182, 212, 0.05), transparent 55%);
+        radial-gradient(1100px 700px at 12% 108%, rgba(224, 142, 60, 0.06), transparent 60%),
+        radial-gradient(900px 600px at 96% -8%, rgba(143, 168, 200, 0.05), transparent 55%);
+    --lfs-font-ui: 'Alegreya Sans', var(--mainFontFamily, sans-serif);
+    --lfs-font-display: 'Alegreya', Georgia, 'Times New Roman', serif;
+    --lfs-font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    --lfs-radius: 10px;
+    --lfs-radius-lg: 14px;
 }
 
 /* ---- Shell ---- */
@@ -2698,4 +2748,439 @@
 
 #lf_world_button:hover {
     color: #f2b263;
+}
+
+/* ============ v1/v2 Forge reproduction layer ============ */
+
+/* Faintest meta text = v2's text-muted (v1 tokyoComment) */
+#lf_studio_root .lf-entry-meta,
+#lf_studio_root .lf-kbd-hints,
+#lf_studio_root .lf-quick-label,
+#lf_studio_root .lf-msg-time,
+#lf_studio_root .lf-source-foot,
+#lf_studio_root .lf-dim { color: var(--lfs-text-faint); }
+
+/* Header logo tile: gold→purple gradient + glow (v1) */
+#lf_studio_root .lf-studio-logo {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--lfs-accent) 22%, transparent),
+        color-mix(in srgb, var(--lfs-accent3) 22%, transparent));
+}
+#lf_studio_root .lf-studio-sub { box-shadow: var(--lfs-glow); }
+#lf_studio_root #lf_theme_btn { color: var(--lfs-accent); font-weight: 600; }
+#lf_studio_root .lf-export-json .lf-ic { color: var(--lfs-accent2); }
+
+/* Proposals tab badge: soft purple pill (v1) */
+#lf_studio_root .lf-tab-badge {
+    background: color-mix(in srgb, var(--lfs-accent3) 20%, transparent);
+    color: var(--lfs-accent3);
+}
+
+/* Header context chip (v1 "Context: 14.2k / 32k") */
+#lf_studio_root .lf-context-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--lfs-text-faint);
+    white-space: nowrap;
+}
+#lf_studio_root .lf-context-chip .lf-ic { color: var(--lfs-good); }
+#lf_studio_root .lf-context-chip strong { color: var(--lfs-text); font-weight: 600; }
+@media (max-width: 1250px) { #lf_studio_root .lf-context-chip { display: none; } }
+
+/* Book pill KB chip (v1) */
+#lf_studio_root .lf-book-pill-kb {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.66rem;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--lfs-surface);
+    color: var(--lfs-text-faint);
+}
+#lf_studio_root .lf-book-pill-kb:empty { display: none; }
+
+/* Chat bubbles: v1 corner notches + assistant header divider */
+#lf_studio_root .lf-msg.user .lf-msg-bubble {
+    background: var(--lfs-surface-2);
+    border-color: var(--lfs-border-strong);
+    border-radius: var(--lfs-radius-lg) 0 var(--lfs-radius-lg) var(--lfs-radius-lg);
+}
+#lf_studio_root .lf-msg.assistant .lf-msg-bubble {
+    border-radius: var(--lfs-radius-lg) var(--lfs-radius-lg) 0 var(--lfs-radius-lg);
+}
+#lf_studio_root .lf-msg.assistant .lf-msg-by {
+    border-bottom: 1px solid var(--lfs-border);
+    padding-bottom: 5px;
+    margin-bottom: 6px;
+}
+#lf_studio_root .lf-msg.user .lf-msg-by { color: var(--lfs-accent); }
+
+/* Quick-forge chips: filled pills with v1's gold/cyan/purple icons */
+#lf_studio_root .lf-quick-chip { background: var(--lfs-card); }
+#lf_studio_root .lf-quick-chip:nth-of-type(1) .lf-ic { color: var(--lfs-accent); }
+#lf_studio_root .lf-quick-chip:nth-of-type(2) .lf-ic { color: var(--lfs-accent2); }
+#lf_studio_root .lf-quick-chip:nth-of-type(3) .lf-ic { color: var(--lfs-accent3); }
+
+/* Extract = v1's purple "Distill AI" */
+#lf_studio_root .lf-studio-page .lf-btn-soft,
+#lf_studio_root .lf-modal-backdrop .lf-btn-soft {
+    color: var(--lfs-accent3) !important;
+    border-color: color-mix(in srgb, var(--lfs-accent3) 45%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent3) 12%, transparent);
+}
+#lf_studio_root .lf-studio-page .lf-btn-soft:hover,
+#lf_studio_root .lf-modal-backdrop .lf-btn-soft:hover {
+    border-color: color-mix(in srgb, var(--lfs-accent3) 75%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent3) 20%, transparent);
+}
+
+/* Draft cards: v1 status dot (cycles gold → cyan → purple) + room for it */
+#lf_studio_root .lf-draft { position: relative; }
+#lf_studio_root .lf-draft-head { padding-right: 14px; }
+#lf_studio_root .lf-draft::after {
+    content: "";
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lfs-accent);
+}
+#lf_studio_root .lf-source-entries .lf-draft:nth-of-type(3n+2)::after { background: var(--lfs-accent2); }
+#lf_studio_root .lf-source-entries .lf-draft:nth-of-type(3n)::after { background: var(--lfs-accent3); }
+#lf_studio_root .lf-draft:hover {
+    border-color: color-mix(in srgb, var(--lfs-accent) 50%, transparent);
+}
+
+/* Draft actions: v1's 4-button labeled grid */
+#lf_studio_root .lf-draft-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--lfs-border);
+}
+#lf_studio_root .lf-draft-actions .menu_button {
+    justify-content: center;
+    min-width: 0;
+    padding: 3px 4px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* The Wizard button: neutral chrome, purple wand (v1) */
+#lf_studio_root .lf-draft-wizard { color: var(--lfs-text); }
+#lf_studio_root .lf-draft-wizard .lf-ic { color: var(--lfs-accent3); }
+#lf_studio_root .lf-draft-wizard:hover {
+    border-color: color-mix(in srgb, var(--lfs-accent3) 55%, transparent);
+    background: color-mix(in srgb, var(--lfs-accent3) 10%, transparent);
+    color: var(--lfs-text);
+}
+
+/* Grounding meter track: visible card-tone well (v1 surfaceBorder) */
+#lf_studio_root .lf-grounding-bar { background: var(--lfs-card); }
+
+/* Reader prose stays bookish in every theme */
+#lf_studio_root .lf-reader-text { font-family: 'Alegreya', Georgia, serif; }
+
+/* v2 is flat: no CRT scanlines */
+#lf_studio_root[data-theme="neon-cyberpunk"] .lf-studio-header::after { content: none; }
+
+/* Wizard bar model chip: v1's green-soft pill */
+#lf_studio_root #lf_wizard_model { cursor: default; }
+
+/* "Grounded Extraction" chip on carousel bubbles: v1's purple mono tag */
+#lf_studio_root .lf-grounded-chip {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--lfs-accent3) 16%, transparent);
+    color: var(--lfs-accent3);
+    white-space: nowrap;
+}
+
+/* ============ v1 LEFT RAIL: Canon Research & Sources ============ */
+#lf_studio_root .lf-panel-research {
+    width: 320px;
+    min-width: 320px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--lfs-border);
+    animation: lf-rise 0.32s ease 0.06s both;
+}
+
+#lf_studio_root .lf-panel-research .lf-panel-header > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Search block: icon inside the well, Go button inside at the right */
+#lf_studio_root .lf-rail-search {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--lfs-border);
+}
+
+#lf_studio_root .lf-rail-search .lf-search-field input { padding-right: 42px; font-size: 0.78rem; }
+
+#lf_studio_root .lf-rail-go {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 2px 8px;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.64rem;
+    font-weight: 600;
+    border: none;
+    border-radius: calc(var(--lfs-radius) - 6px);
+    background: var(--lfs-border-strong);
+    color: var(--lfs-text-dim);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+#lf_studio_root .lf-rail-go:hover {
+    color: var(--lfs-text);
+    background: color-mix(in srgb, var(--lfs-accent) 45%, var(--lfs-border-strong));
+}
+
+/* Quick filter chips (radio behavior — .active is the lit one) */
+#lf_studio_root .lf-rail-filters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+#lf_studio_root .lf-rail-filters-label {
+    font-size: 0.64rem;
+    color: var(--lfs-text-faint);
+}
+
+#lf_studio_root .lf-rail-filter {
+    padding: 2px 9px;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.66rem;
+    border-radius: 999px;
+    border: 1px solid var(--lfs-border-strong);
+    background: var(--lfs-card);
+    color: var(--lfs-text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+#lf_studio_root .lf-rail-filter[data-filter="magic"] {
+    background: var(--lfs-accent-soft);
+    color: var(--lfs-accent);
+    border-color: color-mix(in srgb, var(--lfs-accent) 25%, transparent);
+}
+
+#lf_studio_root .lf-rail-filter[data-filter="chars"] {
+    background: color-mix(in srgb, var(--lfs-accent2) 10%, transparent);
+    color: var(--lfs-accent2);
+    border-color: color-mix(in srgb, var(--lfs-accent2) 25%, transparent);
+}
+
+#lf_studio_root .lf-rail-filter:hover { color: var(--lfs-text); }
+
+#lf_studio_root .lf-rail-filter.active {
+    border-color: currentColor;
+    color: var(--lfs-text);
+    box-shadow: 0 0 8px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* Sources list: the ONE scroll region of the rail */
+#lf_studio_root .lf-rail-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+#lf_studio_root .lf-rail-sources-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lfs-text-faint);
+}
+
+#lf_studio_root .lf-rail-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--lfs-accent2);
+    cursor: pointer;
+}
+
+#lf_studio_root .lf-rail-add:hover { text-decoration: underline; }
+
+#lf_studio_root .lf-rail-sources {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#lf_studio_root .lf-rail-empty {
+    padding: 14px 6px;
+    font-size: 0.74rem;
+    line-height: 1.5;
+    color: var(--lfs-text-faint);
+    text-align: center;
+}
+
+/* Rail source cards: v1 anatomy + hover tint cycling cyan → purple → gold */
+#lf_studio_root .lf-rail-card {
+    flex-shrink: 0;
+    padding: 10px;
+    border: 1px solid var(--lfs-border-strong);
+    border-radius: var(--lfs-radius);
+    background: color-mix(in srgb, var(--lfs-surface) 80%, transparent);
+    transition: border-color 0.15s ease;
+}
+
+#lf_studio_root .lf-rail-card:nth-of-type(3n+1):hover { border-color: color-mix(in srgb, var(--lfs-accent2) 40%, transparent); }
+#lf_studio_root .lf-rail-card:nth-of-type(3n+2):hover { border-color: color-mix(in srgb, var(--lfs-accent3) 40%, transparent); }
+#lf_studio_root .lf-rail-card:nth-of-type(3n):hover { border-color: color-mix(in srgb, var(--lfs-accent) 40%, transparent); }
+
+#lf_studio_root .lf-rail-card-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+#lf_studio_root .lf-rail-card-head > .lf-ic { width: 15px; height: 15px; }
+
+#lf_studio_root .lf-rail-card-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--lfs-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#lf_studio_root .lf-rail-check { flex-shrink: 0; }
+
+#lf_studio_root .lf-rail-card-preview {
+    margin-top: 6px;
+    font-size: 0.7rem;
+    line-height: 1.45;
+    color: var(--lfs-text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+#lf_studio_root .lf-rail-card-foot {
+    margin-top: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-family: var(--lfs-font-mono);
+    font-size: 0.64rem;
+    color: var(--lfs-text-faint);
+}
+
+#lf_studio_root .lf-rail-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--lfs-font-ui);
+    color: var(--lfs-good);
+}
+
+#lf_studio_root .lf-rail-state .lf-ic { width: 10px; height: 10px; }
+
+#lf_studio_root .lf-rail-state.off { color: var(--lfs-text-faint); }
+
+/* Rail footer: Reconciliation Status meter */
+#lf_studio_root .lf-rail-footer {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--lfs-border);
+    background: color-mix(in srgb, var(--lfs-bg-deep) 60%, transparent);
+}
+
+#lf_studio_root .lf-recon-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--lfs-text-dim);
+}
+
+#lf_studio_root .lf-recon-value {
+    font-family: var(--lfs-font-mono);
+    color: var(--lfs-good);
+}
+
+#lf_studio_root .lf-recon-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--lfs-card);
+    overflow: hidden;
+}
+
+#lf_studio_root .lf-recon-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--lfs-accent), var(--lfs-accent3), var(--lfs-accent2));
+    transition: width 0.3s ease;
+}
+
+#lf_studio_root .lf-recon-line {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.66rem;
+    color: var(--lfs-text-faint);
+}
+
+#lf_studio_root .lf-recon-line .lf-ic {
+    width: 11px;
+    height: 11px;
+    color: var(--lfs-accent);
+    flex-shrink: 0;
 }

@@ -9,13 +9,14 @@
 // via activeSources().
 import { extensionName } from "./config.js";
 import { escapeHtml, verifyQuote, icon, keysHtml } from "./helpers.js";
+import { getContext } from "../../../../../script.js";
 import { getWizardSession, activeSources,
          pushWizardMessage, clearWizardMessages,
          addWizardProposals, updateWizardProposal,
          listWizardSessions, createWizardSession, switchWizardSession,
          deleteWizardSession, renameWizardSession } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
-import { saveDraft, renderDraftsList } from "./drafts.js";
+import { saveDraft, renderDraftsList, updateResearchRail } from "./drafts.js";
 import { applyUpdateToLorebook } from "./wiData.js";
 
 const SEND_LABEL = `${icon("send")}Send`;
@@ -43,10 +44,12 @@ function messageHtml(m, byId) {
     const time = m.ts ? ` · ${new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
     const props = m.role === "assistant" ? (byId.get(m.id) || []) : [];
     const carousel = props.length ? carouselHtml(props) : "";
+    // v1's purple mono tag on bubbles that carry a proposal carousel
+    const grounded = props.length ? `<span class="lf-grounded-chip" title="Evidence quotes verified against the staged sources">Grounded Extraction</span>` : "";
     return `
         <div class="lf-msg ${m.role}">
             <div class="lf-msg-bubble${carousel ? " lf-msg-wide" : ""}">
-                <div class="lf-msg-by">${who}<span class="lf-msg-time">${time}</span></div>
+                <div class="lf-msg-by">${who}${grounded}<span class="lf-msg-time">${time}</span></div>
                 <div class="lf-msg-text">${escapeHtml(m.text)}</div>
                 ${carousel}
             </div>
@@ -167,6 +170,7 @@ function renderProposals() {
     const counts = { verified: 0, fuzzy: 0, missing: 0 };
     for (const v of verdicts) counts[v]++;
     renderGrounding(counts, verdicts.length);
+    updateResearchRail(counts, verdicts.length);
 
     // Pane header chip + top-tab badge (pending count only — the badge
     // disappears when nothing awaits review)
@@ -385,6 +389,24 @@ function renderHeaderMeta() {
     $("#lf_wizard_meta").text(`${actives.length} active source${actives.length === 1 ? "" : "s"} · ${(totalChars / 1024).toFixed(1)} KB`);
     $("#lf_book_pill_name").text(w.lorebookTarget || "none");
     $("#lf_book_pill").toggleClass("is-set", !!w.lorebookTarget);
+
+    // v1 header context chip: token estimate of the staged active sources
+    const ctxChip = $("#lf_context_chip");
+    if (ctxChip.length) {
+        ctxChip.toggleClass("lf-hidden", actives.length === 0);
+        ctxChip.find("strong").text(`${(Math.round(totalChars / 4) / 1000).toFixed(1)}k`);
+    }
+
+    // v1 "Active Model:" pill — real connection name, never a hardcoded model
+    const modelChip = $("#lf_wizard_model");
+    if (modelChip.length) {
+        let name = "";
+        try {
+            const ctx = typeof getContext === "function" ? getContext() : null;
+            name = ctx?.connectionManagerProfile?.name || ctx?.mainApi || ctx?.onlineStatus || "";
+        } catch { /* no ST context — fall through to "Connected" */ }
+        modelChip.text(`Active Model: ${name || "Connected"}`);
+    }
 }
 
 // ---------- Root render ----------
@@ -398,6 +420,7 @@ export function renderWizard() {
             <span class="lf-tile">${icon("sparkles")}</span>
             <div class="lf-wizard-heading">
                 <div class="lf-wizard-name">Lorebook Wizard
+                    <span id="lf_wizard_model" class="lf-chip lf-chip-good" title="The connection currently powering the Wizard"></span>
                     <span id="lf_wizard_meta" class="lf-chip lf-chip-good" title="Click to manage sources"></span>
                 </div>
                 <div class="lf-wizard-sub">Grounded WorldInfo extraction — every proposal cites your sources.</div>

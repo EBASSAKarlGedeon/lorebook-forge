@@ -344,7 +344,8 @@ function draftCardHtml(d) {
         <div class="lf-draft-actions">
             <button class="menu_button lf-btn-good lf-draft-commit" type="button" title="Commit to a lorebook">Commit</button>
             <button class="menu_button lf-draft-edit" type="button" title="Inspect &amp; edit WorldInfo fields">Edit</button>
-            <button class="menu_button lf-btn-bad lf-draft-delete" type="button">${icon("trash", "lf-ic-sm")}</button>
+            <button class="menu_button lf-draft-wizard" type="button" title="Load this draft into the Wizard">${icon("wand", "lf-ic-sm")}Wizard</button>
+            <button class="menu_button lf-btn-bad lf-draft-delete" type="button" title="Delete draft">${icon("trash", "lf-ic-sm")}Delete</button>
         </div>
         <div class="lf-commit-form" data-id="${escapeHtml(d.id)}" style="display:none;"></div>
     </div>`;
@@ -533,6 +534,47 @@ export function initDraftsDeck() {
     $("#lf_drafts_list").on("click", ".lf-draft-edit", function () {
         openInspector($(this).closest(".lf-draft").data("id"));
     });
+    // v1 "Wizard" button: load a staged draft into the Wizard composer
+    $("#lf_drafts_list").on("click", ".lf-draft-wizard", function () {
+        sendDraftToWizard($(this).closest(".lf-draft").data("id"));
+    });
+
+    // ---- v1 left rail (Canon Research & Sources) wiring ----
+    // Search: Go click or Enter → the real Reader search (SearXNG)
+    const railSearch = () => {
+        const q = String($("#lf_rail_search").val() || "").trim();
+        if (!q) return;
+        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-reader"));
+        $("#lf_search_query").val(q);
+        $("#lf_search_btn").trigger("click");
+    };
+    $("#lf_rail_search_go").on("click", railSearch);
+    $("#lf_rail_search").on("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            railSearch();
+        }
+    });
+    // Quick filter chips: radio behavior — click the active one to clear
+    $(".lf-rail-filter").on("click", function () {
+        const f = String($(this).data("filter"));
+        railFilter = railFilter === f ? null : f;
+        $(".lf-rail-filter").removeClass("active");
+        if (railFilter) $(this).addClass("active");
+        renderResearchRail();
+    });
+    // Add Source: focus the deck's slide-open paste form (never toggles it closed)
+    $("#lf_rail_addsource").on("click", () => {
+        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-sources"));
+        const form = $("#lf_deck_addsource");
+        if (form.length && !form.is(":visible")) $(".lf-deck-addsource").trigger("click");
+        $(".lf-deck-src-title").trigger("focus");
+    });
+    // Rail checkbox → same context toggle the deck uses, then refresh both
+    $("#lf_rail_sources").on("change", ".lf-rail-check", function () {
+        toggleSourceActive(String($(this).closest(".lf-rail-card").data("id")));
+        renderDraftsList();
+    });
 }
 
 export function renderDraftsList() {
@@ -541,6 +583,7 @@ export function renderDraftsList() {
     const w = getWizardSession();
     const drafts = getDrafts();
     const totalEntryText = drafts.reduce((n, d) => n + d.content.length, 0);
+    $("#lf_book_pill_kb").text(totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "");
     $("#lf_drafts_count").text(w.sources.length
         ? `${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "0 entries"}`
         : "");
@@ -564,6 +607,7 @@ export function renderDraftsList() {
     updateBatchBar();
     renderCanonRules();
     renderImportForm();
+    renderResearchRail();
 }
 
 // Canon-rules + import forms: forms persist across renders, so only their
@@ -604,4 +648,99 @@ function renderImportForm() {
             btn.prop("disabled", false);
         }
     });
+}
+
+// ---------- v1 left rail: Canon Research & Sources ----------
+// A compact mirror of the deck's sources: filterable cards + the
+// Reconciliation Status meter. The rail renders from the SAME wizard
+// session sources the deck owns, so renderDraftsList() refreshes it.
+
+// Quick-filter chips: case-insensitive regex over source titles
+const RAIL_FILTERS = {
+    magic:  /magic|law/i,
+    chars:  /char|person/i,
+    relics: /relic|artifact|item/i,
+};
+let railFilter = null;
+
+// Last verdict counts renderProposals() computed — the rail meter and the
+// Proposals grounding bar can never disagree.
+const recon = { counts: { verified: 0, fuzzy: 0, missing: 0 }, total: 0 };
+
+// Shared with wizard.js — called from renderProposals() with the same
+// verdict counts renderGrounding() uses.
+export function updateResearchRail(counts, total) {
+    recon.counts = counts || { verified: 0, fuzzy: 0, missing: 0 };
+    recon.total = Number(total) || 0;
+    renderReconMeter();
+}
+
+function renderReconMeter() {
+    const val = $("#lf_recon_value");
+    if (!val.length) return;
+    if (!recon.total) {
+        val.text("—");
+        $("#lf_recon_bar").css("width", "0%");
+        $("#lf_recon_text").text("No key conflicts detected in active sources.");
+        return;
+    }
+    const pct = Math.round(recon.counts.verified / recon.total * 100);
+    val.text(`${pct}% Verified`);
+    $("#lf_recon_bar").css("width", `${pct}%`);
+    $("#lf_recon_text").text(recon.counts.missing === 0
+        ? "No key conflicts detected in active sources."
+        : `${recon.counts.missing} unverified — review in Proposals.`);
+}
+
+function railSourceCardHtml(s) {
+    const active = s.active !== false;
+    const preview = String(s.text).replace(/\s+/g, " ").trim().slice(0, 220);
+    return `
+        <div class="lf-rail-card" data-id="${escapeHtml(s.id)}">
+            <div class="lf-rail-card-head">
+                ${sourceIcon(s)}
+                <span class="lf-rail-card-title" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</span>
+                <input type="checkbox" class="lf-rail-check" title="Include this source in AI context (extraction + chat)"${active ? " checked" : ""} />
+            </div>
+            <div class="lf-rail-card-preview">${preview ? escapeHtml(preview) : "<i>(empty source)</i>"}</div>
+            <div class="lf-rail-card-foot">
+                <span>${(s.text.length / 1024).toFixed(1)} KB · ~${Math.ceil(s.text.length / 4).toLocaleString()} tok</span>
+                <span class="lf-rail-state${active ? "" : " off"}">${active ? `${icon("checkCircle", "lf-ic-sm")}Indexed` : "Excluded"}</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderResearchRail() {
+    const list = $("#lf_rail_sources");
+    if (!list.length) return;
+    const sources = getWizardSession().sources;
+    const rx = railFilter ? RAIL_FILTERS[railFilter] : null;
+    const shown = rx ? sources.filter(s => rx.test(s.title)) : sources;
+    $("#lf_rail_count").text(shown.length);
+    list.html(shown.length
+        ? shown.map(railSourceCardHtml).join("")
+        : `<div class="lf-rail-empty">${railFilter
+            ? "No sources match this filter."
+            : "No sources staged yet — scrape a page in the Reader, or use Add Source."}</div>`);
+    renderReconMeter();
+}
+
+// v1 "Wizard" button: load a staged draft into the Wizard composer for iteration
+function sendDraftToWizard(id) {
+    const d = getDrafts().find(x => x.id === String(id));
+    if (!d) return;
+    const text = [
+        "Refine this staged draft entry:",
+        "",
+        `Title: ${d.title}`,
+        `Keys: ${d.keys.join(", ")}`,
+        "Content:",
+        d.content,
+    ].join("\n");
+    $("#lf_wizard_input").val(text);
+    document.getElementById("lf_studio_root")?.dispatchEvent(
+        new CustomEvent("lf-show-center", { detail: "wizard" }));
+    requestAnimationFrame(() => $("#lf_wizard_input").trigger("focus"));
+    toastr.info(`"${d.title}" loaded into the Wizard.`, "Lorebook Forge");
 }

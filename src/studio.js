@@ -21,15 +21,15 @@ import { initWizard } from "./wizard.js";
 import { renderGraph } from "./graph.js";
 
 let studioRoot = null;
-const railState = { drafts: true };
+const railState = { research: true, drafts: true };
 
 // Swatch = the preset's signature accent (shown in the picker)
 const THEMES = [
     { id: "obsidian-cyber",   label: "Obsidian Cyber",   swatch: "#7aa2f7" },
     { id: "tavern-parchment", label: "Tavern Parchment", swatch: "#f59e0b" },
-    { id: "neon-cyberpunk",   label: "Neon Cyberpunk",   swatch: "#ff2a8a" },
-    { id: "royal-velvet",     label: "Royal Velvet",     swatch: "#e2b84b" },
-    { id: "emerald-codex",    label: "Emerald Codex",    swatch: "#2fd08f" },
+    { id: "neon-cyberpunk",   label: "Neon Cyberpunk",   swatch: "#ff007f" },
+    { id: "royal-velvet",     label: "Royal Velvet",     swatch: "#c084fc" },
+    { id: "emerald-codex",    label: "Emerald Codex",    swatch: "#10b981" },
     { id: "night-forge",      label: "Night Forge",      swatch: "#e08e3c" },
 ];
 
@@ -163,6 +163,7 @@ function buildStudio() {
                 <button id="lf_book_pill" class="lf-book-pill" type="button" title="Update target — click to manage sources">
                     ${icon("book")}<span class="lf-book-pill-label">Lorebook</span>
                     <span id="lf_book_pill_name" class="lf-book-pill-name">none</span>
+                    <span id="lf_book_pill_kb" class="lf-book-pill-kb"></span>
                 </button>
                 <nav class="lf-tabs" role="tablist">
                     <button id="lf_tab_wizard" class="lf-tab active" type="button" role="tab" aria-selected="true">${icon("wand")}Wizard</button>
@@ -171,6 +172,10 @@ function buildStudio() {
                     <button id="lf_tab_graph" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("network")}Canon Map</button>
                 </nav>
                 <div class="lf-header-actions">
+                    <div id="lf_context_chip" class="lf-context-chip lf-hidden" title="Token estimate of the active sources staged for the Wizard">
+                        ${icon("database", "lf-ic-sm")}<span>Context: <strong class="lf-mono"></strong> tok</span>
+                    </div>
+                    <button id="lf_toggle_research" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle Canon Research & Sources rail">${icon("panelLeft")}</button>
                     <button id="lf_toggle_drafts" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle Lorebook Deck">${icon("panelRight")}</button>
                     <div class="lf-theme-picker">
                         <button id="lf_theme_btn" class="lf-ghost-btn" type="button" aria-haspopup="menu" aria-expanded="false">
@@ -185,10 +190,45 @@ function buildStudio() {
                         </div>
                     </div>
                     <button class="lf-ghost-btn lf-export-json" type="button" title="Download staged drafts as a SillyTavern lorebook (.json)">${icon("download")}Export JSON</button>
+                    <button id="lf_settings_gear" class="lf-icon-btn" type="button" title="Open Lorebook Forge settings in the Extensions panel">${icon("gear")}</button>
                     <button class="lf-studio-close lf-icon-btn" type="button" title="Close (Esc)">${icon("x")}</button>
                 </div>
             </header>
             <div class="lf-studio-main">
+                <aside class="lf-panel lf-panel-research">
+                    <div class="lf-panel-header">
+                        ${icon("compass", "lf-ic-accent")}<span>Canon Research &amp; Sources</span>
+                        <button class="lf-icon-btn lf-panel-collapse" type="button" data-panel="research" title="Collapse">${icon("panelLeftClose")}</button>
+                    </div>
+                    <div class="lf-rail-search">
+                        <div class="lf-search-field">
+                            ${icon("search")}
+                            <input id="lf_rail_search" class="text_pole lf-text-input" type="text" placeholder="Search web, wiki, or local docs..." autocomplete="off" />
+                            <button id="lf_rail_search_go" class="lf-rail-go" type="button" title="Search with the Reader">Go</button>
+                        </div>
+                        <div class="lf-rail-filters">
+                            <span class="lf-rail-filters-label">Quick Filters:</span>
+                            <button class="lf-rail-filter" type="button" data-filter="magic" title="Sources matching magic / law">Magic Laws</button>
+                            <button class="lf-rail-filter" type="button" data-filter="chars" title="Sources matching char / person">Characters</button>
+                            <button class="lf-rail-filter" type="button" data-filter="relics" title="Sources matching relic / artifact / item">Relics</button>
+                        </div>
+                    </div>
+                    <div class="lf-rail-body">
+                        <div class="lf-rail-sources-head">
+                            <span>Active Context Sources (<span id="lf_rail_count">0</span>)</span>
+                            <button id="lf_rail_addsource" class="lf-rail-add" type="button">${icon("plus", "lf-ic-sm")}Add Source</button>
+                        </div>
+                        <div id="lf_rail_sources" class="lf-rail-sources"></div>
+                    </div>
+                    <div class="lf-rail-footer">
+                        <div class="lf-recon-row">
+                            <span>Reconciliation Status</span>
+                            <span id="lf_recon_value" class="lf-recon-value">—</span>
+                        </div>
+                        <div class="lf-recon-track"><div id="lf_recon_bar" class="lf-recon-fill"></div></div>
+                        <div class="lf-recon-line">${icon("sparkles", "lf-ic-sm")}<span id="lf_recon_text">No key conflicts detected in active sources.</span></div>
+                    </div>
+                </aside>
                 <section class="lf-center">
                     <div id="lf_wizard" class="lf-pane lf-wizard"></div>
                     <section id="lf_proposals_pane" class="lf-pane lf-proposals-pane lf-hidden">
@@ -271,6 +311,20 @@ function buildStudio() {
         el.querySelector(CENTER_TABS[name].tab).addEventListener("click", () => showCenter(name));
     }
     el.querySelector("#lf_toggle_drafts").addEventListener("click", () => toggleSidePanel("drafts"));
+    el.querySelector("#lf_toggle_research").addEventListener("click", () => toggleSidePanel("research"));
+    // v1 settings gear: jump to this extension's drawer in the Extensions
+    // panel and open it. If the panel isn't mounted, say so and stay here.
+    el.querySelector("#lf_settings_gear").addEventListener("click", () => {
+        const drawer = document.querySelector("#extensions_settings2 .lorebook-forge-settings, #extensions_settings .lorebook-forge-settings");
+        if (!drawer) {
+            toastr.info("The Extensions panel isn't mounted — open it from the ST extensions menu, then use the gear again.", "Lorebook Forge");
+            return;
+        }
+        const toggle = drawer.querySelector(".inline-drawer-toggle");
+        if (toggle) $(toggle).trigger("click");
+        drawer.scrollIntoView({ behavior: "smooth" });
+        closeStudio();
+    });
     for (const btn of el.querySelectorAll(".lf-panel-collapse")) {
         btn.addEventListener("click", () => toggleSidePanel(btn.dataset.panel, false));
     }
@@ -305,6 +359,12 @@ export function openStudio() {
     const s = extension_settings[extensionName];
     studioRoot.style.setProperty("--lf-drafts-w", `${Number(s.draftsPanelWidth) || 340}px`);
     applyTheme(s.theme);
+
+    // Restore the panels the user collapsed before closing (railState
+    // persists across Studio reopen within the session)
+    for (const name of Object.keys(railState)) {
+        if (!railState[name]) toggleSidePanel(name, false);
+    }
 
     initResearch();        // wires search + reader (fresh DOM each open)
     initDraftsDeck();      // batch bar + export (fresh DOM each open)
