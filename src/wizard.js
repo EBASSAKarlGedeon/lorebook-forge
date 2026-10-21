@@ -9,7 +9,7 @@
 // via activeSources().
 import { extensionName } from "./config.js";
 import { escapeHtml, verifyQuote, icon, keysHtml } from "./helpers.js";
-import { getContext } from "../../../../../script.js";
+import { getContext } from "../../../../extensions.js";
 import { getWizardSession, activeSources,
          pushWizardMessage, clearWizardMessages,
          addWizardProposals, updateWizardProposal,
