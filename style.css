@@ -110,26 +110,6 @@
     padding-top: 8px;
 }
 
-.lf-reader-meta {
-    font-size: 0.78em;
-    opacity: 0.6;
-    margin-bottom: 6px;
-}
-
-.lf-reader-text {
-    max-height: 300px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
-    font-size: 0.82em;
-    line-height: 1.5;
-    margin: 0;
-    padding: 8px;
-    border-radius: 8px;
-    background: rgba(128, 128, 128, 0.08);
-}
-
 /* Stage 6: entry drafts */
 .lf-drafts-list {
     display: flex;
@@ -179,26 +159,6 @@
     margin-top: 6px;
     padding: 3px 10px;
     font-size: 0.8em;
-}
-
-.lf-draft-btn {
-    padding: 3px 10px;
-    font-size: 0.8em;
-    margin-left: 8px;
-}
-
-.lf-draft-form {
-    margin-top: 10px;
-    padding: 10px;
-    border: 1px solid rgba(128, 128, 128, 0.3);
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.lf-draft-form .lf-settings-label {
-    font-size: 0.85em;
 }
 
 .lf-draft-content {
@@ -903,8 +863,7 @@
 
 #lf_studio_root .lf-result-actions { margin-top: 6px; }
 
-#lf_studio_root .lf-read-btn,
-#lf_studio_root .lf-draft-btn {
+#lf_studio_root .lf-read-btn {
     padding: 3px 10px;
     font-size: 0.8rem;
     margin-left: 0;
@@ -2043,86 +2002,10 @@
 /* Empty state only while there are no results */
 #lf_studio_root .lf-reader-col .lf-search-results:not(:empty) ~ .lf-reader-empty { display: none; }
 
-#lf_studio_root .lf-reader-col .lf-search-results:empty { display: none; }
-
-/* Reader host: empty state fills it; loaded content scrolls its own body */
-#lf_studio_root .lf-reader-host {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
+/* Empty results give the room to the empty-state block below them */
+#lf_studio_root .lf-reader-col .lf-search-results:empty { flex: 0 0 auto; padding: 0; }
 
 #lf_studio_root .lf-reader-search { max-width: 560px; }
-
-#lf_studio_root #lf_reader {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-#lf_studio_root .lf-reader-content {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Meta row doubles as the pane's sticky toolbar */
-#lf_studio_root .lf-reader-meta {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 9px 16px;
-    border-bottom: 1px solid var(--lfs-border);
-    background: var(--lfs-bg-deep);
-    font-size: 0.78rem;
-    color: var(--lfs-text-dim);
-}
-
-#lf_studio_root .lf-reader-meta .lf-reader-close { margin-left: auto; }
-
-/* The ONE scroll of the Reader: text + links + forms flow as one column */
-#lf_studio_root .lf-reader-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 14px 18px 16px;
-}
-
-/* Article text: the book column — serif, measured line length */
-#lf_studio_root .lf-reader-text {
-    flex: none;
-    max-height: none;
-    overflow: visible;
-    width: 100%;
-    max-width: 82ch;
-    align-self: center;
-    margin: 0;
-    padding: 16px 20px;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius);
-    background: var(--lfs-bg-deep);
-    font-family: var(--lfs-font-display);
-    font-size: 0.95rem;
-    line-height: 1.62;
-    color: var(--lfs-text);
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-/* Wiki links strip */
-#lf_studio_root .lf-reader-links {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
 
 #lf_studio_root .lf-reader-links-label {
     display: flex;
@@ -2133,14 +2016,6 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--lfs-text-dim);
-}
-
-#lf_studio_root .lf-reader-links-scroll {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-height: 140px;
-    overflow-y: auto;
 }
 
 #lf_studio_root .lf-reader-link {
@@ -2155,12 +2030,6 @@
     background: var(--lfs-accent-soft);
 }
 
-#lf_studio_root .lf-cat-members {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
 /* ⚡ Read-all button — red while a batch runs (it's the stop button) */
 #lf_studio_root .lf-batch-btn {
     padding: 1px 8px;
@@ -2170,27 +2039,6 @@
 #lf_studio_root .lf-batch-btn.lf-batch-running {
     border-color: var(--lfs-bad);
     color: var(--lfs-bad);
-}
-
-/* Reader draft form: natural height inside the single scroll */
-#lf_studio_root .lf-draft-form {
-    flex: none;
-    max-height: none;
-    overflow: visible;
-    margin-top: 0;
-    padding: 12px;
-    border: 1px solid var(--lfs-border-strong);
-    border-radius: var(--lfs-radius);
-    background: var(--lfs-card);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-#lf_studio_root .lf-draft-form .lf-settings-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--lfs-text);
 }
 
 #lf_studio_root .lf-draft-content {
@@ -2841,9 +2689,6 @@
 /* Grounding meter track: visible card-tone well (v1 surfaceBorder) */
 #lf_studio_root .lf-grounding-bar { background: var(--lfs-card); }
 
-/* Reader prose stays bookish in every theme */
-#lf_studio_root .lf-reader-text { font-family: 'Alegreya', Georgia, serif; }
-
 /* v2 is flat: no CRT scanlines */
 #lf_studio_root[data-theme="neon-cyberpunk"] .lf-studio-header::after { content: none; }
 
@@ -3220,15 +3065,11 @@
     list-style: none;
 }
 #lf_studio_root .lf-reader-overlay .lf-reader-links > summary::-webkit-details-marker { display: none; }
-/* Link + category strips share one height (--lf-links-h, saved by research.js);
-   drag the bottom edge to resize either strip */
+/* Link + category strips: fixed max height, scroll inside */
 #lf_studio_root .lf-reader-overlay .lf-reader-links-scroll {
     margin-top: 6px;
-    height: var(--lf-links-h, 120px);
-    min-height: 48px;
-    max-height: none;
-    resize: vertical;
-    overflow: auto;
+    max-height: 120px;
+    overflow-y: auto;
 }
 
 /* Short screens: let the whole body scroll instead of squeezing the editor */

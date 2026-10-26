@@ -12,7 +12,6 @@ import { searchSearxng, fetchPageText, collectWikiLinks, enumerateCategory } fro
 import { addSource } from "./wizardData.js";
 import { renderDraftsList } from "./drafts.js";
 import { getSettings } from "./settings.js";
-import { saveSettingsDebounced } from "../../../../../script.js";
 
 // Full extracted text per URL. Deliberately survives Studio close/reopen,
 // so a page read earlier can still be drafted after reopening.
@@ -111,27 +110,6 @@ function linkChipHtml(l) {
         title="${isCat ? "Enumerate this category" : escapeHtml(l.url)}">${isCat ? "📁 " : ""}${escapeHtml(l.label)}</button>`;
 }
 
-// ---------- Resizable link / category strips ----------
-// Both strips are rebuilt on every read, so each new one is observed. The
-// height lives in one root variable (--lf-links-h) and is saved in settings:
-// a size chosen once holds for every page and across Studio reopens.
-const LINKS_H_MIN = 48;
-const LINKS_H_MAX = 480;
-const linksObserver = typeof ResizeObserver === "function" ? new ResizeObserver(entries => {
-    const s = getSettings();
-    for (const { target } of entries) {
-        const h = Math.round(target.getBoundingClientRect().height);
-        if (!h || h === s.readerLinksH) continue; // 0 = hidden strip
-        s.readerLinksH = Math.min(LINKS_H_MAX, Math.max(LINKS_H_MIN, h));
-        document.getElementById("lf_studio_root")?.style.setProperty("--lf-links-h", `${s.readerLinksH}px`);
-        saveSettingsDebounced();
-    }
-}) : null;
-
-function watchLinksStrips(scope) {
-    scope.find(".lf-reader-links-scroll").each((_, el) => linksObserver?.observe(el));
-}
-
 function renderLinksStrip(modal, wikiLinks) {
     const strip = modal.find(".lf-reader-links");
     if (!wikiLinks.length) {
@@ -147,7 +125,6 @@ function renderLinksStrip(modal, wikiLinks) {
             ${wikiLinks.map(linkChipHtml).join("")}
         </div>
     `).show();
-    watchLinksStrips(strip);
 }
 
 function renderCategoryMembers(holder, { pages, subcats }) {
@@ -168,7 +145,6 @@ function renderCategoryMembers(holder, { pages, subcats }) {
             ${pages.map(p => chip(p, false)).join("")}
         </div>
     `);
-    watchLinksStrips(holder);
 }
 
 function enumerateCategoryInto(modal, title, linkUrl) {
@@ -297,7 +273,7 @@ function stageFromOverlay(modal) {
         new CustomEvent("lf-sources-changed", { detail: { source } }));
     // Keep the overlay open for more crawling; lock staging until the next edit.
     modal.removeAttr("data-dirty");
-    modal.find(".lf-overlay-stage").prop("disabled", true).html(`${icon("check", "lf-ic-sm")}Staged`);
+    modal.find(".lf-overlay-stage").prop("disabled", true).text("Staged ✓");
     setStatus(`Source staged: "${source.title}"`);
     toastr.success(`Source staged: "${source.title}" — it is in the Sources rail.`, "Lorebook Forge");
 }
@@ -360,7 +336,6 @@ export function openInReader(url) {
     let first = false;
     if (!overlayEl) {
         overlayEl = buildReaderOverlay().appendTo(root);
-        root[0].style.setProperty("--lf-links-h", `${getSettings().readerLinksH || 120}px`);
         first = true;
     } else if (overlayEl.attr("data-dirty") &&
                !window.confirm("Discard your edits and open this page?")) {
