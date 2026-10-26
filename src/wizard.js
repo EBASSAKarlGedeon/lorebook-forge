@@ -656,6 +656,13 @@ export function initWizard() {
     bindProposalActions();
     // Message edit/delete tools (one document-level set, .lfmsg namespaced).
     bindMessageActions();
+    // The Stage-as-source overlay (drafts.js) dispatches lf-sources-changed
+    // after staging a source. Refresh the wizard here instead of having the
+    // overlay/Research reach into this module — keeps modules decoupled via
+    // the event. renderWizard() re-reads sources, so the header chips (active
+    // source count / KB / token estimate) and proposal grounding verdicts stay
+    // current. Bound once, in init.
+    document.getElementById("lf_studio_root")?.addEventListener("lf-sources-changed", renderWizard);
     renderWizard();
     console.log(`[${extensionName}] Wizard initialized (${getWizardSession().sources.length} sources, ${getWizardSession().messages.length} messages, ${getWizardSession().proposals.length} proposals)`);
 }
