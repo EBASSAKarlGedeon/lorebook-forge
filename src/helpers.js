@@ -6,6 +6,12 @@ export function escapeHtml(str) {
         .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// Cheap token estimate — matches the ~len/4 estimate used throughout the UI
+// (entry meta, context chips) and by the wizard's history/source budgeting.
+export function estimateTokens(text) {
+    return Math.ceil(String(text ?? "").length / 4);
+}
+
 // Suggest lorebook keys from a page title: strip stop words, keep
 // meaningful terms, max 4. User edits in the draft form anyway.
 const STOP_WORDS = new Set([
