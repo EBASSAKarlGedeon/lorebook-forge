@@ -243,26 +243,6 @@
     width: 100%;
 }
 
-/* Stage 8: distillation */
-.lf-distill-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 8px;
-    padding: 8px;
-    border: 1px solid rgba(128, 128, 128, 0.3);
-    border-radius: 8px;
-}
-
-.lf-distill-bar .lf-distill-topic {
-    flex: 1 1 200px;
-    min-width: 0;
-}
-
-.lf-distill-status {
-    flex-basis: 100%;
-}
-
 .lf-draft-head {
     display: flex;
     align-items: flex-start;
@@ -622,7 +602,6 @@
 #lf_studio_root .lf-studio-page .lf-btn-primary,
 #lf_studio_root .lf-modal-backdrop .lf-btn-primary,
 #lf_studio_root .lf-studio-page #lf_search_btn,
-#lf_studio_root .lf-studio-page .lf-distill-go,
 #lf_studio_root .lf-studio-page .lf-draft-save {
     background-color: var(--lfs-accent) !important;
     color: var(--lfs-accent-ink) !important;
@@ -633,7 +612,6 @@
 #lf_studio_root .lf-studio-page .lf-btn-primary:hover,
 #lf_studio_root .lf-modal-backdrop .lf-btn-primary:hover,
 #lf_studio_root .lf-studio-page #lf_search_btn:hover,
-#lf_studio_root .lf-studio-page .lf-distill-go:hover,
 #lf_studio_root .lf-studio-page .lf-draft-save:hover {
     background-color: var(--lfs-accent-bright) !important;
     color: var(--lfs-accent-ink) !important;
@@ -1261,18 +1239,6 @@
     min-height: 0;
     max-height: none;
     margin-top: 0;
-}
-
-/* Distill bar sits pinned above the scrolling drafts list */
-#lf_studio_root .lf-distill-bar {
-    flex-shrink: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 12px;
-    border: 1px solid var(--lfs-border);
-    border-radius: var(--lfs-radius);
-    background: var(--lfs-card);
 }
 
 /* Search field with the icon inside the well */
@@ -2140,14 +2106,17 @@
 }
 
 #lf_studio_root .lf-reader-col .lf-search-results {
-    flex: none;
-    max-height: 32%;
+    flex: 1;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
     margin: 0;
     padding: 10px 16px;
-    border-bottom: 1px solid var(--lfs-border);
     background: var(--lfs-bg-deep);
 }
+
+/* Empty state only while there are no results */
+#lf_studio_root .lf-reader-col .lf-search-results:not(:empty) ~ .lf-reader-empty { display: none; }
 
 #lf_studio_root .lf-reader-col .lf-search-results:empty { display: none; }
 
@@ -2889,7 +2858,7 @@
 #lf_studio_root .lf-quick-chip:nth-of-type(2) .lf-ic { color: var(--lfs-accent2); }
 #lf_studio_root .lf-quick-chip:nth-of-type(3) .lf-ic { color: var(--lfs-accent3); }
 
-/* Extract = v1's purple "Distill AI" */
+/* "Propose from chat" = the purple soft button */
 #lf_studio_root .lf-studio-page .lf-btn-soft,
 #lf_studio_root .lf-modal-backdrop .lf-btn-soft {
     color: var(--lfs-accent3) !important;
@@ -3250,4 +3219,84 @@
     height: 11px;
     color: var(--lfs-accent);
     flex-shrink: 0;
+}
+
+/* ============ Reader overlay (Read / pasted URL → editable page) ============ */
+/* Wide variant of the modal. The base .lf-modal is capped at 82vh/760px and
+   860px wide, scoped under #lf_studio_root, so the override must be too. */
+#lf_studio_root .lf-modal.lf-modal-wide {
+    width: min(1100px, 100%);
+    height: min(88vh, 900px);
+    max-height: 100%;
+}
+
+/* Body: one column. The text area takes all spare height; the links strip and
+   category list keep a fixed height and scroll inside themselves. */
+#lf_studio_root .lf-reader-overlay .lf-modal-body.lf-source-editor {
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+}
+#lf_studio_root .lf-reader-overlay .lf-field-grow {
+    flex: 1 1 auto;
+    min-height: 140px;
+}
+#lf_studio_root .lf-reader-overlay .lf-field-grow textarea,
+#lf_studio_root .lf-reader-overlay .lf-src-text {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    resize: none;
+    line-height: 1.55;
+    font-size: 0.86rem;
+    white-space: pre-wrap;
+}
+
+/* Head: title input over the "KB · route" line */
+#lf_studio_root .lf-reader-overlay .lf-overlay-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+#lf_studio_root .lf-reader-overlay .lf-src-title { font-weight: 600; width: 100%; }
+
+/* Foot: status line on the left, buttons on the right */
+#lf_studio_root .lf-reader-overlay .lf-modal-foot { align-items: center; }
+#lf_studio_root .lf-reader-overlay .lf-overlay-status {
+    margin-right: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.76rem;
+    color: var(--lfs-text-dim);
+}
+
+/* Wiki links strip (<details>) and category members */
+#lf_studio_root .lf-reader-overlay .lf-reader-links,
+#lf_studio_root .lf-reader-overlay .lf-cat-members {
+    display: block;
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border: 1px solid var(--lfs-border);
+    border-radius: var(--lfs-radius);
+    background: var(--lfs-bg-deep);
+}
+#lf_studio_root .lf-reader-overlay .lf-reader-links > summary {
+    cursor: pointer;
+    list-style: none;
+}
+#lf_studio_root .lf-reader-overlay .lf-reader-links > summary::-webkit-details-marker { display: none; }
+#lf_studio_root .lf-reader-overlay .lf-reader-links-scroll {
+    margin-top: 6px;
+    max-height: 120px;
+}
+#lf_studio_root .lf-reader-overlay .lf-cat-members .lf-reader-links-scroll { max-height: 140px; }
+
+/* Short screens: let the whole body scroll instead of squeezing the editor */
+@media (max-height: 640px) {
+    #lf_studio_root .lf-reader-overlay .lf-modal-body.lf-source-editor { overflow-y: auto; }
+    #lf_studio_root .lf-reader-overlay .lf-field-grow { min-height: 220px; }
 }
