@@ -12,6 +12,12 @@ export function estimateTokens(text) {
     return Math.ceil(String(text ?? "").length / 4);
 }
 
+// Wizard chat context budget (settings), clamped to 2k–1M tokens. Missing or
+// junk values fall back to the 64k default.
+export function clampContextTokens(value) {
+    return Math.min(1_000_000, Math.max(2_000, Number(value) || 64_000));
+}
+
 // ---------- Direct-URL detection (paste a URL into the search bar) ----------
 function unwrapUrlInput(input) {
     let s = String(input ?? "").trim();

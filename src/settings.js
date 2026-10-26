@@ -4,6 +4,7 @@ import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { defaultSettings, extensionName } from "./config.js";
 import { testSearxngConnection } from "./searchData.js";
+import { clampContextTokens } from "./helpers.js";
 
 export function getSettings() {
     if (!extension_settings[extensionName]) {
@@ -27,6 +28,13 @@ export function initSettings() {
             <div class="lf-settings-hint">Your self-hosted SearXNG instance (Docker). Used by web research. Default: http://localhost:8888</div>
         </div>
         <div class="lf-settings-block">
+            <label class="lf-settings-label" for="lf_chat_context_tokens">Wizard chat context (tokens)</label>
+            <input id="lf_chat_context_tokens" class="text_pole lf-text-input" type="number"
+                   min="2000" max="1000000" step="1000"
+                   value="${clampContextTokens(settings.chatContextTokens)}" />
+            <div class="lf-settings-hint">How much of the wizard conversation is sent with each reply (about 4 characters per token). Older messages are never deleted: raising this brings them back. Default: 64000.</div>
+        </div>
+        <div class="lf-settings-block">
             <button id="lf_test_connection" class="menu_button" type="button">Test SearXNG connection</button>
         </div>
     `;
@@ -36,6 +44,11 @@ export function initSettings() {
         settings.searxngUrl = String($(this).val()).trim();
         saveSettingsDebounced();
         console.debug(`[${extensionName}] searxngUrl = "${settings.searxngUrl}"`);
+    });
+
+    $("#lf_chat_context_tokens").on("input", function () {
+        settings.chatContextTokens = clampContextTokens($(this).val());
+        saveSettingsDebounced();
     });
 
     $("#lf_test_connection").on("click", async function () {

@@ -3,31 +3,34 @@
 // header, sessions strip, ONE flexible chat region, composer with
 // quick-forge chips. The big addition: proposal cards render as a
 // HORIZONTAL CAROUSEL INSIDE the assistant's message bubble (scroll-snap
-// track + prev/next + counter), with Stage/Reject per card. The Lorebook
-// Deck (sources, canon rules, lorebook import, staged entries) moved to
+// track + prev/next + counter), with Add/Reject per card. The Lorebook
+// Deck (sources, canon rules, lorebook import, entries) lives in
 // drafts.js. Source management lives there too — the wizard reads sources
 // via activeSources().
+// Proposals come ONLY from what the user agreed to in the chat (wizardExtract).
 import { extensionName } from "./config.js";
-import { escapeHtml, verifyQuote, icon, keysHtml } from "./helpers.js";
+import { escapeHtml, verifyQuote, icon, keysHtml, clampContextTokens, estimateTokens } from "./helpers.js";
 import { getContext } from "../../../../extensions.js";
+import { getSettings } from "./settings.js";
 import { getWizardSession, activeSources,
          pushWizardMessage, clearWizardMessages,
          addWizardProposals, updateWizardProposal,
          listWizardSessions, createWizardSession, switchWizardSession,
          deleteWizardSession, renameWizardSession,
          editWizardMessage, deleteWizardMessage } from "./wizardData.js";
-import { wizardChat, wizardExtract, omittedSourceTitles } from "./llmData.js";
+import { wizardChat, wizardExtract, omittedSourceTitles, selectHistory } from "./llmData.js";
 import { saveDraft, renderDraftsList, updateResearchRail, clearSelection, getDrafts } from "./drafts.js";
 import { applyUpdateToLorebook } from "./wiData.js";
 
 const SEND_LABEL = `${icon("send")}Send`;
-const EXTRACT_LABEL = `${icon("zap")}Extract`;
+const EXTRACT_LABEL = `${icon("zap")}Propose from chat`;
 
 // Quick-forge chips: canned wizard prompts (they go through onSend like typed text)
 const QUICK_FORGE = [
     { icon: "key", label: "Suggest keys", prompt: "For each major entity in the sources, suggest SillyTavern trigger keys: 2-5 primary keys (name, common aliases, distinctive terms) and any secondary keys worth gating on. Keep keys short and avoid generic words that would fire constantly." },
     { icon: "compare", label: "Reconcile canon", prompt: "Reconcile the sources against the canon rules. List every contradiction or conflict between sources, say which version canon should keep and why, and flag anything the canon rules exclude." },
     { icon: "compress", label: "Compress tokens", prompt: "Which facts in the sources are essential for roleplay and which are trivia? Propose a token-lean structure for the entries: what to keep, what to merge, what to cut." },
+    { icon: "pencil", label: "Draft entries", prompt: "Draft entries for the main entities in the active sources: one complete block per entity (ENTRY / KEYS / CONTENT), for my review. Stay within what the sources say." },
 ];
 
 // Every session change (switch / create / delete / rename) must refresh
@@ -49,11 +52,19 @@ function showSources() {
     document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-sources"));
 }
 
+// The chat context budget from settings (tokens of transcript sent per call).
+function chatContextTokens() {
+    return clampContextTokens(getSettings().chatContextTokens);
+}
+
 // ---------- Chat ----------
 
 // The id of the message currently being edited (null = no editor open).
 // Only one editor may be open at a time.
 let openEditorId = null;
+
+// Drawn above the first message that no longer fits the context budget.
+const CTX_DIVIDER = `<div class="lf-ctx-divider">Earlier messages are outside the context window</div>`;
 
 function messageHtml(m, byId) {
     const who = m.role === "user" ? `${icon("arrow", "lf-ic-sm")}You` : `${icon("sparkles", "lf-ic-sm")}Wizard`;
@@ -61,7 +72,7 @@ function messageHtml(m, byId) {
     const props = m.role === "assistant" ? (byId.get(m.id) || []) : [];
     const carousel = props.length ? carouselHtml(props) : "";
     // v1's purple mono tag on bubbles that carry a proposal carousel
-    const grounded = props.length ? `<span class="lf-grounded-chip" title="Evidence quotes verified against the staged sources">Grounded Extraction</span>` : "";
+    const grounded = props.length ? `<span class="lf-grounded-chip" title="Evidence quotes checked against the chat and sources">Grounded Extraction</span>` : "";
     return `
         <div class="lf-msg ${m.role}" data-id="${escapeHtml(m.id)}">
             <div class="lf-msg-bubble${carousel ? " lf-msg-wide" : ""}">
@@ -75,13 +86,19 @@ function messageHtml(m, byId) {
         </div>`;
 }
 
+// What a proposal's evidence quote may be copied from: the chat (where the
+// agreed text lives) and the staged sources. Recomputed on every render, so
+// editing or deleting a message updates the verdicts live.
+function evidenceTexts(w = getWizardSession()) {
+    return [...w.messages.map(m => m.text), ...w.sources.map(s => s.text)];
+}
+
 // The signature addition (v1 entry-preview → horizontal carousel):
 // proposal cards ride INSIDE the message that proposed them — never as a
 // separate full-chat surface. Cards are staged in DOM order; the track
 // scroll-snaps card by card, with prev/next + counter in a slim header.
 function carouselHtml(props) {
-    // Verdicts are computed per render so accepted/rejected states stay live
-    const texts = getWizardSession().sources.map(s => s.text);
+    const texts = evidenceTexts();
     return `
         <div class="lf-carousel" role="group" aria-label="Proposed entries">
             <div class="lf-carousel-head">
@@ -97,9 +114,9 @@ function carouselHtml(props) {
 }
 
 const VERDICTS = {
-    verified: { icon: "✓", label: "Verified", title: "Verified in sources", cls: "verified" },
+    verified: { icon: "✓", label: "In chat", title: "Quote found in the chat or sources", cls: "verified" },
     fuzzy:    { icon: "≈", label: "Near-match", title: "Near-match — check it", cls: "fuzzy" },
-    missing:  { icon: "✕", label: "Unverified", title: "NOT found in sources", cls: "missing" },
+    missing:  { icon: "✕", label: "Unverified", title: "NOT found in the chat or sources", cls: "missing" },
 };
 
 function proposalCardHtml(p, verdict) {
@@ -108,12 +125,12 @@ function proposalCardHtml(p, verdict) {
     const footer = p.status === "pending"
         ? `
         <div class="lf-proposal-actions">
-            <button class="menu_button lf-btn-primary lf-proposal-accept" type="button">${icon(isUpdate ? "reset" : "plus")}${isUpdate ? "Apply update" : "Stage draft"}</button>
+            <button class="menu_button lf-btn-primary lf-proposal-accept" type="button">${icon(isUpdate ? "reset" : "plus")}${isUpdate ? "Apply update" : "Add to Entries"}</button>
             <button class="menu_button lf-proposal-reject" type="button">Reject</button>
             <button class="lf-ghost-btn lf-proposal-copy" type="button" title="Copy entry content">${icon("copy")}Copy</button>
         </div>`
         : `<div class="lf-proposal-statusline lf-proposal-${p.status}">${p.status === "accepted"
-            ? (isUpdate ? `✓ Applied → ${escapeHtml(p.target || "lorebook")}` : "✓ Staged — in the Lorebook Deck")
+            ? (isUpdate ? `✓ Applied → ${escapeHtml(p.target || "lorebook")}` : "✓ Added to Entries")
             : "✕ Rejected"}</div>`;
     return `
         <article class="lf-proposal lf-proposal-${p.status}" data-id="${escapeHtml(p.id)}">
@@ -142,6 +159,14 @@ function proposalCardHtml(p, verdict) {
     `;
 }
 
+// Swap ONE card for its fresh markup (carousel node and grid node alike),
+// without re-rendering the chat: no scroll jump, no carousel reset to card 1.
+function refreshProposalCard(p) {
+    if (!p) return;
+    const html = proposalCardHtml(p, verifyQuote(p.quote, evidenceTexts()));
+    $(`.lf-proposal[data-id="${CSS.escape(p.id)}"]`).replaceWith(html);
+}
+
 // Left-panel footer: share of proposals whose evidence quote checks out
 function renderGrounding(counts, total) {
     const el = $("#lf_grounding");
@@ -155,9 +180,9 @@ function renderGrounding(counts, total) {
     el.html(`
         <div class="lf-grounding-row">
             <span>Evidence grounding</span>
-            <span class="lf-grounding-val">${Math.round(counts.verified / total * 100)}% verified</span>
+            <span class="lf-grounding-val">${Math.round(counts.verified / total * 100)}% in chat</span>
         </div>
-        <div class="lf-grounding-bar" title="${counts.verified} verified · ${counts.fuzzy} near-match · ${counts.missing} unverified">
+        <div class="lf-grounding-bar" title="${counts.verified} in chat · ${counts.fuzzy} near-match · ${counts.missing} unverified">
             <span class="good" style="width:${pct(counts.verified)}%"></span><span class="warn" style="width:${pct(counts.fuzzy)}%"></span><span class="bad" style="width:${pct(counts.missing)}%"></span>
         </div>`);
 }
@@ -171,15 +196,15 @@ function renderProposals() {
     const scrollEl = document.getElementById("lf_proposals_scroll");
     const prevScroll = scrollEl ? scrollEl.scrollTop : 0;
 
-    const texts = w.sources.map(s => s.text);
+    const texts = evidenceTexts(w);
     const verdicts = w.proposals.map(p => verifyQuote(p.quote, texts));
     if (!w.proposals.length) {
         grid.html(`
             <div class="lf-pane-empty">
                 <div class="lf-reader-empty-icon">⚡</div>
                 <h3>No proposals yet</h3>
-                <p>Stage sources in the <b>Lorebook Deck</b>, then hit <b>⚡ Extract</b> in the Wizard —<br>
-                cards appear here with evidence quotes verified against your sources.</p>
+                <p>Talk through an entry with the wizard and agree on it, then hit <b>⚡ Propose from chat</b> —<br>
+                cards appear here with evidence quotes checked against the chat.</p>
             </div>
         `);
     } else {
@@ -198,21 +223,6 @@ function renderProposals() {
     $("#lf_tab_proposals .lf-tab-badge").text(pending || "").toggleClass("lf-hidden", !pending);
 
     if (scrollEl) scrollEl.scrollTop = prevScroll;
-}
-
-// Attribute a proposal to the session source its evidence quote came from
-// (verified beats fuzzy beats unattributed) — accepted drafts nest inside
-// that source card in the Lorebook Deck.
-function pickSource(quote) {
-    const sources = getWizardSession().sources;
-    if (!quote) return null;
-    let fuzzy = null;
-    for (const s of sources) {
-        const v = verifyQuote(quote, [s.text]);
-        if (v === "verified") return s;
-        if (v === "fuzzy" && !fuzzy) fuzzy = s;
-    }
-    return fuzzy;
 }
 
 // ---------- Message edit / delete ----------
@@ -306,8 +316,8 @@ function bindProposalActions() {
         })
         .on("click.lfprop", ".lf-proposal-reject", function () {
             const id = $(this).closest(".lf-proposal").data("id");
-            updateWizardProposal(id, "rejected");
-            renderChat();
+            refreshProposalCard(updateWizardProposal(id, "rejected"));
+            renderProposals();
             setStatus("Proposal rejected");
         })
         .on("click.lfprop", ".lf-proposal-accept", async function () {
@@ -326,8 +336,8 @@ function bindProposalActions() {
                 const btn = $(this).prop("disabled", true).text("Applying…");
                 try {
                     const res = await applyUpdateToLorebook(target, p.target, { content: p.content, keys: p.keys });
-                    updateWizardProposal(p.id, "accepted");
-                    renderChat();
+                    refreshProposalCard(updateWizardProposal(p.id, "accepted"));
+                    renderProposals();
                     toastr.success(`"${p.target}" updated in "${res.lorebook}" — verify in the World Info editor.`, "Lorebook Forge");
                     setStatus(`Update applied: "${p.target}" → ${res.lorebook}`);
                 } catch (err) {
@@ -338,22 +348,22 @@ function bindProposalActions() {
                 return;
             }
 
-            // New proposal → staged as a draft nested in its evidence source
-            const src = pickSource(p.quote);
+            // New proposal → an Entry in the active session. The content is the
+            // text the user agreed to in the chat, so it is stored verbatim.
             saveDraft({
                 title: p.title,
                 keys: p.keys.length ? p.keys : [p.title],
                 content: p.content,
-                sourceId: src?.id || "",
+                sourceId: "",
                 sourceUrl: "",
-                sourceTitle: src ? src.title : "Wizard extraction",
+                sourceTitle: "Wizard chat",
                 sourceRaw: p.quote,
-                origin: "ai",
+                origin: "chat",
             });
-            updateWizardProposal(p.id, "accepted");
+            refreshProposalCard(updateWizardProposal(p.id, "accepted"));
+            renderProposals();
             renderDraftsList();
-            renderChat();
-            toastr.success(`"${p.title}" staged — inside its source in the Lorebook Deck.`, "Lorebook Forge");
+            toastr.success(`"${p.title}" added to Entries.`, "Lorebook Forge");
         });
 }
 
@@ -395,8 +405,8 @@ function renderChat() {
             <div class="lf-wizard-chat-empty">
                 <div class="lf-reader-empty-icon">✨</div>
                 <h3>Lorebook Wizard</h3>
-                <p>Stage sources in the Lorebook Deck, then talk to me —<br>
-                or hit <b>⚡ Extract</b> to propose entries with verified evidence quotes.<br>
+                <p>Talk through the entries you want, and iterate until they're right.<br>
+                Then hit <b>⚡ Propose from chat</b>: only what you agreed to becomes a card.<br>
                 Proposals ride the reply as a horizontal carousel.</p>
             </div>
         `);
@@ -407,7 +417,10 @@ function renderChat() {
             if (!byId.has(p.msgId)) byId.set(p.msgId, []);
             byId.get(p.msgId).push(p);
         }
-        chatEl.html(w.messages.map(m => messageHtml(m, byId)).join(""));
+        // Messages before this index are not sent to the model any more.
+        const { firstIndex } = selectHistory(w.messages, chatContextTokens());
+        chatEl.html(w.messages.map((m, i) =>
+            `${i === firstIndex && i > 0 ? CTX_DIVIDER : ""}${messageHtml(m, byId)}`).join(""));
     }
     chatEl.scrollTop(chatEl[0].scrollHeight);
 
@@ -450,6 +463,7 @@ async function onSend() {
             sources: activeSources(),
             history,
             message: text,
+            contextTokens: chatContextTokens(),
         });
         pushWizardMessage("assistant", reply);
         renderChat();
@@ -470,40 +484,64 @@ async function onSend() {
     }
 }
 
+// Proposals come from the AGREED part of the chat. Sources are not the input
+// any more — they only matter for resolving updates to an imported lorebook.
 async function onExtract() {
     const input = $("#lf_wizard_input");
     const btn = $("#lf_wizard_extract");
     const w = getWizardSession();
-    const actives = activeSources();
-    if (!actives.length) {
-        toastr.warning("No active sources. Stage one in the Lorebook Deck first — extraction works from sources only.", "Lorebook Forge");
-        showSources();
+    if (!w.messages.length) {
+        toastr.warning("Discuss an entry with the wizard first", "Lorebook Forge");
         return;
     }
     const focus = String(input.val()).trim();
     input.val("");
     btn.prop("disabled", true).text("…");
-    setStatus(`Extracting entries from ${actives.length} source(s)${focus ? ` — focus: "${focus}"` : ""}…`);
+    setStatus(`Proposing entries from the chat${focus ? ` — focus: "${focus}"` : ""}…`);
 
     try {
-        const { items, omitted } = await wizardExtract({ canonRules: w.canonRules, sources: actives, focus, lorebookTarget: w.lorebookTarget });
-        if (focus) pushWizardMessage("user", focus);
-        // The proposal carousel rides INSIDE this assistant message — push it
+        const { items, omitted } = await wizardExtract({
+            canonRules: w.canonRules,
+            history: w.messages,
+            sources: activeSources(),
+            focus,
+            lorebookTarget: w.lorebookTarget,
+            contextTokens: chatContextTokens(),
+        });
+        if (!items.length) {
+            toastr.info("No agreed entries found yet", "Lorebook Forge");
+            setStatus("No agreed entries found yet");
+            if (focus) input.val(focus);
+            return;
+        }
+
+        // The proposal carousel rides INSIDE the assistant message — push it
         // first so addWizardProposals can link every card to it via msgId.
-        const msg = pushWizardMessage("assistant",
-            `⚡ Proposed ${items.length} entr${items.length === 1 ? "y" : "ies"}${focus ? ` — focus: "${focus}"` : ""}. Review the carousel below — stage what you like, reject the rest.`);
+        const focusMsg = focus ? pushWizardMessage("user", focus) : null;
+        const msg = pushWizardMessage("assistant", "…");
         const proposals = addWizardProposals(items, msg.id);
-        const texts = actives.map(s => s.text);
+        if (!proposals.length) {
+            // Everything was already proposed or accepted: leave no trace in the chat.
+            deleteWizardMessage(msg.id);
+            if (focusMsg) deleteWizardMessage(focusMsg.id);
+            toastr.info("Those entries are already proposed or accepted", "Lorebook Forge");
+            setStatus("Nothing new to propose");
+            if (focus) input.val(focus);
+            return;
+        }
+        editWizardMessage(msg.id,
+            `⚡ Proposed ${proposals.length} entr${proposals.length === 1 ? "y" : "ies"}${focus ? ` — focus: "${focus}"` : ""}. Review the carousel below — add what you like, reject the rest.`);
+
+        const texts = evidenceTexts();
         const counts = { verified: 0, fuzzy: 0, missing: 0 };
         for (const p of proposals) counts[verifyQuote(p.quote, texts)]++;
         renderChat();
-        renderGrounding(counts, proposals.length);
-        setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`
+        setStatus(`Proposed ${proposals.length} (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`
             + (omitted.length ? ` · ${omitted.length} source${omitted.length === 1 ? "" : "s"} omitted (cap)` : ""));
     } catch (err) {
-        console.error(`[${extensionName}] Extraction failed:`, err);
-        toastr.error(`Extraction failed: ${err.message}`, "Lorebook Forge");
-        setStatus(`Extraction failed: ${err.message}`);
+        console.error(`[${extensionName}] Proposal failed:`, err);
+        toastr.error(`Proposal failed: ${err.message}`, "Lorebook Forge");
+        setStatus(`Proposal failed: ${err.message}`);
         if (focus) input.val(focus);
     } finally {
         btn.prop("disabled", false).html(EXTRACT_LABEL);
@@ -520,11 +558,17 @@ function renderHeaderMeta() {
     $("#lf_book_pill_name").text(w.lorebookTarget || "none");
     $("#lf_book_pill").toggleClass("is-set", !!w.lorebookTarget);
 
-    // v1 header context chip: token estimate of the staged active sources
+    // v1 header context chip: token estimate of the staged active sources.
+    // Its tooltip adds the chat part: what the next reply will actually carry.
     const ctxChip = $("#lf_context_chip");
     if (ctxChip.length) {
+        const srcTok = Math.round(totalChars / 4);
+        const budget = chatContextTokens();
+        const chatTok = selectHistory(w.messages, budget).messages
+            .reduce((n, m) => n + estimateTokens(m.text), 0);
         ctxChip.toggleClass("lf-hidden", actives.length === 0);
-        ctxChip.find("strong").text(`${(Math.round(totalChars / 4) / 1000).toFixed(1)}k`);
+        ctxChip.find("strong").text(`${(srcTok / 1000).toFixed(1)}k`);
+        ctxChip.attr("title", `Sources ~${(srcTok / 1000).toFixed(1)}k tok · chat ~${(chatTok / 1000).toFixed(1)}k tok sent of ${(budget / 1000).toFixed(0)}k window`);
     }
 
     // "N sources omitted from AI context" warning chip — same cap math the
@@ -564,7 +608,7 @@ export function renderWizard() {
                     <span id="lf_wizard_meta" class="lf-chip lf-chip-good" title="Click to manage sources"></span>
                     <span id="lf_omit_chip" class="lf-chip lf-chip-warn lf-hidden" title=""></span>
                 </div>
-                <div class="lf-wizard-sub">Grounded WorldInfo extraction — every proposal cites your sources.</div>
+                <div class="lf-wizard-sub">Grounded WorldInfo extraction — every proposal is something you agreed to in the chat.</div>
             </div>
             <button class="lf-ghost-btn lf-wizard-deck" type="button" title="Sources, canon rules and imported lorebooks live in the deck">${icon("layers")}Lorebook Deck</button>
             <button class="lf-ghost-btn lf-wizard-clear" type="button" title="Delete the conversation AND proposals">${icon("reset")}Clear session</button>
@@ -587,10 +631,10 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
             </div>
             <div class="lf-composer-box">
                 <textarea id="lf_wizard_input" rows="2"
-                          placeholder="Talk to the wizard… or type an extraction focus and hit Extract"></textarea>
+                          placeholder="Talk to the wizard… or name an entry to focus on, then hit Propose from chat"></textarea>
                 <div class="lf-composer-foot">
                     <span class="lf-kbd-hints"><kbd>Enter</kbd> send <kbd>Shift+Enter</kbd> newline</span>
-                    <button id="lf_wizard_extract" class="menu_button lf-btn-soft lf-wizard-extract" type="button" title="Propose entries from your sources, with verified evidence quotes">${EXTRACT_LABEL}</button>
+                    <button id="lf_wizard_extract" class="menu_button lf-btn-soft lf-wizard-extract" type="button" title="Propose entries from what you agreed to in the chat, with evidence quotes">${EXTRACT_LABEL}</button>
                     <button id="lf_wizard_send" class="menu_button lf-btn-primary lf-wizard-send" type="button">${SEND_LABEL}</button>
                 </div>
             </div>
@@ -641,7 +685,7 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
         setStatus("New wizard session created");
     });
 
-    // Chat + extraction
+    // Chat + proposals
     $("#lf_wizard_send").on("click", onSend);
     $("#lf_wizard_extract").on("click", onExtract);
     $("#lf_wizard_input").on("keydown", (e) => {
@@ -659,7 +703,7 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
     root.find(".lf-wizard-clear").on("click", function () {
         const w = getWizardSession();
         if (!w.messages.length && !w.proposals.length) return;
-        if (!window.confirm("Delete the wizard conversation AND all pending proposals? Sources and canon rules stay. Accepted drafts are already saved.")) return;
+        if (!window.confirm("Delete the wizard conversation AND all pending proposals? Sources and canon rules stay. Accepted entries are already saved.")) return;
         clearWizardMessages();
         renderChat();
         setStatus("Wizard chat cleared");

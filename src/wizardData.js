@@ -256,25 +256,42 @@ export function setLorebookTarget(name) {
 
 // ---------- Entry proposals (Stage 14) ----------
 
+// Adds the extracted items as pending cards. Dedupe: an item identical (title
+// and content) to a pending or accepted card is skipped. A pending card with
+// the same title but different content is superseded — marked rejected, so
+// only the newest wording stays open for review. Returns the cards created.
 export function addWizardProposals(items, msgId) {
     const w = getWizardSession();
-    const proposals = (items || [])
-        .filter(e => String(e?.content ?? "").trim())
-        .map(e => ({
+    const created = [];
+    for (const e of items || []) {
+        const content = String(e?.content ?? "").trim();
+        if (!content) continue;
+        const card = {
             id: crypto.randomUUID(),
             msgId: String(msgId || ""), // assistant message that carries the carousel
             action: e?.action === "update" ? "update" : "new",
             target: String(e?.target ?? "").trim(),
             title: String(e?.title || "Untitled").trim(),
             keys: Array.isArray(e?.keys) ? e.keys.map(k => String(k).trim()).filter(Boolean) : [],
-            content: String(e?.content ?? "").trim(),
+            content,
             quote: String(e?.quote ?? "").trim(),
             status: "pending", // pending | accepted | rejected
             createdAt: Date.now(),
-        }));
-    w.proposals.push(...proposals); // chronological — rendered in order
+        };
+        const sameAsKept = w.proposals.some(p =>
+            (p.status === "pending" || p.status === "accepted") &&
+            p.title === card.title && p.content === card.content);
+        if (sameAsKept) continue;
+        for (const p of w.proposals) {
+            if (p.status === "pending" && p.title === card.title && p.content !== card.content) {
+                p.status = "rejected"; // superseded by this newer wording
+            }
+        }
+        w.proposals.push(card); // chronological — rendered in order
+        created.push(card);
+    }
     saveSettingsDebounced();
-    return proposals;
+    return created;
 }
 
 export function updateWizardProposal(id, status) {

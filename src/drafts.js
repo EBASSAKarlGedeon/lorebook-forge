@@ -83,7 +83,7 @@ export function saveDraft({ title, keys, content, sourceId, sourceUrl, sourceTit
         sourceUrl: String(sourceUrl || ""),
         sourceTitle: String(sourceTitle || ""),
         sourceRaw: String(sourceRaw || ""),
-        origin: origin === "ai" ? "ai" : "research",
+        origin: ["ai", "chat"].includes(origin) ? origin : "research", // chat = agreed in the Wizard chat
         createdAt: Date.now(),
     };
     drafts.unshift(draft);
@@ -380,6 +380,7 @@ function draftCardHtml(d) {
             <input type="checkbox" class="lf-draft-check" title="Select for batch commit or export"${selected.has(d.id) ? " checked" : ""} />
             <div class="lf-draft-title">${escapeHtml(d.title)}</div>
             ${d.origin === "ai" ? `<span class="lf-ai-badge">${icon("sparkles", "lf-ic-sm")}AI</span>` : ""}
+            ${d.origin === "chat" ? `<span class="lf-ai-badge" title="Agreed in the Wizard chat">${icon("send", "lf-ic-sm")}Chat</span>` : ""}
         </div>
         ${keysHtml(d.keys)}
         <div class="lf-draft-preview">${escapeHtml(d.content)}</div>

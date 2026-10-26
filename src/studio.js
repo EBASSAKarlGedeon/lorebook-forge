@@ -246,7 +246,7 @@ function buildStudio() {
                             <span class="lf-tile">${icon("pull")}</span>
                             <span class="lf-pane-title">Proposals</span>
                             <span id="lf_proposals_count" class="lf-chip"></span>
-                            <span class="lf-pane-hint">Every card carries an evidence quote, verified against this session's sources.</span>
+                            <span class="lf-pane-hint">Every card carries an evidence quote, checked against this session's chat and sources.</span>
                         </div>
                         <div id="lf_grounding" class="lf-grounding lf-grounding-pane"></div>
                         <div id="lf_proposals_scroll" class="lf-proposals-scroll">
@@ -309,7 +309,7 @@ function buildStudio() {
             </div>
             <footer class="lf-studio-statusbar">
                 <span class="lf-status-dot"></span>
-                <span id="lf_studio_status">Ready — scrape the web in the Reader; the Wizard stages entries into the Lorebook Deck.</span>
+                <span id="lf_studio_status">Ready — scrape the web in the Reader; agreed Wizard entries land in Entries.</span>
             </footer>
         </div>
     `;
