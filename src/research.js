@@ -125,7 +125,7 @@ function showDraftForm(readerEl, url) {
     form.html(`
         <label class="lf-settings-label">Source title</label>
         <input class="text_pole lf-text-input lf-draft-title" value="${escapeHtml(cached.title)}" />
-        <label class="lf-settings-label">Text <span class="lf-dim">(staged as a source in the Lorebook Deck — the Wizard extracts its entries)</span></label>
+        <label class="lf-settings-label">Text <span class="lf-dim">(staged as a source in the Lorebook Deck — draft entries from it in the Wizard chat)</span></label>
         <textarea class="text_pole lf-draft-content" rows="8">${escapeHtml(cached.text)}</textarea>
         <div class="lf-draft-form-actions">
             <button class="menu_button lf-draft-save" type="button">Stage Source</button>
