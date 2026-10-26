@@ -57,6 +57,13 @@ export function getWizardSession() {
     return sess.wizard;
 }
 
+// The id of the ACTIVE session. drafts.js stamps entries with this and
+// filters the deck by it, so a session switch shows only its own entries.
+export function getActiveSessionId() {
+    ensureSessions();
+    return extension_settings[extensionName].wizardSessionId;
+}
+
 // ---------- Session management (Stage 21) ----------
 
 export function listWizardSessions() {
@@ -102,7 +109,10 @@ export function switchWizardSession(id) {
 }
 
 // Delete a session (never the last one). Switches to the first remaining
-// when deleting the active one. Returns true when deleted.
+// when deleting the active one. Also drops that session's UNCOMMITTED staged
+// entries — committed entries already live in a lorebook, so they stay for
+// provenance. The draft pruning is done directly on extension_settings here
+// (NOT via drafts.js) to avoid a wizardData ↔ drafts import cycle.
 export function deleteWizardSession(id) {
     ensureSessions();
     const s = extension_settings[extensionName];
@@ -112,6 +122,14 @@ export function deleteWizardSession(id) {
     const wasActive = s.wizardSessionId === id;
     s.wizardSessions.splice(i, 1);
     if (wasActive) s.wizardSessionId = s.wizardSessions[0].id;
+
+    const drafts = Array.isArray(s.drafts) ? s.drafts : [];
+    const keep = drafts.filter(d => !(d.sessionId === id && !d.committedTo));
+    if (keep.length !== drafts.length) {
+        s.drafts = keep;
+        console.log(`[${extensionName}] Session deleted — removed ${drafts.length - keep.length} uncommitted entr${drafts.length - keep.length === 1 ? "y" : "ies"}`);
+    }
+
     saveSettingsDebounced();
     return true;
 }

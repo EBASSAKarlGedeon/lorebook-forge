@@ -9,23 +9,66 @@ import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
 import { escapeHtml, icon, keysHtml } from "./helpers.js";
 import { getWizardSession, setCanonRules, setLorebookTarget,
-         addSource, deleteSource, toggleSourceActive } from "./wizardData.js";
+         addSource, deleteSource, toggleSourceActive, getActiveSessionId } from "./wizardData.js";
 import { listLorebooks, loadLorebookEntries, lorebookToSourceText,
          commitDraftToLorebook, draftToEntry, draftsToWorldJson } from "./wiData.js";
 
-// Ticked draft ids — kept across re-renders (cleared on delete)
+// Ticked draft ids — kept across re-renders (cleared on delete and on session change)
 const selected = new Set();
+
+// The `selected` Set is module-global, so a session switch must clear it —
+// otherwise ids from the previous session leak into the new one's batch bar.
+export function clearSelection() {
+    selected.clear();
+}
+
+// One-time migration: entries staged before they were session-scoped have
+// no sessionId. Attribute each to the session that owns its source (matched
+// by sourceId), otherwise to the first session.
+let migratedDraftSessions = false;
+function migrateDraftSessions(drafts) {
+    getActiveSessionId(); // ensureSessions() — legacy installs get their session created first
+    const s = extension_settings[extensionName];
+    const sessions = Array.isArray(s.wizardSessions) ? s.wizardSessions : [];
+    if (!sessions.length) return;
+    const firstId = sessions[0].id;
+    let changed = false;
+    for (const d of drafts) {
+        if (d.sessionId) continue;
+        const owner = d.sourceId
+            ? sessions.find(sess => Array.isArray(sess.wizard?.sources) &&
+                  sess.wizard.sources.some(src => src.id === d.sourceId))
+            : null;
+        d.sessionId = owner ? owner.id : firstId;
+        changed = true;
+    }
+    if (changed) {
+        saveSettingsDebounced();
+        console.log(`[${extensionName}] Migrated draft sessions (${drafts.length} drafts)`);
+    }
+}
 
 export function getDrafts() {
     const s = extension_settings[extensionName];
     if (!Array.isArray(s.drafts)) s.drafts = [];
+    if (!migratedDraftSessions) {
+        migratedDraftSessions = true;
+        migrateDraftSessions(s.drafts);
+    }
     return s.drafts;
+}
+
+// Entries belonging to the ACTIVE wizard session — what the deck shows.
+export function getSessionDrafts() {
+    const id = getActiveSessionId();
+    return getDrafts().filter(d => d.sessionId === id);
 }
 
 export function saveDraft({ title, keys, content, sourceId, sourceUrl, sourceTitle, sourceRaw, origin }){
     const drafts = getDrafts();
     const draft = {
         id: crypto.randomUUID(),
+        sessionId: getActiveSessionId(),
         title: String(title || "Untitled").trim(),
         keys: Array.isArray(keys) ? keys.map(k => String(k).trim()).filter(Boolean) : [],
         content: String(content || "").trim(),
@@ -372,7 +415,7 @@ function looseSectionHtml(drafts) {
 // ---------- Deck ----------
 
 function updateBatchBar() {
-    const drafts = getDrafts();
+    const drafts = getSessionDrafts();
     const n = drafts.filter(d => selected.has(d.id)).length;
     $("#lf_drafts_selected").text(n ? `${n} selected` : "");
     $("#lf_drafts_all").prop("checked", n > 0 && n === drafts.length).prop("indeterminate", n > 0 && n < drafts.length);
@@ -387,7 +430,7 @@ function renderBookPill() {
 }
 
 export function exportJson() {
-    const drafts = getDrafts();
+    const drafts = getSessionDrafts();
     const chosen = drafts.filter(d => selected.has(d.id));
     const list = chosen.length ? chosen : drafts;
     if (!list.length) {
@@ -486,7 +529,7 @@ export function initDraftsDeck() {
     // Batch "select all" ticks every .lf-draft-check (nested cards included)
     $("#lf_drafts_all").on("change", function () {
         const on = $(this).prop("checked");
-        for (const d of getDrafts()) on ? selected.add(d.id) : selected.delete(d.id);
+        for (const d of getSessionDrafts()) on ? selected.add(d.id) : selected.delete(d.id);
         $("#lf_drafts_list .lf-draft-check").prop("checked", on);
         $("#lf_drafts_list .lf-draft").toggleClass("selected", on);
         updateBatchBar();
@@ -581,7 +624,7 @@ export function renderDraftsList() {
     const container = $("#lf_drafts_list");
     if (!container.length) return;
     const w = getWizardSession();
-    const drafts = getDrafts();
+    const drafts = getSessionDrafts();
     const totalEntryText = drafts.reduce((n, d) => n + d.content.length, 0);
     $("#lf_book_pill_kb").text(totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "");
     $("#lf_drafts_count").text(w.sources.length

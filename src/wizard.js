@@ -16,7 +16,7 @@ import { getWizardSession, activeSources,
          listWizardSessions, createWizardSession, switchWizardSession,
          deleteWizardSession, renameWizardSession } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
-import { saveDraft, renderDraftsList, updateResearchRail } from "./drafts.js";
+import { saveDraft, renderDraftsList, updateResearchRail, clearSelection, getDrafts } from "./drafts.js";
 import { applyUpdateToLorebook } from "./wiData.js";
 
 const SEND_LABEL = `${icon("send")}Send`;
@@ -28,6 +28,17 @@ const QUICK_FORGE = [
     { icon: "compare", label: "Reconcile canon", prompt: "Reconcile the sources against the canon rules. List every contradiction or conflict between sources, say which version canon should keep and why, and flag anything the canon rules exclude." },
     { icon: "compress", label: "Compress tokens", prompt: "Which facts in the sources are essential for roleplay and which are trivia? Propose a token-lean structure for the entries: what to keep, what to merge, what to cut." },
 ];
+
+// Every session change (switch / create / delete / rename) must refresh
+// BOTH the wizard console AND the deck + left rail. The deck/rail are owned
+// by drafts.js and only re-render via renderDraftsList() — without this the
+// deck keeps showing the previous session's sources. The `selected` Set in
+// drafts.js is module-global, so it is cleared on any session change too.
+function afterSessionChange() {
+    clearSelection();
+    renderWizard();
+    renderDraftsList();
+}
 
 function setStatus(text) {
     $("#lf_studio_status").text(text);
@@ -466,7 +477,7 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
     root.find(".lf-session-chip").on("click", function () {
         const id = String($(this).data("id"));
         if (switchWizardSession(id)) {
-            renderWizard();
+            afterSessionChange();
             setStatus(`Switched to wizard session`);
         }
     }).on("dblclick", function () {
@@ -474,15 +485,21 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
         const current = listWizardSessions().find(x => x.id === id);
         const name = window.prompt("Rename session:", current?.name || "");
         if (name === null) return;
-        if (renameWizardSession(id, name)) renderWizard();
+        if (renameWizardSession(id, name)) afterSessionChange();
     }).on("contextmenu", function (e) {
         e.preventDefault();
         const id = String($(this).data("id"));
         const sess = listWizardSessions().find(x => x.id === id);
         if (!sess) return;
-        if (!window.confirm(`Delete session "${sess.name}"? Sources, chat and proposals in it are gone.`)) return;
+        // deleteWizardSession() also drops this session's UNCOMMITTED entries
+        // (drafts.js) — tell the user how many before they confirm.
+        const uncommitted = getDrafts().filter(d => d.sessionId === id && !d.committedTo).length;
+        const extra = uncommitted
+            ? ` ${uncommitted} uncommitted ${uncommitted === 1 ? "entry" : "entries"} staged in it will be deleted too.`
+            : "";
+        if (!window.confirm(`Delete session "${sess.name}"? Sources, chat and proposals in it are gone.${extra}`)) return;
         deleteWizardSession(id);
-        renderWizard();
+        afterSessionChange();
         setStatus("Session deleted");
     });
 
@@ -490,7 +507,7 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
         const name = window.prompt("New wizard session name:", "");
         if (name === null) return;
         createWizardSession(name.trim() || undefined);
-        renderWizard();
+        afterSessionChange();
         setStatus("New wizard session created");
     });
 
