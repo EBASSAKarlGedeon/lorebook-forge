@@ -19,7 +19,7 @@ function addWorldInfoButton() {
     }
     const button = $(`
         <div id="lf_world_button" class="fa-solid fa-hammer interactable" tabindex="0" role="button"
-             title="Lorebook Forge Studio — research, distill, commit"></div>
+             title="Lorebook Forge Studio — research, entries, commit"></div>
     `);
     anchor.before(button);
     button.on("click", openStudio);

@@ -13,13 +13,15 @@ grounded, review-first workflow:
    editable reader overlay, follow wiki links, and enumerate MediaWiki
    categories. Pages read this session are cached.
 2. **Stage sources** — save a read page (or pasted text, or an imported
-   lorebook) as a source in the Lorebook Deck.
-3. **Extract / chat** — the Wizard proposes entries from the staged sources,
-   attaching a verbatim evidence quote to every proposal.
+   lorebook) as a source in the Sources rail. Sources are context for the
+   Wizard; they never become entries by themselves.
+3. **Chat, then propose** — talk an entry through with the Wizard and iterate.
+   When you agree on it, hit *Propose from chat*: only what you agreed to
+   becomes a proposal, copied verbatim from the chat.
 4. **Review** — proposals render as a horizontal carousel inside the Wizard
-   reply, with each quote verified against the sources. Stage what you want,
-   reject the rest.
-5. **Commit** — staged entries nest inside the source they came from. Commit
+   reply, each with an evidence quote checked against the chat and sources.
+   Add what you want to Entries, reject the rest.
+5. **Commit** — accepted proposals are entries in the Entries panel. Commit
    them to any lorebook (new or existing), or export them as World Info JSON.
 
 ## The Studio
@@ -33,8 +35,9 @@ four regions:
   opens the reader overlay, which is also where sources are staged.
 - **Proposals** — every proposed entry for the active session, with evidence
   verdicts and a grounding meter.
-- **Lorebook Deck** — sources (with their staged entries nested inside), canon
-  rules, lorebook import, batch commit and JSON export.
+- **Sources (left rail)** — sources, canon rules, lorebook import and web search.
+- **Entries (right panel)** — accepted entries for the active session, batch
+  commit and JSON export.
 
 ## Sessions
 

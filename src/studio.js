@@ -2,8 +2,9 @@
 // Stage 25 layout (v1/v2 convergence): one header (brand + lorebook pill +
 // workspace tabs + deck toggle + theme picker + export + close) over TWO
 // full-bleed columns — ONE active center tab (Wizard, Proposals, Search,
-// Map) | the Lorebook Deck (sources with their staged entries nested
-// inside, batch commit, export). Web search lives in the Search tab header.
+// Map) | the Entries panel (accepted entries, batch commit, export). Sources
+// live in the left rail, which also holds web search. The Search tab header
+// is the Reader's search box.
 // Every pane owns a single full-height scroll region. Themes are
 // CSS-variable presets switched via data-theme on the root, persisted in
 // extension settings.
@@ -82,11 +83,11 @@ function toggleSidePanel(name, force) {
     btn.setAttribute("aria-pressed", String(railState[name]));
 }
 
-// ---- Deck focus: the wizard (and drafts) ask the deck to come forward ----
+// ---- Sources focus: the wizard, book pill and "Add source" ask the rail to come forward ----
 function focusDeck() {
     if (!studioRoot) return;
-    toggleSidePanel("drafts", true);
-    const body = studioRoot.querySelector(".lf-panel-drafts .lf-panel-body");
+    toggleSidePanel("research", true);
+    const body = studioRoot.querySelector(".lf-panel-research .lf-rail-body");
     if (body) body.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -186,7 +187,7 @@ function buildStudio() {
                         ${icon("database", "lf-ic-sm")}<span>Context: <strong class="lf-mono"></strong> tok</span>
                     </div>
                     <button id="lf_toggle_research" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle Canon Research & Sources rail">${icon("panelLeft")}</button>
-                    <button id="lf_toggle_drafts" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle Lorebook Deck">${icon("panelRight")}</button>
+                    <button id="lf_toggle_drafts" class="lf-icon-btn active" type="button" aria-pressed="true" title="Toggle Entries">${icon("panelRight")}</button>
                     <div class="lf-theme-picker">
                         <button id="lf_theme_btn" class="lf-ghost-btn" type="button" aria-haspopup="menu" aria-expanded="false">
                             ${icon("palette")}<span id="lf_theme_label"></span>${icon("chevron", "lf-ic-sm")}
@@ -224,6 +225,14 @@ function buildStudio() {
                         </div>
                     </div>
                     <div class="lf-rail-body">
+                        <div class="lf-deck-toolbar">
+                            <button class="lf-ghost-btn lf-deck-addsource" type="button">${icon("plus", "lf-ic-sm")}Add source</button>
+                            <button class="lf-ghost-btn lf-deck-import" type="button">${icon("download", "lf-ic-sm")}Import lorebook</button>
+                            <button class="lf-ghost-btn lf-deck-canon" type="button">${icon("compare", "lf-ic-sm")}Canon rules</button>
+                        </div>
+                        <div id="lf_deck_addsource" class="lf-deck-form" style="display:none;"></div>
+                        <div id="lf_deck_import" class="lf-deck-form" style="display:none;"></div>
+                        <div id="lf_deck_canon" class="lf-deck-form" style="display:none;"></div>
                         <div class="lf-rail-sources-head">
                             <span>Active Context Sources (<span id="lf_rail_count">0</span>)</span>
                             <button id="lf_rail_addsource" class="lf-rail-add" type="button">${icon("plus", "lf-ic-sm")}Add Source</button>
@@ -281,18 +290,10 @@ function buildStudio() {
                 <aside class="lf-panel lf-panel-drafts">
                     <div id="lf_drafts_resize" class="lf-drafts-resize" title="Drag to resize"></div>
                     <div class="lf-panel-header">
-                        ${icon("layers", "lf-ic-accent2")}<span>Lorebook Deck</span>
+                        ${icon("layers", "lf-ic-accent2")}<span>Entries</span>
                         <span id="lf_drafts_count" class="lf-count"></span>
                         <button class="lf-icon-btn lf-panel-collapse" type="button" data-panel="drafts" title="Collapse">${icon("panelRight")}</button>
                     </div>
-                    <div class="lf-deck-toolbar">
-                        <button class="lf-ghost-btn lf-deck-addsource" type="button">${icon("plus", "lf-ic-sm")}Add source</button>
-                        <button class="lf-ghost-btn lf-deck-import" type="button">${icon("download", "lf-ic-sm")}Import lorebook</button>
-                        <button class="lf-ghost-btn lf-deck-canon" type="button">${icon("compare", "lf-ic-sm")}Canon rules</button>
-                    </div>
-                    <div id="lf_deck_addsource" class="lf-deck-form" style="display:none;"></div>
-                    <div id="lf_deck_import" class="lf-deck-form" style="display:none;"></div>
-                    <div id="lf_deck_canon" class="lf-deck-form" style="display:none;"></div>
                     <div class="lf-batchbar">
                         <label class="lf-batch-all"><input id="lf_drafts_all" type="checkbox" /> Select all</label>
                         <span id="lf_drafts_selected" class="lf-batch-count"></span>
@@ -354,6 +355,7 @@ function buildStudio() {
     el.addEventListener("lf-show-reader", () => showCenter("reader"));
     el.addEventListener("lf-show-center", (e) => showCenter(e.detail));
     el.addEventListener("lf-show-sources", focusDeck);
+    el.addEventListener("lf-show-entries", () => toggleSidePanel("drafts", true));
 
     return el;
 }

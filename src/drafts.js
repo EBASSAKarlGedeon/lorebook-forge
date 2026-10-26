@@ -1,11 +1,12 @@
-// The Lorebook Deck (right rail): Rulebook-style source cards with their
-// staged entries NESTED inside, batch commit, export JSON.
-// Stage 25 (v1/v2 convergence): sources, canon rules and lorebook import
-// moved here from the Wizard tab (scraping stages SOURCES now, and Wizard
-// proposals stage into them via saveDraft's sourceId + pickSource).
+// Two panels, one module:
+//  - Sources (left rail): websites, lorebook imports and pasted text. They are
+//    wizard.sources, live only in the rail, and never appear in Entries. The
+//    add / import / canon-rules toolbar lives there too.
+//  - Entries (right panel, formerly the Lorebook Deck): accepted proposals and
+//    staged entries for the active wizard session. Batch commit, export JSON.
 // Storage lives in extension_settings — survives refresh.
-// NOTE: the "Stage as source" overlay now lives in research.js (the overlay
-// IS the Reader) — this module owns the deck only.
+// NOTE: the "Stage as source" overlay lives in research.js (the overlay IS the
+// Reader) — this module owns the rail and the Entries panel.
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
@@ -345,32 +346,6 @@ function sourceIcon(s) {
     return icon("globe", "lf-ic-accent2");
 }
 
-function sourceCardHtml(s, drafts) {
-    const nested = drafts.filter(d => d.sourceId === s.id);
-    const preview = String(s.text).replace(/\s+/g, " ").trim().slice(0, 400);
-    const kb = (s.text.length / 1024).toFixed(1);
-    return `
-        <div class="lf-source" data-id="${escapeHtml(s.id)}">
-            <div class="lf-source-head">
-                <input type="checkbox" class="lf-source-check" title="Include this source in AI context (extraction + chat)"${s.active !== false ? " checked" : ""} />
-                ${sourceIcon(s)}
-                <div class="lf-source-title" title="Click to expand/collapse the source preview">${escapeHtml(s.title)}</div>
-                <span class="lf-chip${nested.length ? "" : " lf-chip-dim"}" title="Entries staged against this source">${nested.length || ""}</span>
-                <button class="lf-icon-btn lf-source-delete" type="button" title="Remove source">${icon("x")}</button>
-            </div>
-            <div class="lf-source-preview">${escapeHtml(preview)}…</div>
-            <div class="lf-source-foot">
-                <span>${kb} KB · ~${Math.ceil(s.text.length / 4).toLocaleString()} tok</span>
-                <span class="lf-source-state${s.active !== false ? "" : " off"}">${s.active !== false ? "In context" : "Excluded"}</span>
-            </div>
-            ${nested.length ? `
-            <div class="lf-source-entries">
-                ${nested.map(draftCardHtml).join("")}
-            </div>` : ""}
-        </div>
-    `;
-}
-
 function draftCardHtml(d) {
     const wi = wiOf(d);
     const pos = POSITIONS.find(p => p[0] === wi.position)?.[1] ?? "?";
@@ -400,24 +375,6 @@ function draftCardHtml(d) {
         </div>
         <div class="lf-commit-form" data-id="${escapeHtml(d.id)}" style="display:none;"></div>
     </div>`;
-}
-
-// Loose entries (no live source) — Wizard extractions without attribution,
-// or entries whose source was deleted: they keep their content and commit fine.
-function looseSectionHtml(drafts) {
-    return `
-        <div class="lf-source lf-source-loose">
-            <div class="lf-source-head">
-                ${icon("sparkles", "lf-ic-accent")}
-                <div class="lf-source-title">Loose entries</div>
-                <span class="lf-chip" title="Entries not tied to a staged source">${drafts.length || ""}</span>
-            </div>
-            <div class="lf-source-preview">Staged without a live source — Wizard extractions with unattributed evidence, or entries whose source was removed.</div>
-            <div class="lf-source-entries">
-                ${drafts.map(draftCardHtml).join("")}
-            </div>
-        </div>
-    `;
 }
 
 // ---------- Deck ----------
@@ -549,25 +506,18 @@ export function initDraftsDeck() {
         card.toggleClass("selected", on);
         updateBatchBar();
     });
-    // Source context checkbox (v1 "include in prompt" toggle)
-    $("#lf_drafts_list").on("change", ".lf-source-check", function () {
-        const srcEl = $(this).closest(".lf-source");
-        if (!srcEl.data("id")) return; // loose section has none
-        const active = toggleSourceActive(String(srcEl.data("id")));
-        srcEl.toggleClass("off", !active);
-        srcEl.find(".lf-source-state").toggleClass("off", !active).text(active ? "In context" : "Excluded");
+    // Rail card: clicking the header expands/collapses the preview; ✕ removes
+    // the source. Accepted entries are unaffected — they live in Entries.
+    $("#lf_rail_sources").on("click", ".lf-rail-card-head", function (e) {
+        if ($(e.target).closest(".lf-rail-check, .lf-rail-del").length) return;
+        $(this).closest(".lf-rail-card").toggleClass("open");
     });
-    // Card header click expands/collapses the source preview
-    $("#lf_drafts_list").on("click", ".lf-source-head", function (e) {
-        if ($(e.target).closest(".lf-source-check, .lf-source-delete, .lf-chip").length) return;
-        $(this).closest(".lf-source").toggleClass("open");
-    });
-    $("#lf_drafts_list").on("click", ".lf-source-delete", function () {
-        const srcEl = $(this).closest(".lf-source");
-        const src = getWizardSession().sources.find(s => s.id === String(srcEl.data("id")));
+    $("#lf_rail_sources").on("click", ".lf-rail-del", function () {
+        const id = String($(this).closest(".lf-rail-card").data("id"));
+        const src = getWizardSession().sources.find(s => s.id === id);
         if (!src) return;
-        if (!window.confirm(`Remove source "${src.title}"? Entries staged against it stay, but become Loose.`)) return;
-        deleteSource(String(srcEl.data("id")));
+        if (!window.confirm(`Remove source "${src.title}"? Entries already accepted stay in Entries.`)) return;
+        deleteSource(id);
         renderDraftsList();
         console.log(`[${extensionName}] Source removed: "${src.title}"`);
     });
@@ -636,28 +586,22 @@ export function renderDraftsList() {
     if (deckRendering) return;
     deckRendering = true;
     try {
-        const w = getWizardSession();
         const drafts = getSessionDrafts();
         const totalEntryText = drafts.reduce((n, d) => n + d.content.length, 0);
         $("#lf_book_pill_kb").text(totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "");
-        $("#lf_drafts_count").text(w.sources.length
-            ? `${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "0 entries"}`
-            : "");
+        $("#lf_drafts_count").text(drafts.length || "");
 
-        if (!w.sources.length && !drafts.length) {
+        // Entries only: a flat list. Sources never render here (they live in the rail).
+        if (!drafts.length) {
             container.html(`
                 <div class="lf-pane-empty">
-                    <div class="lf-reader-empty-icon">🗂</div>
-                    <h3>The deck is empty</h3>
-                    <p>Add a source, import a lorebook,<br>or scrape a page in the Reader —<br>staged entries nest inside their source here.</p>
+                    <div class="lf-reader-empty-icon">📘</div>
+                    <h3>No entries yet</h3>
+                    <p>Agree on one with the wizard and accept its proposal.</p>
                 </div>
             `);
         } else {
-            const loose = drafts.filter(d => !d.sourceId || !w.sources.some(s => s.id === d.sourceId));
-            container.html(`
-                ${w.sources.map(s => sourceCardHtml(s, drafts)).join("")}
-                ${loose.length ? looseSectionHtml(loose) : ""}
-            `);
+            container.html(drafts.map(draftCardHtml).join(""));
         }
         renderBookPill();
         updateBatchBar();
@@ -759,13 +703,15 @@ function renderReconMeter() {
 
 function railSourceCardHtml(s) {
     const active = s.active !== false;
-    const preview = String(s.text).replace(/\s+/g, " ").trim().slice(0, 220);
+    // Longer than the 2-line clamp on purpose: an expanded card shows more of it
+    const preview = String(s.text).replace(/\s+/g, " ").trim().slice(0, 1200);
     return `
         <div class="lf-rail-card" data-id="${escapeHtml(s.id)}">
-            <div class="lf-rail-card-head">
+            <div class="lf-rail-card-head" title="Click to expand or collapse the preview">
                 ${sourceIcon(s)}
                 <span class="lf-rail-card-title" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</span>
                 <input type="checkbox" class="lf-rail-check" title="Include this source in AI context (extraction + chat)"${active ? " checked" : ""} />
+                <button class="lf-icon-btn lf-rail-del" type="button" title="Remove source">${icon("x")}</button>
             </div>
             <div class="lf-rail-card-preview">${preview ? escapeHtml(preview) : "<i>(empty source)</i>"}</div>
             <div class="lf-rail-card-foot">

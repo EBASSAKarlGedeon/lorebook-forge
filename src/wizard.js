@@ -48,8 +48,13 @@ function setStatus(text) {
     $("#lf_studio_status").text(text);
 }
 
+// Sources live in the left rail; accepted entries in the Entries panel.
 function showSources() {
     document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-sources"));
+}
+
+function showEntries() {
+    document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-show-entries"));
 }
 
 // The chat context budget from settings (tokens of transcript sent per call).
@@ -610,7 +615,7 @@ export function renderWizard() {
                 </div>
                 <div class="lf-wizard-sub">Grounded WorldInfo extraction — every proposal is something you agreed to in the chat.</div>
             </div>
-            <button class="lf-ghost-btn lf-wizard-deck" type="button" title="Sources, canon rules and imported lorebooks live in the deck">${icon("layers")}Lorebook Deck</button>
+            <button class="lf-ghost-btn lf-wizard-deck" type="button" title="Accepted entries for this session">${icon("layers")}Entries</button>
             <button class="lf-ghost-btn lf-wizard-clear" type="button" title="Delete the conversation AND proposals">${icon("reset")}Clear session</button>
         </div>
         <div class="lf-sessions-bar">
@@ -645,7 +650,8 @@ Click = switch · double-click = rename · right-click = delete">${escapeHtml(se
     renderHeaderMeta();
 
     // The deck (drafts.js) owns sources/canon/import — this just focuses it
-    root.find(".lf-wizard-deck, #lf_wizard_meta").on("click", showSources);
+    root.find("#lf_wizard_meta").on("click", showSources);
+    root.find(".lf-wizard-deck").on("click", showEntries);
 
     // ---- Sessions bar (Stage 21) ----
     root.find(".lf-session-chip").on("click", function () {

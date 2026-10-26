@@ -874,19 +874,13 @@
 
 /* ---- Shared: cards ---- */
 #lf_studio_root .lf-result,
-#lf_studio_root .lf-draft,
-#lf_studio_root .lf-source {
+#lf_studio_root .lf-draft {
     padding: 10px 12px;
     border: 1px solid var(--lfs-border);
     border-radius: var(--lfs-radius);
     background: var(--lfs-card);
     flex-shrink: 0;
     transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-#lf_studio_root .lf-source:hover {
-    border-color: color-mix(in srgb, var(--lfs-accent) 45%, transparent);
-    background: color-mix(in srgb, var(--lfs-card) 94%, var(--lfs-accent) 6%);
 }
 
 #lf_studio_root .lf-result-title {
@@ -1847,86 +1841,6 @@
     gap: 6px;
 }
 
-/* Source cards: v1's evidence containers — context checkbox, size/status
-   footer, nested entry drafts inside */
-#lf_studio_root .lf-source { cursor: pointer; }
-
-#lf_studio_root .lf-source-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-#lf_studio_root .lf-source-check {
-    flex-shrink: 0;
-    accent-color: var(--lfs-accent);
-    cursor: pointer;
-}
-
-#lf_studio_root .lf-source-title {
-    flex: 1;
-    min-width: 0;
-    font-weight: 600;
-    font-size: 0.85rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-#lf_studio_root .lf-source-delete { width: 24px; height: 24px; }
-
-#lf_studio_root .lf-source-preview {
-    margin-top: 5px;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    color: var(--lfs-text-dim);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    word-break: break-word;
-}
-
-#lf_studio_root .lf-source.open .lf-source-preview {
-    -webkit-line-clamp: unset;
-    max-height: 40vh;
-    overflow-y: auto;
-}
-
-#lf_studio_root .lf-source-foot {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-    font-family: var(--lfs-font-mono);
-    font-size: 0.66rem;
-    color: var(--lfs-text-dim);
-}
-
-#lf_studio_root .lf-source-state { margin-left: auto; }
-
-#lf_studio_root .lf-source-state { color: var(--lfs-good); }
-
-#lf_studio_root .lf-source-state.off { color: var(--lfs-warn); }
-
-/* Excluded sources visually recede but keep their entries committable */
-#lf_studio_root .lf-source.off {
-    opacity: 0.62;
-}
-
-/* Nested entry drafts inside a source card */
-#lf_studio_root .lf-source-entries {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-    padding-left: 10px;
-    border-left: 2px solid color-mix(in srgb, var(--lfs-accent) 30%, transparent);
-}
-
-/* Loose section: entries without a live source */
-#lf_studio_root .lf-source-loose .lf-source-title { color: var(--lfs-text-dim); }
-
 /* Updater: lorebook import */
 #lf_studio_root .lf-wizard-lb-select { width: 100%; }
 
@@ -2804,7 +2718,6 @@
 #lf_studio_root .lf-kbd-hints,
 #lf_studio_root .lf-quick-label,
 #lf_studio_root .lf-msg-time,
-#lf_studio_root .lf-source-foot,
 #lf_studio_root .lf-dim { color: var(--lfs-text-faint); }
 
 /* Header logo tile: gold→purple gradient + glow (v1) */
@@ -2895,8 +2808,6 @@
     border-radius: 50%;
     background: var(--lfs-accent);
 }
-#lf_studio_root .lf-source-entries .lf-draft:nth-of-type(3n+2)::after { background: var(--lfs-accent2); }
-#lf_studio_root .lf-source-entries .lf-draft:nth-of-type(3n)::after { background: var(--lfs-accent3); }
 #lf_studio_root .lf-draft:hover {
     border-color: color-mix(in srgb, var(--lfs-accent) 50%, transparent);
 }
@@ -3142,6 +3053,15 @@
 
 #lf_studio_root .lf-rail-check { flex-shrink: 0; }
 
+/* Rail source cards: click the header to expand the preview; ✕ removes */
+#lf_studio_root .lf-rail-card-head { cursor: pointer; }
+#lf_studio_root .lf-rail-del { width: 24px; height: 24px; flex-shrink: 0; }
+#lf_studio_root .lf-rail-card.open .lf-rail-card-preview {
+    -webkit-line-clamp: unset;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
 #lf_studio_root .lf-rail-card-preview {
     margin-top: 6px;
     font-size: 0.7rem;
@@ -3300,11 +3220,16 @@
     list-style: none;
 }
 #lf_studio_root .lf-reader-overlay .lf-reader-links > summary::-webkit-details-marker { display: none; }
+/* Link + category strips share one height (--lf-links-h, saved by research.js);
+   drag the bottom edge to resize either strip */
 #lf_studio_root .lf-reader-overlay .lf-reader-links-scroll {
     margin-top: 6px;
-    max-height: 120px;
+    height: var(--lf-links-h, 120px);
+    min-height: 48px;
+    max-height: none;
+    resize: vertical;
+    overflow: auto;
 }
-#lf_studio_root .lf-reader-overlay .lf-cat-members .lf-reader-links-scroll { max-height: 140px; }
 
 /* Short screens: let the whole body scroll instead of squeezing the editor */
 @media (max-height: 640px) {
