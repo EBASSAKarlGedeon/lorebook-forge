@@ -45,7 +45,7 @@ export function parseSearxngResults(html) {
     return results;
 }
 
-// The public search API. Stage 5+ (page reading, distillation) build on this.
+// The public search API.
 export async function searchSearxng(baseUrl, query) {
     console.log(`[${extensionName}] Searching SearXNG for: "${query}"`);
     const html = await fetchSearxngHtml(baseUrl, query);

@@ -12,6 +12,42 @@ export function estimateTokens(text) {
     return Math.ceil(String(text ?? "").length / 4);
 }
 
+// ---------- Direct-URL detection (paste a URL into the search bar) ----------
+function unwrapUrlInput(input) {
+    let s = String(input ?? "").trim();
+    let prev;
+    do {
+        prev = s;
+        // leading wrappers
+        s = s.replace(/^[<("'\u201C\u2018\s]+/, "");
+        // trailing wrappers + sentence punctuation, in any order
+        s = s.replace(/[>"'\u201D\u2019\s.,;:!?\]]+$/, "");
+        // an UNBALANCED trailing ")" is a wrapper; a balanced one is part of the URL
+        if (s.endsWith(")") && (s.match(/\)/g) || []).length > (s.match(/\(/g) || []).length) {
+            s = s.slice(0, -1);
+        }
+    } while (s !== prev);
+    return s;
+}
+
+export function parseDirectUrl(input) {
+    const s = unwrapUrlInput(input);
+    if (!s || /\s/.test(s)) return null;
+    const hasScheme = /^https?:\/\//i.test(s);
+    if (!hasScheme) {
+        // No scheme: only obvious URL shapes. Bare "node.js" / "e.g." stay searches.
+        const looksLikeUrl = /^www\./i.test(s) || /^[^\s/]+\.[a-z]{2,}\/\S*/i.test(s);
+        if (!looksLikeUrl) return null;
+    }
+    try {
+        const url = new URL(hasScheme ? s : `https://${s}`);
+        if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+        return url.toString();
+    } catch {
+        return null;
+    }
+}
+
 // Suggest lorebook keys from a page title: strip stop words, keep
 // meaningful terms, max 4. User edits in the draft form anyway.
 const STOP_WORDS = new Set([

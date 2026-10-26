@@ -16,7 +16,6 @@ import { extensionName } from "./config.js";
 import { icon } from "./helpers.js";
 import { initResearch, getPageCache, closeReaderOverlay } from "./research.js";
 import { renderDraftsList, initDraftsDeck } from "./drafts.js";
-import { initDistiller } from "./distiller.js";
 import { initWizard } from "./wizard.js";
 import { renderGraph } from "./graph.js";
 
@@ -378,7 +377,6 @@ export function openStudio() {
     initResearch();        // wires search + the reader overlay (fresh DOM each open)
     initDraftsDeck();      // batch bar + export (fresh DOM each open)
     renderDraftsList();    // drafts into the panel
-    initDistiller();       // distill bar (guarded against duplicates)
     initWizard();          // wizard + sources + proposals (fresh DOM each open)
     initDraftsResizer();   // drag handle on the drafts panel
 

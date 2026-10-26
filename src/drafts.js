@@ -377,7 +377,7 @@ function draftCardHtml(d) {
     return `
     <div class="lf-draft${selected.has(d.id) ? " selected" : ""}${d.committedTo ? " committed" : ""}" data-id="${escapeHtml(d.id)}">
         <div class="lf-draft-head">
-            <input type="checkbox" class="lf-draft-check" title="Select for distill, batch commit or export"${selected.has(d.id) ? " checked" : ""} />
+            <input type="checkbox" class="lf-draft-check" title="Select for batch commit or export"${selected.has(d.id) ? " checked" : ""} />
             <div class="lf-draft-title">${escapeHtml(d.title)}</div>
             ${d.origin === "ai" ? `<span class="lf-ai-badge">${icon("sparkles", "lf-ic-sm")}AI</span>` : ""}
         </div>
