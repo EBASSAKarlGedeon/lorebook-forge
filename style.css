@@ -1573,6 +1573,73 @@
     word-break: break-word;
 }
 
+/* --- Message tools (edit / delete): hidden until hover, always on touch --- */
+#lf_studio_root .lf-msg-tools {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+#lf_studio_root .lf-msg:hover .lf-msg-tools { opacity: 1; }
+
+#lf_studio_root .lf-msg-tools .lf-icon-btn {
+    width: 22px;
+    height: 22px;
+}
+
+/* Touch devices have no hover — keep the tools visible. */
+@media (hover: none) {
+    #lf_studio_root .lf-msg-tools { opacity: 1; }
+}
+
+/* A wizard request is in flight — the tools are disabled, so hide them. */
+#lf_studio_root .lf-busy .lf-msg-tools {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+/* --- Inline message editor (swaps in for .lf-msg-text) --- */
+#lf_studio_root .lf-msg-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+#lf_studio_root .lf-msg-editor-text {
+    width: 100%;
+    resize: vertical;
+    min-height: 70px;
+    font-family: var(--lfs-font-ui);
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+#lf_studio_root .lf-msg-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#lf_studio_root .lf-msg-editor-hint {
+    margin-right: auto;
+    font-size: 0.66rem;
+    color: var(--lfs-text-faint);
+}
+
+#lf_studio_root .lf-msg-editor-hint kbd {
+    font-family: var(--lfs-font-mono);
+    font-size: 0.62rem;
+    padding: 0 5px;
+    border: 1px solid var(--lfs-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--lfs-surface-2);
+    color: var(--lfs-text-dim);
+}
+
 /* --- Proposal carousel (Stage 25 signature) ---
    Rides INSIDE the assistant bubble that proposed the entries — never a
    separate tab jump. v1's entry-preview box becomes a scroll-snap track. */

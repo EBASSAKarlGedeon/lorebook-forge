@@ -46,6 +46,11 @@ function normalizeWizard(w) {
     if (!Array.isArray(w.messages)) w.messages = [];
     if (typeof w.lorebookTarget !== "string") w.lorebookTarget = "";
     if (!Array.isArray(w.proposals)) w.proposals = [];
+    // Messages predating edit/delete have no id. Assign one so the chat's
+    // proposal lookup (byId.get(m.id)) and the message tools work.
+    for (const m of w.messages) {
+        if (m && !m.id) m.id = crypto.randomUUID();
+    }
     return w;
 }
 
@@ -208,6 +213,39 @@ export function clearWizardMessages() {
     w.messages = [];
     w.proposals = [];
     saveSettingsDebounced();
+}
+
+// ---------- Message edit / delete (UI #2) ----------
+
+// Replace a message's text in place. The transcript is sent to the model
+// as-is, so an edit changes what later replies see.
+export function editWizardMessage(id, text) {
+    const w = getWizardSession();
+    const m = w.messages.find(m => m.id === id);
+    if (!m) return null;
+    m.text = String(text ?? "");
+    saveSettingsDebounced();
+    return m;
+}
+
+// Remove a message. Its pending/rejected proposals go with it (they were
+// anchored to that bubble); accepted proposals survive and simply lose their
+// msgId — their entry is already saved, so the card has nothing left to do.
+export function deleteWizardMessage(id) {
+    const w = getWizardSession();
+    const i = w.messages.findIndex(m => m.id === id);
+    if (i === -1) return false;
+    w.messages.splice(i, 1);
+    w.proposals = w.proposals.filter(p => {
+        if (p.msgId !== id) return true;
+        if (p.status === "accepted") {
+            p.msgId = "";
+            return true;
+        }
+        return false;
+    });
+    saveSettingsDebounced();
+    return true;
 }
 
 export function setLorebookTarget(name) {

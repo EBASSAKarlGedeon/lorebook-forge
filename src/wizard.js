@@ -14,7 +14,8 @@ import { getWizardSession, activeSources,
          pushWizardMessage, clearWizardMessages,
          addWizardProposals, updateWizardProposal,
          listWizardSessions, createWizardSession, switchWizardSession,
-         deleteWizardSession, renameWizardSession } from "./wizardData.js";
+         deleteWizardSession, renameWizardSession,
+         editWizardMessage, deleteWizardMessage } from "./wizardData.js";
 import { wizardChat, wizardExtract } from "./llmData.js";
 import { saveDraft, renderDraftsList, updateResearchRail, clearSelection, getDrafts } from "./drafts.js";
 import { applyUpdateToLorebook } from "./wiData.js";
@@ -50,6 +51,10 @@ function showSources() {
 
 // ---------- Chat ----------
 
+// The id of the message currently being edited (null = no editor open).
+// Only one editor may be open at a time.
+let openEditorId = null;
+
 function messageHtml(m, byId) {
     const who = m.role === "user" ? `${icon("arrow", "lf-ic-sm")}You` : `${icon("sparkles", "lf-ic-sm")}Wizard`;
     const time = m.ts ? ` · ${new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
@@ -58,9 +63,12 @@ function messageHtml(m, byId) {
     // v1's purple mono tag on bubbles that carry a proposal carousel
     const grounded = props.length ? `<span class="lf-grounded-chip" title="Evidence quotes verified against the staged sources">Grounded Extraction</span>` : "";
     return `
-        <div class="lf-msg ${m.role}">
+        <div class="lf-msg ${m.role}" data-id="${escapeHtml(m.id)}">
             <div class="lf-msg-bubble${carousel ? " lf-msg-wide" : ""}">
-                <div class="lf-msg-by">${who}${grounded}<span class="lf-msg-time">${time}</span></div>
+                <div class="lf-msg-by">${who}${grounded}<span class="lf-msg-time">${time}</span><span class="lf-msg-tools">
+                    <button class="lf-icon-btn lf-msg-edit" type="button" title="Edit this message">${icon("pencil", "lf-ic-sm")}</button>
+                    <button class="lf-icon-btn lf-msg-delete" type="button" title="Delete this message">${icon("trash", "lf-ic-sm")}</button>
+                </span></div>
                 <div class="lf-msg-text">${escapeHtml(m.text)}</div>
                 ${carousel}
             </div>
@@ -207,6 +215,80 @@ function pickSource(quote) {
     return fuzzy;
 }
 
+// ---------- Message edit / delete ----------
+
+// True while a wizard request is in flight — the tools are disabled then.
+function isBusy() {
+    return $("#lf_wizard_send").prop("disabled");
+}
+
+// Tear down an open editor without saving (used when switching editors).
+function closeMessageEditor() {
+    if (!openEditorId) return;
+    const msgEl = $(`.lf-msg[data-id="${CSS.escape(openEditorId)}"]`);
+    msgEl.find(".lf-msg-editor").remove();
+    msgEl.find(".lf-msg-text").show();
+    openEditorId = null;
+}
+
+function openMessageEditor(msgEl, m) {
+    if (isBusy()) return;
+    // Only one editor at a time — close any other before opening this one.
+    if (openEditorId && openEditorId !== m.id) closeMessageEditor();
+    const textEl = msgEl.find(".lf-msg-text");
+    if (!textEl.length || msgEl.find(".lf-msg-editor").length) return;
+
+    openEditorId = m.id;
+    const original = m.text;
+    textEl.hide();
+
+    const editor = $(`
+        <div class="lf-msg-editor">
+            <textarea class="text_pole lf-msg-editor-text" rows="4"></textarea>
+            <div class="lf-msg-editor-actions">
+                <span class="lf-msg-editor-hint"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
+                <button class="menu_button lf-msg-cancel" type="button">Cancel</button>
+                <button class="menu_button lf-btn-primary lf-msg-save" type="button">${icon("check", "lf-ic-sm")}Save</button>
+            </div>
+        </div>
+    `);
+    editor.find(".lf-msg-editor-text").val(original);
+    textEl.after(editor);
+    editor.find(".lf-msg-editor-text").trigger("focus");
+
+    // No chat re-render per keystroke — only on save.
+    const cancel = () => {
+        editor.remove();
+        textEl.show();
+        openEditorId = null;
+    };
+    const save = () => {
+        const text = String(editor.find(".lf-msg-editor-text").val()).trim();
+        if (!text) {
+            toastr.warning("Message text is empty.", "Lorebook Forge");
+            return;
+        }
+        editWizardMessage(m.id, text);
+        openEditorId = null;
+        renderChat();
+        setStatus("Message edited");
+    };
+
+    editor.find(".lf-msg-cancel").on("click", cancel);
+    editor.find(".lf-msg-save").on("click", save);
+    editor.find(".lf-msg-editor-text").on("keydown", (e) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            save();
+        } else if (e.key === "Escape") {
+            // Swallow Esc so the global onStudioEsc doesn't close the Studio.
+            e.stopPropagation();
+            e.preventDefault();
+            cancel();
+        }
+    });
+}
+
 // One delegated handler set for proposal cards wherever they render —
 // the Proposals grid AND the in-message carousel.
 function bindProposalActions() {
@@ -275,8 +357,38 @@ function bindProposalActions() {
         });
 }
 
+// Message tools (edit / delete). Delegated + namespaced so re-renders don't
+// stack handlers.
+function bindMessageActions() {
+    $(document).off("click.lfmsg")
+        .on("click.lfmsg", ".lf-msg-edit", function () {
+            if (isBusy()) return;
+            const msgEl = $(this).closest(".lf-msg");
+            const id = String(msgEl.data("id"));
+            const m = getWizardSession().messages.find(x => x.id === id);
+            if (m) openMessageEditor(msgEl, m);
+        })
+        .on("click.lfmsg", ".lf-msg-delete", function () {
+            if (isBusy()) return;
+            const msgEl = $(this).closest(".lf-msg");
+            const id = String(msgEl.data("id"));
+            const w = getWizardSession();
+            if (!w.messages.some(x => x.id === id)) return;
+            const pending = w.proposals.filter(p => p.msgId === id && p.status === "pending").length;
+            const extra = pending
+                ? ` ${pending} pending ${pending === 1 ? "proposal" : "proposals"} on it will be removed too.`
+                : "";
+            if (!window.confirm(`Delete this message?${extra}`)) return;
+            deleteWizardMessage(id);
+            renderChat();
+            setStatus("Message deleted");
+        });
+}
+
 function renderChat() {
     const chatEl = $("#lf_wizard_chat");
+    // The DOM is about to be replaced — any open editor goes with it.
+    openEditorId = null;
     const w = getWizardSession();
     if (!w.messages.length) {
         chatEl.html(`
@@ -328,6 +440,7 @@ async function onSend() {
     pushWizardMessage("user", text);
     input.val("").prop("disabled", true);
     btn.prop("disabled", true).text("…");
+    $("#lf_wizard_chat").addClass("lf-busy");
     renderChat();
     setStatus("Wizard is thinking…");
 
@@ -349,6 +462,7 @@ async function onSend() {
     } finally {
         input.prop("disabled", false).trigger("focus");
         btn.prop("disabled", false).html(SEND_LABEL);
+        $("#lf_wizard_chat").removeClass("lf-busy");
     }
 }
 
@@ -540,6 +654,8 @@ export function initWizard() {
     // Delegated proposal actions cover BOTH the proposals grid and the
     // in-message carousels (one document-level set, .lfprop namespaced).
     bindProposalActions();
+    // Message edit/delete tools (one document-level set, .lfmsg namespaced).
+    bindMessageActions();
     renderWizard();
     console.log(`[${extensionName}] Wizard initialized (${getWizardSession().sources.length} sources, ${getWizardSession().messages.length} messages, ${getWizardSession().proposals.length} proposals)`);
 }
