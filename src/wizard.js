@@ -16,7 +16,7 @@ import { getWizardSession, activeSources,
          listWizardSessions, createWizardSession, switchWizardSession,
          deleteWizardSession, renameWizardSession,
          editWizardMessage, deleteWizardMessage } from "./wizardData.js";
-import { wizardChat, wizardExtract } from "./llmData.js";
+import { wizardChat, wizardExtract, omittedSourceTitles } from "./llmData.js";
 import { saveDraft, renderDraftsList, updateResearchRail, clearSelection, getDrafts } from "./drafts.js";
 import { applyUpdateToLorebook } from "./wiData.js";
 
@@ -445,7 +445,7 @@ async function onSend() {
     setStatus("Wizard is thinking…");
 
     try {
-        const reply = await wizardChat({
+        const { reply, omitted } = await wizardChat({
             canonRules: w.canonRules,
             sources: activeSources(),
             history,
@@ -453,7 +453,11 @@ async function onSend() {
         });
         pushWizardMessage("assistant", reply);
         renderChat();
-        setStatus("Wizard replied");
+        // Surface any sources dropped by the material cap instead of hiding it
+        // in the console — the header chip shows it too.
+        setStatus(omitted.length
+            ? `Wizard replied — ${omitted.length} source${omitted.length === 1 ? "" : "s"} omitted from AI context (material cap)`
+            : "Wizard replied");
     } catch (err) {
         console.error(`[${extensionName}] Wizard chat failed:`, err);
         toastr.error(`Wizard chat failed: ${err.message}`, "Lorebook Forge");
@@ -482,7 +486,7 @@ async function onExtract() {
     setStatus(`Extracting entries from ${actives.length} source(s)${focus ? ` — focus: "${focus}"` : ""}…`);
 
     try {
-        const items = await wizardExtract({ canonRules: w.canonRules, sources: actives, focus, lorebookTarget: w.lorebookTarget });
+        const { items, omitted } = await wizardExtract({ canonRules: w.canonRules, sources: actives, focus, lorebookTarget: w.lorebookTarget });
         if (focus) pushWizardMessage("user", focus);
         // The proposal carousel rides INSIDE this assistant message — push it
         // first so addWizardProposals can link every card to it via msgId.
@@ -494,7 +498,8 @@ async function onExtract() {
         for (const p of proposals) counts[verifyQuote(p.quote, texts)]++;
         renderChat();
         renderGrounding(counts, proposals.length);
-        setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`);
+        setStatus(`Extracted ${proposals.length} proposals (${counts.verified}✅ / ${counts.fuzzy}⚠️ / ${counts.missing}❌)`
+            + (omitted.length ? ` · ${omitted.length} source${omitted.length === 1 ? "" : "s"} omitted (cap)` : ""));
     } catch (err) {
         console.error(`[${extensionName}] Extraction failed:`, err);
         toastr.error(`Extraction failed: ${err.message}`, "Lorebook Forge");
@@ -522,6 +527,16 @@ function renderHeaderMeta() {
         ctxChip.find("strong").text(`${(Math.round(totalChars / 4) / 1000).toFixed(1)}k`);
     }
 
+    // "N sources omitted from AI context" warning chip — same cap math the
+    // chat/extraction calls use (llmData.js), so it always matches the request.
+    const omitted = omittedSourceTitles(actives);
+    const omitChip = $("#lf_omit_chip");
+    if (omitChip.length) {
+        omitChip.toggleClass("lf-hidden", !omitted.length)
+            .text(omitted.length ? `${omitted.length} source${omitted.length === 1 ? "" : "s"} omitted from AI context` : "")
+            .attr("title", omitted.length ? `Over the per-call material cap — not sent to the AI: ${omitted.join(", ")}` : "");
+    }
+
     // v1 "Active Model:" pill — real connection name, never a hardcoded model
     const modelChip = $("#lf_wizard_model");
     if (modelChip.length) {
@@ -547,6 +562,7 @@ export function renderWizard() {
                 <div class="lf-wizard-name">Lorebook Wizard
                     <span id="lf_wizard_model" class="lf-chip lf-chip-good" title="The connection currently powering the Wizard"></span>
                     <span id="lf_wizard_meta" class="lf-chip lf-chip-good" title="Click to manage sources"></span>
+                    <span id="lf_omit_chip" class="lf-chip lf-chip-warn lf-hidden" title=""></span>
                 </div>
                 <div class="lf-wizard-sub">Grounded WorldInfo extraction — every proposal cites your sources.</div>
             </div>
@@ -656,13 +672,16 @@ export function initWizard() {
     bindProposalActions();
     // Message edit/delete tools (one document-level set, .lfmsg namespaced).
     bindMessageActions();
-    // The Stage-as-source overlay (drafts.js) dispatches lf-sources-changed
-    // after staging a source. Refresh the wizard here instead of having the
-    // overlay/Research reach into this module — keeps modules decoupled via
-    // the event. renderWizard() re-reads sources, so the header chips (active
-    // source count / KB / token estimate) and proposal grounding verdicts stay
-    // current. Bound once, in init.
-    document.getElementById("lf_studio_root")?.addEventListener("lf-sources-changed", renderWizard);
+    // The Stage-as-source overlay (research.js) and the Lorebook Deck
+    // (drafts.js → renderDraftsList) dispatch lf-sources-changed whenever a
+    // source is staged, toggled, added, deleted or imported. Refresh ONLY the
+    // header meta here — a full renderWizard() rebuilds the root via
+    // root.html(...) and would wipe whatever the user is typing in the
+    // composer (and re-render the chat). renderHeaderMeta() re-reads
+    // activeSources(), so the "N active sources · KB" chip, the context token
+    // chip and the "N sources omitted" warning chip all stay current.
+    // Bound once, in init.
+    document.getElementById("lf_studio_root")?.addEventListener("lf-sources-changed", renderHeaderMeta);
     renderWizard();
     console.log(`[${extensionName}] Wizard initialized (${getWizardSession().sources.length} sources, ${getWizardSession().messages.length} messages, ${getWizardSession().proposals.length} proposals)`);
 }

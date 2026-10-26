@@ -44,7 +44,7 @@ async function stripReasoning(text) {
             return mod.removeReasoningFromString(text);
         }
     } catch { /* older ST — regex fallback below */ }
-    return String(text).replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    return String(text).replace(/ thinking[\s\S]*?<\/think>/gi, "").trim();
 }
 
 // LLMs love wrapping JSON in fences or adding chatter. Find the JSON anyway.
@@ -137,39 +137,65 @@ Behavior:
 - Be concise and concrete. No filler, no restating the question.
 - This is a working session, not a roleplay chat.`;
 
-// Newest sources first (that's storage order); oldest fall off the cap.
-function buildSourceMaterial(sources) {
+// Per-source "does it fit the cap?" decision, in storage order (newest first;
+// oldest fall off the cap). Single source of truth shared by
+// buildSourceMaterial (what the AI actually sees) and omittedSourceTitles
+// (the UI warning chip), so the two can never disagree about which sources
+// were dropped.
+function capDecisions(sources) {
     let budget = SOURCE_MATERIAL_CAP;
+    return sources.map(s => {
+        const included = s.text.length <= budget;
+        if (included) budget -= s.text.length;
+        return { source: s, included };
+    });
+}
+
+// Returns { material, omitted }. `omitted` is the list of source titles that
+// did NOT fit the cap — surfaced by the caller as a status line / warning chip
+// instead of being dropped silently.
+function buildSourceMaterial(sources) {
     const parts = [];
-    let omitted = 0;
-    for (const s of sources) {
-        if (s.text.length <= budget) {
+    const omitted = [];
+    for (const { source: s, included } of capDecisions(sources)) {
+        if (included) {
             parts.push(`### SOURCE: ${s.title}\n${s.text}`);
-            budget -= s.text.length;
         } else {
             parts.push(`### SOURCE: ${s.title}\n[omitted from this call — material cap reached]`);
-            omitted++;
+            omitted.push(s.title);
         }
     }
-    if (omitted) console.warn(`[${extensionName}] ${omitted} source(s) over the ${SOURCE_MATERIAL_CAP} char cap were omitted from this call`);
-    return parts.join("\n\n");
+    if (omitted.length) {
+        console.warn(`[${extensionName}] ${omitted.length} source(s) over the ${SOURCE_MATERIAL_CAP} char cap were omitted from this call: ${omitted.join(", ")}`);
+    }
+    return { material: parts.join("\n\n"), omitted };
+}
+
+// Which active sources would NOT fit the per-call material cap right now.
+// Exported for the Wizard header's "N sources omitted from AI context" chip —
+// same math buildSourceMaterial uses, so the chip always matches the request.
+export function omittedSourceTitles(sources) {
+    return capDecisions(sources).filter(d => !d.included).map(d => d.source.title);
 }
 
 /**
  * One conversational turn. Stateless by design: canon rules + sources go in
  * the system prompt, the recent transcript + new message in the user prompt.
  * @param {{canonRules: string, sources: Array, history: Array, message: string}} args
- * @returns {Promise<string>} assistant reply (reasoning already stripped)
+ * @returns {Promise<{reply: string, omitted: string[]}>} assistant reply
+ *          (reasoning already stripped) + titles of any sources dropped by the
+ *          material cap, for the caller to surface.
  */
 export async function wizardChat({ canonRules, sources, history, message }) {
     const canon = String(canonRules ?? "").trim();
+    const { material, omitted } = buildSourceMaterial(sources);
     const systemPrompt = `${WIZARD_CHAT_SYSTEM}
 
 CANON RULES (user-defined, override sources):
 ${canon || "(none set yet)"}
 
 SOURCE MATERIAL:
-${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer from the conversation alone, and say clearly when you're missing sources)"}`;
+${sources.length ? material : "(none pasted yet — answer from the conversation alone, and say clearly when you're missing sources)"}`;
 
     const transcript = (history || []).slice(-HISTORY_TURNS)
         .map(m => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.text}`)
@@ -177,7 +203,7 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer f
 
     const quietPrompt = `${transcript ? `CONVERSATION SO FAR\n${transcript}\n\n` : ""}NEW MESSAGE\nUser: ${message}`;
 
-    console.log(`[${extensionName}] Wizard chat call: system ${systemPrompt.length} chars, prompt ${quietPrompt.length} chars, ${sources.length} source(s)`);
+    console.log(`[${extensionName}] Wizard chat call: system ${systemPrompt.length} chars, prompt ${quietPrompt.length} chars, ${sources.length} source(s)${omitted.length ? `, ${omitted.length} omitted (cap)` : ""}`);
     const t0 = Date.now();
 
     let reply = await callLLM({
@@ -193,7 +219,7 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted yet — answer f
     if (reply.trim() && !/[.!?:;"”')\]}…]/.test(reply.trim().at(-1))) {
         console.warn(`[${extensionName}] Wizard reply looks cut off — the ${WIZARD_CHAT_TOKENS}-token budget may have been eaten by reasoning + answer`);
     }
-    return reply;
+    return { reply, omitted };
 }
 
 // ---------- Wizard extraction (Stage 14) ----------
@@ -220,11 +246,13 @@ Output STRICT JSON only — no markdown fences, no commentary before or after. S
 /**
  * Extract entry proposals from the session's sources.
  * @param {{canonRules: string, sources: Array, focus?: string}} args
- * @returns {Promise<{title, keys, content, quote}[]>}
+ * @returns {Promise<{items: Array, omitted: string[]}>} raw proposal items +
+ *          titles of any sources dropped by the material cap.
  */
 export async function wizardExtract({ canonRules, sources, focus, lorebookTarget }) {
     const canon = String(canonRules ?? "").trim();
     const target = String(lorebookTarget ?? "").trim();
+    const { material, omitted } = buildSourceMaterial(sources);
     const systemPrompt = `${WIZARD_EXTRACT_SYSTEM}
 ${target ? `\nUPDATE TARGET: the existing lorebook "${target}" is loaded among the sources. Updates you accept here will later be applied to "${target}" directly, so keep "target" titles EXACTLY as they appear in the EXISTING LOREBOOK section.\n` : ""}
 
@@ -232,11 +260,11 @@ CANON RULES (user-defined, override sources):
 ${canon || "(none set)"}
 
 SOURCE MATERIAL:
-${sources.length ? buildSourceMaterial(sources) : "(none pasted — return an empty [])"}`;
+${sources.length ? material : "(none pasted — return an empty [])"}`;
 
     const prompt = `${focus ? `EXTRACTION FOCUS:\n${focus}\n\n` : ""}Propose lorebook entries from the source material now. Strict JSON array only.`;
 
-    console.log(`[${extensionName}] Extraction call: ${sources.length} source(s), focus: "${focus || "(all)"}"${target ? `, target: "${target}"` : ""}`);
+    console.log(`[${extensionName}] Extraction call: ${sources.length} source(s), focus: "${focus || "(all)"}"${target ? `, target: "${target}"` : ""}${omitted.length ? `, ${omitted.length} omitted (cap)` : ""}`);
     const t0 = Date.now();
 
     const reply = await callLLM({ prompt, systemPrompt, responseLength: EXTRACT_RESPONSE_TOKENS });
@@ -250,5 +278,5 @@ ${sources.length ? buildSourceMaterial(sources) : "(none pasted — return an em
     }
     const items = (Array.isArray(parsed) ? parsed : [parsed]);
     console.log(`[${extensionName}] Parsed ${items.length} proposal(s), ${items.filter(i => i?.quote).length} with quotes`);
-    return items;
+    return { items, omitted };
 }

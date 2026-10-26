@@ -18,6 +18,11 @@ import { listLorebooks, loadLorebookEntries, lorebookToSourceText,
 // Ticked draft ids — kept across re-renders (cleared on delete and on session change)
 const selected = new Set();
 
+// Re-entrancy guard for renderDraftsList() — it now dispatches
+// lf-sources-changed (see below), and a listener that re-renders the deck
+// would otherwise recurse forever.
+let deckRendering = false;
+
 // The `selected` Set is module-global, so a session switch must clear it —
 // otherwise ids from the previous session leak into the new one's batch bar.
 export function clearSelection() {
@@ -625,34 +630,48 @@ export function initDraftsDeck() {
 export function renderDraftsList() {
     const container = $("#lf_drafts_list");
     if (!container.length) return;
-    const w = getWizardSession();
-    const drafts = getSessionDrafts();
-    const totalEntryText = drafts.reduce((n, d) => n + d.content.length, 0);
-    $("#lf_book_pill_kb").text(totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "");
-    $("#lf_drafts_count").text(w.sources.length
-        ? `${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "0 entries"}`
-        : "");
+    // Re-entrancy guard: this function dispatches lf-sources-changed below,
+    // and a listener that re-renders the deck would otherwise loop forever.
+    if (deckRendering) return;
+    deckRendering = true;
+    try {
+        const w = getWizardSession();
+        const drafts = getSessionDrafts();
+        const totalEntryText = drafts.reduce((n, d) => n + d.content.length, 0);
+        $("#lf_book_pill_kb").text(totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "");
+        $("#lf_drafts_count").text(w.sources.length
+            ? `${w.sources.length} source${w.sources.length === 1 ? "" : "s"} · ${totalEntryText ? `${(totalEntryText / 1024).toFixed(1)} KB` : "0 entries"}`
+            : "");
 
-    if (!w.sources.length && !drafts.length) {
-        container.html(`
-            <div class="lf-pane-empty">
-                <div class="lf-reader-empty-icon">🗂</div>
-                <h3>The deck is empty</h3>
-                <p>Add a source, import a lorebook,<br>or scrape a page in the Reader —<br>staged entries nest inside their source here.</p>
-            </div>
-        `);
-    } else {
-        const loose = drafts.filter(d => !d.sourceId || !w.sources.some(s => s.id === d.sourceId));
-        container.html(`
-            ${w.sources.map(s => sourceCardHtml(s, drafts)).join("")}
-            ${loose.length ? looseSectionHtml(loose) : ""}
-        `);
+        if (!w.sources.length && !drafts.length) {
+            container.html(`
+                <div class="lf-pane-empty">
+                    <div class="lf-reader-empty-icon">🗂</div>
+                    <h3>The deck is empty</h3>
+                    <p>Add a source, import a lorebook,<br>or scrape a page in the Reader —<br>staged entries nest inside their source here.</p>
+                </div>
+            `);
+        } else {
+            const loose = drafts.filter(d => !d.sourceId || !w.sources.some(s => s.id === d.sourceId));
+            container.html(`
+                ${w.sources.map(s => sourceCardHtml(s, drafts)).join("")}
+                ${loose.length ? looseSectionHtml(loose) : ""}
+            `);
+        }
+        renderBookPill();
+        updateBatchBar();
+        renderCanonRules();
+        renderImportForm();
+        renderResearchRail();
+
+        // Single choke point every source add/toggle/delete/import path funnels
+        // through — tell the rest of the Studio (the Wizard header chips in
+        // particular) that the active source set may have changed. Dispatched
+        // INSIDE the guard so a re-entrant listener can't recurse.
+        document.getElementById("lf_studio_root")?.dispatchEvent(new CustomEvent("lf-sources-changed"));
+    } finally {
+        deckRendering = false;
     }
-    renderBookPill();
-    updateBatchBar();
-    renderCanonRules();
-    renderImportForm();
-    renderResearchRail();
 }
 
 // Canon-rules + import forms: forms persist across renders, so only their
