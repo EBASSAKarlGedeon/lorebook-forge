@@ -4,6 +4,8 @@
 // moved here from the Wizard tab (scraping stages SOURCES now, and Wizard
 // proposals stage into them via saveDraft's sourceId + pickSource).
 // Storage lives in extension_settings — survives refresh.
+// NOTE: the "Stage as source" overlay now lives in research.js (the overlay
+// IS the Reader) — this module owns the deck only.
 import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";

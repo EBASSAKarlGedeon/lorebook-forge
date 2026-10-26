@@ -1,9 +1,9 @@
 // The Studio overlay: full-screen workspace.
 // Stage 25 layout (v1/v2 convergence): one header (brand + lorebook pill +
 // workspace tabs + deck toggle + theme picker + export + close) over TWO
-// full-bleed columns — ONE active center tab (Wizard, Proposals, Reader,
+// full-bleed columns — ONE active center tab (Wizard, Proposals, Search,
 // Map) | the Lorebook Deck (sources with their staged entries nested
-// inside, batch commit, export). Web search lives in the Reader tab header.
+// inside, batch commit, export). Web search lives in the Search tab header.
 // Every pane owns a single full-height scroll region. Themes are
 // CSS-variable presets switched via data-theme on the root, persisted in
 // extension settings.
@@ -14,7 +14,7 @@ import { extension_settings } from "../../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../../script.js";
 import { extensionName } from "./config.js";
 import { icon } from "./helpers.js";
-import { initResearch, getPageCache } from "./research.js";
+import { initResearch, getPageCache, closeReaderOverlay } from "./research.js";
 import { renderDraftsList, initDraftsDeck } from "./drafts.js";
 import { initDistiller } from "./distiller.js";
 import { initWizard } from "./wizard.js";
@@ -37,12 +37,23 @@ export function isStudioOpen() {
     return !!studioRoot;
 }
 
-// Esc peels one layer at a time: modal → theme menu → the Studio itself
+// Esc peels one layer at a time: modal → theme menu → the Studio itself.
+// The reader overlay guards unsaved edits and owns a running batch, so it is
+// closed through closeReaderOverlay() rather than a bare DOM removal.
 function onStudioEsc(e) {
     if (e.key !== "Escape") return;
     e.preventDefault();
     const modal = studioRoot?.querySelector(".lf-modal-backdrop");
-    if (modal) return modal.remove();
+    if (modal) {
+        if (modal.classList.contains("lf-reader-overlay")) {
+            if (modal.hasAttribute("data-dirty") &&
+                !window.confirm("Discard your edits and close the reader?")) return;
+            closeReaderOverlay();
+        } else {
+            modal.remove();
+        }
+        return;
+    }
     if (studioRoot?.querySelector(".lf-theme-menu.open")) return toggleThemeMenu(false);
     closeStudio();
 }
@@ -168,7 +179,7 @@ function buildStudio() {
                 <nav class="lf-tabs" role="tablist">
                     <button id="lf_tab_wizard" class="lf-tab active" type="button" role="tab" aria-selected="true">${icon("wand")}Wizard</button>
                     <button id="lf_tab_proposals" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("pull")}Proposals<span class="lf-tab-badge lf-hidden"></span></button>
-                    <button id="lf_tab_reader" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("search")}Reader</button>
+                    <button id="lf_tab_reader" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("search")}Search</button>
                     <button id="lf_tab_graph" class="lf-tab" type="button" role="tab" aria-selected="false">${icon("network")}Canon Map</button>
                 </nav>
                 <div class="lf-header-actions">
@@ -203,7 +214,7 @@ function buildStudio() {
                     <div class="lf-rail-search">
                         <div class="lf-search-field">
                             ${icon("search")}
-                            <input id="lf_rail_search" class="text_pole lf-text-input" type="text" placeholder="Search web, wiki, or local docs..." autocomplete="off" />
+                            <input id="lf_rail_search" class="text_pole lf-text-input" type="text" placeholder="Search the web, or paste a URL…" autocomplete="off" />
                             <button id="lf_rail_search_go" class="lf-rail-go" type="button" title="Search with the Reader">Go</button>
                         </div>
                         <div class="lf-rail-filters">
@@ -246,23 +257,21 @@ function buildStudio() {
                     <section class="lf-pane lf-reader-pane lf-hidden" id="lf_reader_pane">
                         <div class="lf-pane-header">
                             <span class="lf-tile">${icon("search")}</span>
-                            <span class="lf-pane-title">Reader</span>
+                            <span class="lf-pane-title">Search</span>
                             <div class="lf-search-row lf-reader-search">
                                 <span class="lf-search-field">
                                     ${icon("search")}
-                                    <input id="lf_search_query" class="text_pole lf-text-input" type="text" placeholder="Search web, wikis, fandoms…" autocomplete="off" />
+                                    <input id="lf_search_query" class="text_pole lf-text-input" type="text" placeholder="Search the web, or paste a URL…" autocomplete="off" />
                                 </span>
                                 <button id="lf_search_btn" class="menu_button" type="button">Go</button>
                             </div>
                         </div>
                         <div class="lf-reader-col">
                             <div id="lf_search_results" class="lf-search-results"></div>
-                            <div id="lf_reader" class="lf-reader-host">
-                                <div class="lf-reader-empty">
-                                    <div class="lf-reader-empty-icon">📖</div>
-                                    <h3>Reader</h3>
-                                    <p>Search the web above, then click "Read" on a result.<br>Pages load here, ready to become entries inside their source.</p>
-                                </div>
+                            <div class="lf-reader-empty">
+                                <div class="lf-reader-empty-icon">📖</div>
+                                <h3>Search</h3>
+                                <p>Search the web or paste a URL.<br>Read opens the page in an overlay.</p>
                             </div>
                         </div>
                     </section>
@@ -366,7 +375,7 @@ export function openStudio() {
         if (!railState[name]) toggleSidePanel(name, false);
     }
 
-    initResearch();        // wires search + reader (fresh DOM each open)
+    initResearch();        // wires search + the reader overlay (fresh DOM each open)
     initDraftsDeck();      // batch bar + export (fresh DOM each open)
     renderDraftsList();    // drafts into the panel
     initDistiller();       // distill bar (guarded against duplicates)
