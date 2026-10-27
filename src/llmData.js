@@ -182,7 +182,7 @@ ${sources.length ? material : "(none pasted yet — answer from the conversation
 
 // ---------- Wizard extraction (Stage 14, chat-only since 6) ----------
 
-const EXTRACT_RESPONSE_TOKENS = 4000;
+const EXTRACT_RESPONSE_TOKENS = 32000;
 
 // Entries come ONLY from what the user agreed to in the chat. Sources are not
 // sent (they were already in the chat); the existing lorebook is, because
