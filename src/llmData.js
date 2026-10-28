@@ -48,13 +48,13 @@ function extractJsonArray(text) {
 
 // ---------- Wizard chat (Stage 13) ----------
 
-// 4000 (was 1200): generateRaw maps responseLength straight onto the request's
+// 32000 (was 4000): generateRaw maps responseLength straight onto the request's
 // max_tokens (verified in ST source: st-context → TempResponseLength.save →
 // openai.js ships it raw), and thinking models like GLM spend reasoning tokens
 // out of that SAME budget before the answer starts. At 1200 the reasoning ate
 // most of it and answers clipped mid-sentence. 4000 covers reasoning + a
 // full entry draft in one reply.
-const WIZARD_CHAT_TOKENS = 4000;
+const WIZARD_CHAT_TOKENS = 32000;
 const SOURCE_MATERIAL_CAP = 160_000; // soft cap on pasted material per call
 
 const WIZARD_CHAT_SYSTEM = `You are the Lorebook Wizard — a focused assistant inside SillyTavern that helps the user turn pasted source material into World Info lorebook entries through conversation.
@@ -182,7 +182,7 @@ ${sources.length ? material : "(none pasted yet — answer from the conversation
 
 // ---------- Wizard extraction (Stage 14, chat-only since 6) ----------
 
-const EXTRACT_RESPONSE_TOKENS = 32000;
+const EXTRACT_RESPONSE_TOKENS = 64000;
 
 // Entries come ONLY from what the user agreed to in the chat. Sources are not
 // sent (they were already in the chat); the existing lorebook is, because
